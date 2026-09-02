@@ -1,0 +1,512 @@
+import express from 'express';
+import path from 'path';
+import { createServer as createViteServer } from 'vite';
+import { GoogleGenAI } from '@google/genai';
+import { MongoClient, Db } from 'mongodb';
+import dotenv from 'dotenv';
+import { INITIAL_TOOLS } from './src/data/initialData';
+
+dotenv.config();
+
+let aiClient: GoogleGenAI | null = null;
+function getAIClient(): GoogleGenAI | null {
+  if (aiClient) return aiClient;
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey || apiKey === 'MY_GEMINI_API_KEY') {
+    return null;
+  }
+  aiClient = new GoogleGenAI({ apiKey });
+  return aiClient;
+}
+
+// MongoDB Database Manager
+let mongoClient: MongoClient | null = null;
+let dbInstance: Db | null = null;
+let memoryToolsCache: any[] = [...INITIAL_TOOLS];
+
+async function getMongoDb(): Promise<Db | null> {
+  const uri = process.env.MONGODB_URI;
+  if (!uri || uri === 'MY_MONGODB_URI') {
+    return null;
+  }
+
+  if (dbInstance) return dbInstance;
+
+  try {
+    mongoClient = new MongoClient(uri, {
+      serverSelectionTimeoutMS: 5000,
+    });
+    await mongoClient.connect();
+    dbInstance = mongoClient.db('aiflux_db');
+    console.log('✅ Successfully connected to MongoDB: aiflux_db');
+
+    // Auto-seed initial tools if collection is empty
+    const collection = dbInstance.collection('tools');
+    const count = await collection.countDocuments();
+    if (count === 0) {
+      console.log('🌱 Seeding MongoDB with initial AI tools dataset...');
+      await collection.insertMany(INITIAL_TOOLS.map((t) => ({ ...t, _id: t.id as any })));
+      console.log(`✅ Seeded ${INITIAL_TOOLS.length} tools into MongoDB.`);
+    }
+
+    return dbInstance;
+  } catch (error) {
+    console.warn('⚠️ MongoDB connection failed, running in resilient fallback mode:', error);
+    return null;
+  }
+}
+
+async function startServer() {
+  const app = express();
+  const PORT = 3000;
+
+  app.use(express.json({ limit: '10mb' }));
+
+  // Try initializing MongoDB on boot
+  getMongoDb().catch(() => {});
+
+  // API Routes
+  app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', time: new Date().toISOString() });
+  });
+
+  // DB Status API
+  app.get('/api/db/status', async (req, res) => {
+    try {
+      const db = await getMongoDb();
+      if (db) {
+        const count = await db.collection('tools').countDocuments();
+        return res.json({
+          status: 'connected',
+          provider: 'MongoDB',
+          database: 'aiflux_db',
+          collection: 'tools',
+          count,
+          uriConfigured: true,
+        });
+      }
+
+      const hasUri = Boolean(process.env.MONGODB_URI && process.env.MONGODB_URI !== 'MY_MONGODB_URI');
+      return res.json({
+        status: hasUri ? 'connecting_or_failed' : 'local_storage_fallback',
+        provider: hasUri ? 'MongoDB (Offline/Connecting)' : 'In-Memory / LocalStorage Fallback',
+        database: 'aiflux_local',
+        collection: 'tools',
+        count: memoryToolsCache.length,
+        uriConfigured: hasUri,
+        note: hasUri
+          ? 'MongoDB URI is configured but server is currently falling back to memory store.'
+          : 'To persist directly in MongoDB Atlas/Server, specify MONGODB_URI in Settings/Secrets.',
+      });
+    } catch (err: any) {
+      res.json({
+        status: 'error',
+        provider: 'Fallback',
+        count: memoryToolsCache.length,
+        error: err.message,
+      });
+    }
+  });
+
+  // Get All Tools
+  app.get('/api/tools', async (req, res) => {
+    try {
+      const db = await getMongoDb();
+      if (db) {
+        const tools = await db.collection('tools').find({}).toArray();
+        // Normalize _id to id
+        const cleanTools = tools.map((t) => {
+          const { _id, ...rest } = t;
+          return { id: rest.id || _id?.toString(), ...rest };
+        });
+        memoryToolsCache = cleanTools;
+        return res.json(cleanTools);
+      }
+
+      // Return memory cache
+      res.json(memoryToolsCache);
+    } catch (error: any) {
+      console.error('Error fetching tools:', error);
+      res.json(memoryToolsCache);
+    }
+  });
+
+  // Add a New Tool
+  app.post('/api/tools', async (req, res) => {
+    try {
+      const toolData = req.body;
+      if (!toolData.name || !toolData.category) {
+        return res.status(400).json({ error: 'Tool name and category are required' });
+      }
+
+      const id = toolData.id || `tool-${Date.now()}`;
+      const slug = toolData.slug || toolData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+      const monthlyVisits = Number(toolData.monthlyVisits) || 120000;
+      let monthlyVisitsFormatted = toolData.monthlyVisitsFormatted;
+      if (!monthlyVisitsFormatted) {
+        if (monthlyVisits >= 1000000) {
+          monthlyVisitsFormatted = `${(monthlyVisits / 1000000).toFixed(1)}M`;
+        } else if (monthlyVisits >= 1000) {
+          monthlyVisitsFormatted = `${Math.round(monthlyVisits / 1000)}K`;
+        } else {
+          monthlyVisitsFormatted = `${monthlyVisits}`;
+        }
+      }
+
+      const newTool = {
+        id,
+        name: toolData.name,
+        slug,
+        tagline: toolData.tagline || 'Next-generation AI platform',
+        description: toolData.description || 'Comprehensive AI tool designed for high productivity and automated workflows.',
+        url: toolData.url || 'https://example.com',
+        category: toolData.category,
+        logoUrl: toolData.logoUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80',
+        thumbnailVideoUrl: toolData.thumbnailVideoUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80',
+        videoDuration: toolData.videoDuration || '03:15',
+        rating: Number(toolData.rating) || 4.8,
+        reviewCount: Number(toolData.reviewCount) || 12,
+        pricingType: toolData.pricingType || 'Freemium',
+        isOpenSource: Boolean(toolData.isOpenSource),
+        hasApi: Boolean(toolData.hasApi),
+        isFeatured: Boolean(toolData.isFeatured),
+        featuredRank: toolData.isFeatured ? 1 : undefined,
+        monthlyVisits,
+        monthlyVisitsFormatted,
+        trafficGrowth: Number(toolData.trafficGrowth) || 24.5,
+        globalRank: Number(toolData.globalRank) || 142,
+        categoryRank: Number(toolData.categoryRank) || 4,
+        topCountries: toolData.topCountries?.length ? toolData.topCountries : ['United States (42%)', 'India (18%)', 'Germany (9%)'],
+        trafficStats: {
+          monthlyVisits,
+          monthlyVisitsFormatted,
+          trafficGrowth: Number(toolData.trafficGrowth) || 24.5,
+          globalRank: Number(toolData.globalRank) || 142,
+          categoryRank: Number(toolData.categoryRank) || 4,
+          topCountry: toolData.topCountry || 'United States (42%)',
+          avgDuration: toolData.avgDuration || '05:30',
+          bounceRate: toolData.bounceRate || '32.4%',
+        },
+        platforms: toolData.platforms?.length ? toolData.platforms : ['Web'],
+        targetAudience: toolData.targetAudience?.length ? toolData.targetAudience : ['Professionals', 'Developers'],
+        pros: toolData.pros?.length ? toolData.pros : ['Intuitive interface', 'Fast execution speed', 'Comprehensive feature set'],
+        cons: toolData.cons?.length ? toolData.cons : ['Free plan has basic limits'],
+        alternatives: toolData.alternatives?.length ? toolData.alternatives : [],
+        deal: toolData.dealCode
+          ? {
+              discount: toolData.dealDiscount || '20% OFF',
+              code: toolData.dealCode,
+              description: toolData.dealDescription || 'Special launch discount',
+              validUntil: toolData.dealValidUntil,
+            }
+          : toolData.deal || undefined,
+        upvotes: Number(toolData.upvotes) || 10,
+        launchedDate: toolData.launchedDate || new Date().toISOString().split('T')[0],
+        keyFeatures: toolData.keyFeatures?.length ? toolData.keyFeatures : ['AI Automation', 'Cloud Sync', 'Real-time Processing'],
+        pricingPlans: toolData.pricingPlans?.length
+          ? toolData.pricingPlans
+          : [
+              {
+                id: `${id}-free`,
+                name: 'Free Starter',
+                price: '$0',
+                period: 'forever',
+                features: ['Basic AI features', 'Standard speed', 'Community support'],
+              },
+              {
+                id: `${id}-pro`,
+                name: 'Pro Tier',
+                price: toolData.proPrice || '$20',
+                period: 'monthly',
+                features: ['Unlimited AI generation', 'High-priority GPU access', 'API Keys access', 'Priority support'],
+                isPopular: true,
+              },
+            ],
+        reviews: toolData.reviews || [],
+        createdAt: new Date().toISOString(),
+      };
+
+      // Save to MongoDB if available
+      const db = await getMongoDb();
+      if (db) {
+        await db.collection('tools').replaceOne(
+          { id: newTool.id },
+          { ...newTool, _id: newTool.id as any },
+          { upsert: true }
+        );
+        console.log(`✅ Stored new tool "${newTool.name}" in MongoDB collection tools.`);
+      }
+
+      // Update memory cache
+      memoryToolsCache = [newTool, ...memoryToolsCache.filter((t) => t.id !== newTool.id)];
+
+      res.status(201).json({
+        success: true,
+        message: db ? 'Tool successfully saved in MongoDB' : 'Tool saved (local cache fallback)',
+        tool: newTool,
+      });
+    } catch (error: any) {
+      console.error('Error in POST /api/tools:', error);
+      res.status(500).json({ error: error?.message || 'Failed to save tool' });
+    }
+  });
+
+  // Update a Tool
+  app.put('/api/tools/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+
+      const db = await getMongoDb();
+      if (db) {
+        await db.collection('tools').updateOne({ id }, { $set: updates });
+      }
+
+      memoryToolsCache = memoryToolsCache.map((t) => (t.id === id ? { ...t, ...updates } : t));
+
+      res.json({ success: true, message: 'Tool updated successfully' });
+    } catch (error: any) {
+      console.error('Error in PUT /api/tools/:id:', error);
+      res.status(500).json({ error: error?.message || 'Failed to update tool' });
+    }
+  });
+
+  // Delete a Tool
+  app.delete('/api/tools/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const db = await getMongoDb();
+      if (db) {
+        await db.collection('tools').deleteOne({ id });
+      }
+
+      memoryToolsCache = memoryToolsCache.filter((t) => t.id !== id);
+
+      res.json({ success: true, message: 'Tool deleted successfully' });
+    } catch (error: any) {
+      console.error('Error in DELETE /api/tools/:id:', error);
+      res.status(500).json({ error: error?.message || 'Failed to delete tool' });
+    }
+  });
+
+  // Seed MongoDB
+  app.post('/api/tools/seed', async (req, res) => {
+    try {
+      const db = await getMongoDb();
+      if (!db) {
+        return res.status(400).json({ error: 'MongoDB is not connected. Check MONGODB_URI.' });
+      }
+
+      const collection = db.collection('tools');
+      await collection.deleteMany({});
+      await collection.insertMany(INITIAL_TOOLS.map((t) => ({ ...t, _id: t.id as any })));
+
+      memoryToolsCache = [...INITIAL_TOOLS];
+
+      res.json({
+        success: true,
+        message: `Successfully seeded ${INITIAL_TOOLS.length} tools into MongoDB aiflux_db.tools`,
+      });
+    } catch (error: any) {
+      console.error('Error seeding MongoDB:', error);
+      res.status(500).json({ error: error?.message || 'Failed to seed tools' });
+    }
+  });
+
+  // AI Tool Matcher
+  app.post('/api/ai/match-tools', async (req, res) => {
+    try {
+      const { userGoal, budget, category, toolsData } = req.body;
+      const ai = getAIClient();
+
+      if (!ai) {
+        // Fallback intelligent matching if API key not yet provided
+        return res.json({
+          recommendations: [
+            {
+              toolName: 'Cursor AI',
+              matchScore: 98,
+              reason: 'Best in class for AI code completion, multi-file edits, and agentic debugging with terminal integration.',
+              pricingNote: '$20/mo Pro Plan fits developer workflows perfectly.',
+            },
+            {
+              toolName: 'ChatGPT-4o',
+              matchScore: 94,
+              reason: 'Versatile multimodal AI supporting code, vision, documents, and real-time voice analysis.',
+              pricingNote: 'Free tier available, Plus at $20/mo.',
+            },
+            {
+              toolName: 'Perplexity AI',
+              matchScore: 91,
+              reason: 'Real-time citation engine ideal for technical research and API documentation lookups.',
+              pricingNote: 'Free tier with daily pro searches.',
+            },
+          ],
+          summary: `Based on your goal "${userGoal || 'AI productivity'}", here are the top matching tools based on traffic volume, features, and developer feedback.`,
+        });
+      }
+
+      const prompt = `You are the chief AI Analyst for AIFlux (an AI directory combining Toolify.ai traffic intelligence and AIChief verified deals).
+The user wants recommendations for:
+- User Goal / Query: "${userGoal || 'General AI tools'}"
+- Budget / Pricing Preference: "${budget || 'Any'}"
+- Desired Category: "${category || 'All'}"
+
+Available Tools in directory:
+${JSON.stringify(
+  (toolsData || []).slice(0, 15).map((t: any) => ({
+    name: t.name,
+    category: t.category,
+    tagline: t.tagline,
+    pricingType: t.pricingType,
+    monthlyVisits: t.monthlyVisitsFormatted,
+  }))
+)}
+
+Provide a structured JSON response with:
+1. "summary": A brief 1-2 sentence recommendation overview.
+2. "recommendations": Array of 3-4 objects, each containing:
+   - "toolName": name of the tool
+   - "matchScore": integer between 85 and 99
+   - "reason": 1-2 sentences on why it fits the user's specific request
+   - "pricingNote": short pricing advice
+Only respond with valid JSON.`;
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.7-flash',
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+        },
+      });
+
+      const text = response.text || '{}';
+      const parsed = JSON.parse(text);
+      res.json(parsed);
+    } catch (error: any) {
+      console.error('Error in /api/ai/match-tools:', error);
+      res.status(500).json({ error: error?.message || 'Failed to match tools' });
+    }
+  });
+
+  // AI Prompt Optimizer
+  app.post('/api/ai/optimize-prompt', async (req, res) => {
+    try {
+      const { rawPrompt, targetModel, taskType } = req.body;
+      const ai = getAIClient();
+
+      if (!ai) {
+        return res.json({
+          optimizedPrompt: `### ROLE & OBJECTIVE\nYou are an elite specialist in ${taskType || 'AI assistance'}.\n\n### TASK INSTRUCTIONS\n${rawPrompt}\n\n### CONSTRAINTS & FORMATTING\n- Deliver clear, production-ready output.\n- Structure findings into scannable markdown with bullet points.\n- Eliminate boilerplate and deliver concise, high-signal explanations.\n\n### OUTPUT SPECIFICATION\nProvide the final output immediately without conversational filler.`,
+          tips: [
+            'Includes clear system role framing to anchor model context.',
+            'Adds explicit output constraints to reduce hallucination and verbose replies.',
+            'Optimized for token efficiency and high output fidelity.',
+          ],
+        });
+      }
+
+      const prompt = `You are a world-class Prompt Engineer for top AI models (${targetModel || 'Universal LLM'}).
+Improve and engineer the following raw prompt into a production-grade master prompt:
+
+Raw Input: "${rawPrompt}"
+Target Model: "${targetModel || 'Universal'}"
+Task Type: "${taskType || 'General'}"
+
+Return a JSON object with:
+1. "optimizedPrompt": The complete, copyable, structured prompt (with sections like Role, Instructions, Constraints, Examples/Format).
+2. "tips": Array of 3 short bullet points explaining why this prompt structure improves output quality.
+Only return valid JSON.`;
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.7-flash',
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+        },
+      });
+
+      const text = response.text || '{}';
+      const parsed = JSON.parse(text);
+      res.json(parsed);
+    } catch (error: any) {
+      console.error('Error in /api/ai/optimize-prompt:', error);
+      res.status(500).json({ error: error?.message || 'Failed to optimize prompt' });
+    }
+  });
+
+  // AI Comparison Verdict
+  app.post('/api/ai/compare-verdict', async (req, res) => {
+    try {
+      const { tool1Name, tool2Name, tool3Name, toolData } = req.body;
+      const ai = getAIClient();
+
+      if (!ai) {
+        return res.json({
+          verdictTitle: `${tool1Name} vs ${tool2Name}: Key Takeaway`,
+          summary: `${tool1Name} leads in market traffic and ecosystem integrations, while ${tool2Name} offers specialized workflow advantages and accessible pricing.`,
+          recommendation: `Choose ${tool1Name} for enterprise scalability and standard team adoption. Choose ${tool2Name} for agile workflows and cost efficiency.`,
+          keyFactors: [
+            { factor: 'Traffic & Community', winner: tool1Name, reason: 'Higher monthly active user volume and broader documentation.' },
+            { factor: 'Value for Money', winner: tool2Name, reason: 'More generous free tier and accessible subscription tiers.' },
+            { factor: 'Feature Depth', winner: 'Tie', reason: 'Both tools excel within their respective sub-niches.' }
+          ]
+        });
+      }
+
+      const prompt = `You are an expert AI software analyst for AIFlux Directory.
+Compare these AI tools:
+Tool A: ${tool1Name}
+Tool B: ${tool2Name}
+${tool3Name ? `Tool C: ${tool3Name}` : ''}
+
+Tools Data:
+${JSON.stringify(toolData || {})}
+
+Return a JSON object with:
+1. "verdictTitle": Catchy 4-7 word title of the verdict.
+2. "summary": 2-3 sentences summarizing the major architectural and workflow differences.
+3. "recommendation": Concrete guidance on who should choose which tool.
+4. "keyFactors": Array of 3-4 objects with {"factor": string, "winner": string, "reason": string}.
+Only return valid JSON.`;
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.7-flash',
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+        },
+      });
+
+      const text = response.text || '{}';
+      const parsed = JSON.parse(text);
+      res.json(parsed);
+    } catch (error: any) {
+      console.error('Error in /api/ai/compare-verdict:', error);
+      res.status(500).json({ error: error?.message || 'Failed to generate comparison verdict' });
+    }
+  });
+
+  // Vite middleware setup
+  if (process.env.NODE_ENV !== 'production') {
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: 'spa',
+    });
+    app.use(vite.middlewares);
+  } else {
+    const distPath = path.join(process.cwd(), 'dist');
+    app.use(express.static(distPath));
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+  }
+
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`AIFlux Server running on http://localhost:${PORT}`);
+  });
+}
+
+startServer();

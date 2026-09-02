@@ -1,0 +1,6 @@
+{
+  "name": "AIFlux Directory",
+  "description": "The leading AI directory, monthly traffic rankings, side-by-side comparison engine, verified deals & promo codes, and curated prompt engineering library.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
