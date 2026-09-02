@@ -16,6 +16,23 @@ import { AdminView } from './components/AdminView';
 import { VideoPreviewModal } from './components/VideoPreviewModal';
 import { AIMatcherModal } from './components/AIMatcherModal';
 import { BookmarksDrawer } from './components/BookmarksDrawer';
+import { Bot, Sparkles } from 'lucide-react';
+
+// Helper to parse URL path/hash
+const getInitialTabFromUrl = (): ActiveTab => {
+  if (typeof window === 'undefined') return 'directory';
+  const path = window.location.pathname.toLowerCase();
+  const hash = window.location.hash.toLowerCase();
+
+  if (path.includes('admin') || hash.includes('admin')) return 'admin';
+  if (path.includes('rankings') || hash.includes('rankings')) return 'rankings';
+  if (path.includes('compare') || hash.includes('compare')) return 'compare';
+  if (path.includes('deals') || hash.includes('deals')) return 'deals';
+  if (path.includes('prompts') || hash.includes('prompts')) return 'prompts';
+  if (path.includes('categories') || hash.includes('categories')) return 'categories';
+  if (path.includes('news') || path.includes('blog') || hash.includes('news') || hash.includes('blog')) return 'blog';
+  return 'directory';
+};
 
 export const App: React.FC = () => {
   // Tools state initialized from localStorage or initial dataset
@@ -44,11 +61,26 @@ export const App: React.FC = () => {
     return [];
   });
 
-  const [activeTab, setActiveTab] = useState<ActiveTab>('directory');
+  const [activeTab, setActiveTab] = useState<ActiveTab>(getInitialTabFromUrl);
   const [selectedTool, setSelectedTool] = useState<AITool | null>(null);
   const [videoPreviewTool, setVideoPreviewTool] = useState<AITool | null>(null);
   const [isMatcherOpen, setIsMatcherOpen] = useState<boolean>(false);
   const [isBookmarksOpen, setIsBookmarksOpen] = useState<boolean>(false);
+
+  // Sync URL changes and popstate (browser back/forward & direct links)
+  useEffect(() => {
+    const handleLocationChange = () => {
+      const tab = getInitialTabFromUrl();
+      setActiveTab(tab);
+    };
+
+    window.addEventListener('popstate', handleLocationChange);
+    window.addEventListener('hashchange', handleLocationChange);
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+      window.removeEventListener('hashchange', handleLocationChange);
+    };
+  }, []);
 
   // Fetch latest tools from MongoDB API on load
   const fetchApiTools = async () => {
@@ -98,9 +130,22 @@ export const App: React.FC = () => {
     }
   };
 
-  // Scroll to top on tab change
+  // Scroll to top on tab change & update URL pathname
   const handleTabChange = (tab: ActiveTab) => {
     setActiveTab(tab);
+    try {
+      const targetPath = tab === 'directory' ? '/' : `/${tab}`;
+      if (window.location.pathname !== targetPath) {
+        window.history.pushState({ tab }, '', targetPath);
+      }
+    } catch (e) {
+      // Fallback for sandboxed iframes
+      try {
+        window.location.hash = `#${tab}`;
+      } catch (err) {
+        // ignore
+      }
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -271,6 +316,38 @@ export const App: React.FC = () => {
         onClose={() => setVideoPreviewTool(null)}
         onSelectTool={handleSelectTool}
       />
+
+      {/* Floating Ask AI Matcher Copilot Widget (Bottom Right) */}
+      <div className="fixed bottom-6 right-6 z-40">
+        <button
+          onClick={() => setIsMatcherOpen(true)}
+          className="group relative flex items-center gap-3 px-4 sm:px-5 py-3.5 bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-2xl shadow-xl hover:shadow-2xl hover:shadow-indigo-500/30 border border-white/20 transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer backdrop-blur-md"
+          title="Ask AI Matcher - Find the perfect AI tool for your exact stack"
+        >
+          {/* Animated Glow / Ping Indicator */}
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400"></span>
+          </span>
+
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-xl bg-white/20 flex items-center justify-center shrink-0 shadow-xs">
+              <Bot className="w-4 h-4 text-white" />
+            </div>
+            <div className="flex flex-col text-left">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs sm:text-sm font-extrabold tracking-tight">
+                  Ask AI Matcher
+                </span>
+                <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+              </div>
+              <span className="text-[10px] text-indigo-100 font-medium hidden sm:inline leading-none">
+                AI Tool Recommendation Engine
+              </span>
+            </div>
+          </div>
+        </button>
+      </div>
 
       {/* Global Clean Minimal Footer */}
       <Footer onNavigate={handleTabChange} />

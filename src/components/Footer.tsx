@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Flame, Tag, Terminal, GitCompare } from 'lucide-react';
+import { Sparkles, Flame, Tag, Terminal, GitCompare, Lock } from 'lucide-react';
 import { ActiveTab } from '../types';
 
 interface FooterProps {
@@ -71,18 +71,23 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           >
             AI News & Guides
           </button>
-          <button
-            onClick={() => onNavigate('admin')}
-            className="hover:text-indigo-600 transition-colors cursor-pointer text-indigo-600 font-bold"
-          >
-            MongoDB Admin Portal
-          </button>
         </div>
 
         {/* Secondary Info & Copyright */}
-        <div className="text-xs text-slate-400 text-center space-y-1">
+        <div className="text-xs text-slate-400 text-center space-y-2">
           <p>© {new Date().getFullYear()} AIFlux Intelligence Directory. Real-time web traffic, model comparisons, and verified coupons.</p>
-          <p className="text-[11px] text-slate-400">Benchmarked against global search velocity & developer usage statistics.</p>
+          <div className="flex items-center justify-center gap-4 text-[11px] text-slate-400">
+            <span>Benchmarked against global search velocity & developer usage statistics.</span>
+            <span>•</span>
+            <button
+              onClick={() => onNavigate('admin')}
+              className="hover:text-slate-600 transition-colors cursor-pointer flex items-center gap-1 text-slate-400"
+              title="Restricted Administrator Area"
+            >
+              <Lock className="w-3 h-3" />
+              <span>Admin Login</span>
+            </button>
+          </div>
         </div>
       </div>
     </footer>

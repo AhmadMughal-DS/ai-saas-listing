@@ -152,19 +152,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             <BookOpen className="w-4 h-4" />
             <span>News & Guides</span>
           </button>
-
-          {/* Admin Database Control */}
-          <button
-            onClick={() => setActiveTab('admin')}
-            className={`px-3.5 py-2 rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer flex items-center gap-1.5 ${
-              activeTab === 'admin'
-                ? 'text-indigo-600 font-bold bg-indigo-50/80 border border-indigo-100/80'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
-            }`}
-          >
-            <Layers className="w-4 h-4 text-indigo-500" />
-            <span>Admin</span>
-          </button>
         </nav>
 
         {/* Right Side Controls */}
@@ -177,8 +164,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             title="Search AI Tools, Rankings & Deals"
           >
             <Search className="w-4 h-4 text-slate-400" />
-            <span className="text-xs font-semibold hidden md:inline">Search</span>
-            <kbd className="hidden xl:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-white border border-slate-200 rounded text-slate-400">
+            <span className="text-xs font-semibold hidden sm:inline">Search</span>
+            <kbd className="hidden md:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-white border border-slate-200 rounded text-slate-400">
               ⌘K
             </kbd>
           </button>
@@ -186,24 +173,16 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Bookmarks / Saved Stack Button */}
           <button
             onClick={onOpenBookmarks}
-            className="relative p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-900 transition-all cursor-pointer shadow-xs"
+            className="relative p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-900 transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
             title="Saved AI Stack"
           >
             <Bookmark className={`w-4 h-4 ${bookmarkCount > 0 ? 'fill-indigo-600 text-indigo-600' : ''}`} />
+            <span className="text-xs font-semibold hidden md:inline text-slate-600">Saved</span>
             {bookmarkCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-extrabold flex items-center justify-center">
+              <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-extrabold flex items-center justify-center">
                 {bookmarkCount}
               </span>
             )}
-          </button>
-
-          {/* AI Matcher Copilot Button */}
-          <button
-            onClick={onOpenMatcher}
-            className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold btn-purple shadow-xs cursor-pointer"
-          >
-            <Bot className="w-4 h-4 text-indigo-200" />
-            <span>Ask AI Matcher</span>
           </button>
         </div>
       </div>
@@ -267,14 +246,6 @@ export const Navbar: React.FC<NavbarProps> = ({
           }`}
         >
           News
-        </button>
-        <button
-          onClick={() => setActiveTab('admin')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap ${
-            activeTab === 'admin' ? 'bg-indigo-600 text-white font-bold' : 'text-slate-600 bg-white border border-slate-200'
-          }`}
-        >
-          Admin
         </button>
       </div>
     </header>
