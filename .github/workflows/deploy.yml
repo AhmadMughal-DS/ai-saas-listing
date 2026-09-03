@@ -85,7 +85,7 @@ jobs:
               --name $CONTAINER_NAME \
               --restart unless-stopped \
               -p 3000:3000 \
-              -e GEMINI_API_KEY="${{ secrets.GEMINI_API_KEY }}" \
+              -e DEEPSEEK_API_KEY="${{ secrets.DEEPSEEK_API_KEY }}" \
               -e MONGODB_URI="${{ secrets.MONGODB_URI }}" \
               -e NODE_ENV=production \
               $IMAGE

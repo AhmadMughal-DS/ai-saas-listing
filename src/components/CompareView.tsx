@@ -255,7 +255,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
             {isGeneratingVerdict ? (
               <>
                 <Sparkles className="w-4 h-4 animate-spin" />
-                <span>Analyzing specs with Gemini...</span>
+                <span>Analyzing specs with DeepSeek...</span>
               </>
             ) : (
               <>

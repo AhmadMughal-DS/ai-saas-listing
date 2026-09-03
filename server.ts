@@ -1,21 +1,24 @@
 import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
-import { GoogleGenAI } from '@google/genai';
+import OpenAI from 'openai';
 import { MongoClient, Db } from 'mongodb';
 import dotenv from 'dotenv';
 import { INITIAL_TOOLS } from './src/data/initialData';
 
 dotenv.config();
 
-let aiClient: GoogleGenAI | null = null;
-function getAIClient(): GoogleGenAI | null {
+let aiClient: OpenAI | null = null;
+function getAIClient(): OpenAI | null {
   if (aiClient) return aiClient;
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || apiKey === 'MY_GEMINI_API_KEY') {
+  const apiKey = process.env.DEEPSEEK_API_KEY;
+  if (!apiKey || apiKey === 'MY_DEEPSEEK_API_KEY') {
     return null;
   }
-  aiClient = new GoogleGenAI({ apiKey });
+  aiClient = new OpenAI({
+    baseURL: 'https://api.deepseek.com',
+    apiKey,
+  });
   return aiClient;
 }
 
@@ -492,15 +495,16 @@ Provide a structured JSON response with:
    - "pricingNote": short pricing advice
 Only respond with valid JSON.`;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
-        contents: prompt,
-        config: {
-          responseMimeType: 'application/json',
-        },
+      const response = await ai.chat.completions.create({
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: 'You are an AI analyst. Only respond with valid JSON.' },
+          { role: 'user', content: prompt },
+        ],
+        response_format: { type: 'json_object' },
       });
 
-      const text = response.text || '{}';
+      const text = response.choices[0]?.message?.content || '{}';
       const parsed = JSON.parse(text);
       res.json(parsed);
     } catch (error: any) {
@@ -538,15 +542,16 @@ Return a JSON object with:
 2. "tips": Array of 3 short bullet points explaining why this prompt structure improves output quality.
 Only return valid JSON.`;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
-        contents: prompt,
-        config: {
-          responseMimeType: 'application/json',
-        },
+      const response = await ai.chat.completions.create({
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: 'You are a world-class Prompt Engineer. Only respond with valid JSON.' },
+          { role: 'user', content: prompt },
+        ],
+        response_format: { type: 'json_object' },
       });
 
-      const text = response.text || '{}';
+      const text = response.choices[0]?.message?.content || '{}';
       const parsed = JSON.parse(text);
       res.json(parsed);
     } catch (error: any) {
@@ -590,15 +595,16 @@ Return a JSON object with:
 4. "keyFactors": Array of 3-4 objects with {"factor": string, "winner": string, "reason": string}.
 Only return valid JSON.`;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
-        contents: prompt,
-        config: {
-          responseMimeType: 'application/json',
-        },
+      const response = await ai.chat.completions.create({
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: 'You are an expert AI software analyst. Only respond with valid JSON.' },
+          { role: 'user', content: prompt },
+        ],
+        response_format: { type: 'json_object' },
       });
 
-      const text = response.text || '{}';
+      const text = response.choices[0]?.message?.content || '{}';
       const parsed = JSON.parse(text);
       res.json(parsed);
     } catch (error: any) {

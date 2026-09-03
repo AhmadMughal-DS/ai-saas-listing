@@ -192,7 +192,7 @@ export const PromptsView: React.FC<PromptsViewProps> = ({ onNavigate }) => {
             <div className="text-xs text-slate-400 font-medium mt-0.5">Zero Hallucination Rate</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 font-heading">Gemini</div>
+            <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 font-heading">DeepSeek</div>
             <div className="text-xs text-slate-400 font-medium mt-0.5">Prompt Optimizer</div>
           </div>
         </div>
@@ -287,7 +287,7 @@ export const PromptsView: React.FC<PromptsViewProps> = ({ onNavigate }) => {
               ) : (
                 <>
                   <Wand2 className="w-4 h-4" />
-                  <span>Engineer Master Prompt with Gemini</span>
+                  <span>Engineer Master Prompt with DeepSeek</span>
                 </>
               )}
             </button>

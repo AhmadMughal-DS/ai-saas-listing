@@ -277,7 +277,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
         description: `${capitalized} provides high-performance AI workflows with frontier models, multi-modal integration, and enterprise-grade reliability.`,
       }));
 
-      setStatusMessage({ type: 'success', text: `Auto-filled details for ${capitalized} using Gemini!` });
+      setStatusMessage({ type: 'success', text: `Auto-filled details for ${capitalized} using DeepSeek!` });
     } catch (e) {
       const cleanName = aiUrlPrompt.replace(/https?:\/\//, '').split('.')[0];
       setFormData((prev) => ({
@@ -717,7 +717,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
           {/* AI Fast Pre-fill Bar */}
           <div className="mb-6 p-4 rounded-2xl bg-indigo-50/70 border border-indigo-100 space-y-2">
             <label className="block text-xs font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-indigo-600" /> Quick Auto-Fill with Gemini
+              <Sparkles className="w-3.5 h-3.5 text-indigo-600" /> Quick Auto-Fill with DeepSeek
             </label>
             <div className="flex gap-2">
               <input
