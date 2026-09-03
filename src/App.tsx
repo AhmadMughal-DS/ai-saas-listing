@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AITool, ActiveTab, ToolReview } from './types';
+import { AITool, ActiveTab, ToolReview, UserAccount } from './types';
 import { INITIAL_TOOLS } from './data/initialData';
 import { CyberBackground } from './components/CyberBackground';
 import { Navbar } from './components/Navbar';
@@ -16,6 +16,8 @@ import { AdminView } from './components/AdminView';
 import { VideoPreviewModal } from './components/VideoPreviewModal';
 import { AIMatcherModal } from './components/AIMatcherModal';
 import { BookmarksDrawer } from './components/BookmarksDrawer';
+import { AuthModal } from './components/AuthModal';
+import { UserAccountModal } from './components/UserAccountModal';
 import { Bot, Sparkles } from 'lucide-react';
 
 // Helper to parse URL path/hash
@@ -66,6 +68,19 @@ export const App: React.FC = () => {
   const [videoPreviewTool, setVideoPreviewTool] = useState<AITool | null>(null);
   const [isMatcherOpen, setIsMatcherOpen] = useState<boolean>(false);
   const [isBookmarksOpen, setIsBookmarksOpen] = useState<boolean>(false);
+  const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => {
+    const saved = localStorage.getItem('aiflux_user');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  });
+  const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
+  const [isAccountOpen, setIsAccountOpen] = useState<boolean>(false);
 
   // Sync URL changes and popstate (browser back/forward & direct links)
   useEffect(() => {
@@ -110,6 +125,15 @@ export const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('aiflux_bookmarks', JSON.stringify(bookmarkedIds));
   }, [bookmarkedIds]);
+
+  // Sync user to localStorage
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem('aiflux_user', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('aiflux_user');
+    }
+  }, [currentUser]);
 
   const handleToolAdded = (newTool: AITool) => {
     setTools((prev) => [newTool, ...prev.filter((t) => t.id !== newTool.id)]);
@@ -208,6 +232,9 @@ export const App: React.FC = () => {
         onOpenMatcher={() => setIsMatcherOpen(true)}
         onOpenBookmarks={() => setIsBookmarksOpen(true)}
         bookmarkCount={bookmarkedIds.length}
+        user={currentUser}
+        onOpenAuth={() => setIsAuthOpen(true)}
+        onOpenUserAccount={() => setIsAccountOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -277,7 +304,7 @@ export const App: React.FC = () => {
           <ToolDetailView
             tool={selectedTool}
             allTools={tools}
-            user={null}
+            user={currentUser}
             onBack={() => handleTabChange('directory')}
             onSelectTool={handleSelectTool}
             onSubscribePlan={() => {
@@ -316,6 +343,44 @@ export const App: React.FC = () => {
         onClose={() => setVideoPreviewTool(null)}
         onSelectTool={handleSelectTool}
       />
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+        onLoginSuccess={(user) => {
+          setCurrentUser(user);
+          setIsAuthOpen(false);
+        }}
+      />
+
+      {/* User Account Modal */}
+      {currentUser && (
+        <UserAccountModal
+          isOpen={isAccountOpen}
+          onClose={() => setIsAccountOpen(false)}
+          user={currentUser}
+          allTools={tools}
+          onLogout={() => {
+            setCurrentUser(null);
+            setIsAccountOpen(false);
+          }}
+          onUpgradePlan={() => {
+            setIsAccountOpen(false);
+            handleTabChange('deals');
+          }}
+          onCancelSubscription={() => {
+            setCurrentUser((prev) =>
+              prev ? { ...prev, subscription: undefined } : null
+            );
+          }}
+          onSelectTool={handleSelectTool}
+          onOpenSubmitTool={() => {
+            setIsAccountOpen(false);
+            setIsMatcherOpen(true);
+          }}
+        />
+      )}
 
       {/* Floating Ask AI Matcher Copilot Widget (Bottom Right) */}
       <div className="fixed bottom-6 right-6 z-40">

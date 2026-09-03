@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActiveTab } from '../types';
+import { ActiveTab, UserAccount } from '../types';
 import { 
   Sparkles, 
   Search, 
@@ -11,7 +11,8 @@ import {
   BookOpen, 
   Layers,
   Bookmark,
-  Bot
+  Bot,
+  User
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -21,6 +22,9 @@ interface NavbarProps {
   onOpenMatcher: () => void;
   onOpenBookmarks: () => void;
   bookmarkCount: number;
+  user?: UserAccount | null;
+  onOpenAuth?: () => void;
+  onOpenUserAccount?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -30,6 +34,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenMatcher,
   onOpenBookmarks,
   bookmarkCount,
+  user,
+  onOpenAuth,
+  onOpenUserAccount,
 }) => {
   return (
     <header className="fixed top-0 left-0 w-full z-50 bg-white/90 backdrop-blur-xl border-b border-slate-200 shadow-xs">
@@ -184,6 +191,32 @@ export const Navbar: React.FC<NavbarProps> = ({
               </span>
             )}
           </button>
+
+          {/* User Account / Sign In */}
+          {user ? (
+            <button
+              onClick={onOpenUserAccount}
+              className="flex items-center gap-2 p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-all cursor-pointer shadow-xs"
+              title={`${user.displayName} - Account Details`}
+            >
+              <img
+                src={user.photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80'}
+                alt={user.displayName}
+                className="w-7 h-7 rounded-lg object-cover border border-indigo-300"
+              />
+              <span className="text-xs font-semibold text-indigo-900 hidden sm:inline max-w-[90px] truncate">
+                {user.displayName.split(' ')[0]}
+              </span>
+            </button>
+          ) : (
+            <button
+              onClick={onOpenAuth}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition-all cursor-pointer shadow-xs"
+            >
+              <User className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Sign In</span>
+            </button>
+          )}
         </div>
       </div>
 

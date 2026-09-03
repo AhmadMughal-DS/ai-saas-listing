@@ -87,6 +87,7 @@ jobs:
               -p 3000:3000 \
               -e DEEPSEEK_API_KEY="${{ secrets.DEEPSEEK_API_KEY }}" \
               -e MONGODB_URI="${{ secrets.MONGODB_URI }}" \
+              -e FIREBASE_SERVICE_ACCOUNT="${{ secrets.FIREBASE_SERVICE_ACCOUNT }}" \
               -e NODE_ENV=production \
               $IMAGE
 

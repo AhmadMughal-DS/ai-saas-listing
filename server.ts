@@ -1,8 +1,10 @@
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import OpenAI from 'openai';
 import { MongoClient, Db } from 'mongodb';
+import { initializeApp as initFirebaseApp, cert, applicationDefault, App as FirebaseApp } from 'firebase-admin/app';
 import dotenv from 'dotenv';
 import { INITIAL_TOOLS } from './src/data/initialData';
 
@@ -20,6 +22,56 @@ function getAIClient(): OpenAI | null {
     apiKey,
   });
   return aiClient;
+}
+
+// Firebase Admin SDK Manager
+let firebaseApp: FirebaseApp | null = null;
+function getFirebaseAdmin(): FirebaseApp | null {
+  if (firebaseApp) return firebaseApp;
+
+  try {
+    // 1. Direct JSON string in environment variable
+    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+      firebaseApp = initFirebaseApp({
+        credential: cert(serviceAccount),
+      });
+      console.log('✅ Firebase Admin SDK initialized from FIREBASE_SERVICE_ACCOUNT env var');
+      return firebaseApp;
+    }
+
+    // 2. Candidate service account file paths
+    const candidatePaths = [
+      process.env.FIREBASE_SERVICE_ACCOUNT_PATH,
+      process.env.GOOGLE_APPLICATION_CREDENTIALS,
+      path.join(process.cwd(), 'ai-saas-listing-firebase-adminsdk-fbsvc-743174e1f9.json'),
+    ].filter(Boolean) as string[];
+
+    for (const p of candidatePaths) {
+      const resolved = path.isAbsolute(p) ? p : path.join(process.cwd(), p);
+      if (fs.existsSync(resolved)) {
+        const serviceAccount = JSON.parse(fs.readFileSync(resolved, 'utf8'));
+        firebaseApp = initFirebaseApp({
+          credential: cert(serviceAccount),
+        });
+        console.log(`✅ Firebase Admin SDK initialized with service account: ${path.basename(resolved)} (project: ${serviceAccount.project_id || 'ai-saas-listing'})`);
+        return firebaseApp;
+      }
+    }
+
+    // 3. Fallback to application default credentials
+    if (process.env.GOOGLE_APPLICATION_CREDENTIALS && !firebaseApp) {
+      firebaseApp = initFirebaseApp({
+        credential: applicationDefault(),
+      });
+      console.log('✅ Firebase Admin SDK initialized with default credentials');
+      return firebaseApp;
+    }
+  } catch (err: any) {
+    console.warn('⚠️ Firebase Admin initialization note:', err?.message || err);
+  }
+
+  return null;
 }
 
 // MongoDB Database Manager with Resilient Connection & TLS Options
@@ -69,8 +121,8 @@ async function getMongoDb(forceReconnect = false): Promise<Db | null> {
       const isTls = isSrv || uri.includes('ssl=true') || uri.includes('tls=true');
 
       const clientOptions: any = {
-        serverSelectionTimeoutMS: 4000,
-        connectTimeoutMS: 4000,
+        serverSelectionTimeoutMS: 5000,
+        connectTimeoutMS: 5000,
         socketTimeoutMS: 30000,
         maxPoolSize: 10,
         minPoolSize: 0,
@@ -78,13 +130,16 @@ async function getMongoDb(forceReconnect = false): Promise<Db | null> {
         retryReads: true,
       };
 
-      if (isTls) {
+      if (isTls && !isSrv) {
         clientOptions.tls = true;
-        clientOptions.tlsAllowInvalidCertificates = true;
-        clientOptions.tlsInsecure = true;
       }
 
-      mongoClient = new MongoClient(uri, clientOptions);
+      let connectionUri = uri.trim();
+      if (isSrv && !connectionUri.includes('?')) {
+        connectionUri = `${connectionUri}/?retryWrites=true&w=majority`;
+      }
+
+      mongoClient = new MongoClient(connectionUri, clientOptions);
 
       await mongoClient.connect();
       dbInstance = mongoClient.db('aiflux_db');
@@ -128,12 +183,35 @@ async function startServer() {
 
   app.use(express.json({ limit: '10mb' }));
 
-  // Try initializing MongoDB on boot
+  // Try initializing MongoDB & Firebase Admin on boot
   getMongoDb().catch(() => {});
+  try {
+    getFirebaseAdmin();
+  } catch {}
 
   // API Routes
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', time: new Date().toISOString() });
+  });
+
+  // Firebase Admin Status API
+  app.get('/api/firebase/status', (req, res) => {
+    const fb = getFirebaseAdmin();
+    if (fb) {
+      return res.json({
+        status: 'connected',
+        provider: 'Firebase Admin SDK',
+        projectId: fb.options.projectId || 'ai-saas-listing',
+        configured: true,
+      });
+    }
+    return res.json({
+      status: 'unconfigured',
+      provider: 'Firebase Admin SDK',
+      projectId: 'ai-saas-listing',
+      configured: false,
+      note: 'Provide service account JSON or set FIREBASE_SERVICE_ACCOUNT / GOOGLE_APPLICATION_CREDENTIALS',
+    });
   });
 
   // Private Admin Authentication Endpoint
