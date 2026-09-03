@@ -51,7 +51,7 @@ EXPOSE 3000
 
 # Health check — ensures the container is serving responses
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/ || exit 1
 
 # Run the production server
 CMD ["node", "dist/server.cjs"]

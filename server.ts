@@ -13,7 +13,8 @@ dotenv.config();
 let aiClient: OpenAI | null = null;
 function getAIClient(): OpenAI | null {
   if (aiClient) return aiClient;
-  const apiKey = process.env.DEEPSEEK_API_KEY;
+  const rawKey = process.env.DEEPSEEK_API_KEY;
+  const apiKey = rawKey ? rawKey.replace(/^["']|["']$/g, '').trim() : null;
   if (!apiKey || apiKey === 'MY_DEEPSEEK_API_KEY') {
     return null;
   }
@@ -84,8 +85,9 @@ let lastConnectionError: string | null = null;
 const CONNECTION_COOLDOWN_MS = 25000; // 25s cooling period between connection attempts if failed
 
 async function getMongoDb(forceReconnect = false): Promise<Db | null> {
-  const uri = process.env.MONGODB_URI;
-  if (!uri || uri === 'MY_MONGODB_URI' || uri.trim() === '') {
+  const rawUri = process.env.MONGODB_URI;
+  const uri = rawUri ? rawUri.replace(/^["']|["']$/g, '').trim() : null;
+  if (!uri || uri === 'MY_MONGODB_URI' || uri === '') {
     return null;
   }
 
