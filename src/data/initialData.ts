@@ -1423,8 +1423,8 @@ export const MEMBERSHIP_PLANS: MembershipPlan[] = [
 
 export const FAQS = [
   {
-    question: 'How are the traffic and ranking estimates computed on AIFlux?',
-    answer: 'AIFlux synthesizes verified web telemetry, monthly visitor analytics, search engine indexing velocity, and community engagement scores to provide accurate monthly visits and global rankings updated weekly.'
+    question: 'How are the traffic and ranking estimates computed on ToolverAI (toolverai.com)?',
+    answer: 'ToolverAI synthesizes verified web telemetry, monthly visitor analytics, search engine indexing velocity, and community engagement scores to provide accurate monthly visits and global rankings updated weekly.'
   },
   {
     question: 'How do the AI Deals and Promo Codes work?',

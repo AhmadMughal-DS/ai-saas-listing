@@ -84,7 +84,7 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
         date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
         amount: `$${plan.price}.00`,
         status: 'paid',
-        invoiceNumber: `AIFLUX-${Math.floor(100000 + Math.random() * 900000)}`,
+        invoiceNumber: `TOOLVER-${Math.floor(100000 + Math.random() * 900000)}`,
         planName: plan.name,
       };
 

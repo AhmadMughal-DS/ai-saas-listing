@@ -84,7 +84,7 @@ export const SubmitToolView: React.FC<SubmitToolViewProps> = ({
             authorName: user?.displayName || 'Ahmad Zafar',
             authorAvatar: user?.photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
             rating: 5,
-            comment: 'Newly indexed on AIFlux. Excited to share our model with the community!',
+            comment: 'Newly indexed on ToolverAI (toolverai.com). Excited to share our model with the community!',
             date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
             verified: true,
           },
@@ -438,7 +438,7 @@ export const SubmitToolView: React.FC<SubmitToolViewProps> = ({
                     className="px-8 py-3.5 rounded-xl btn-cyan text-xs font-semibold flex items-center gap-2 shadow-xs cursor-pointer"
                   >
                     {isSubmitting ? (
-                      <span>Publishing to AIFlux...</span>
+                      <span>Publishing to ToolverAI...</span>
                     ) : (
                       <>
                         <CheckCircle className="w-4 h-4" />

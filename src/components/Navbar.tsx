@@ -1,5 +1,6 @@
 import React from 'react';
 import { ActiveTab, UserAccount } from '../types';
+import { Logo } from './Logo';
 import { 
   Sparkles, 
   Search, 
@@ -33,24 +34,11 @@ export const Navbar: React.FC<NavbarProps> = ({
     <header className="fixed top-0 left-0 w-full z-50 bg-white/90 backdrop-blur-xl border-b border-slate-200 shadow-xs">
       <div className="max-w-[1440px] mx-auto h-20 px-4 sm:px-8 flex items-center justify-between">
         {/* Brand Logo */}
-        <div
+        <Logo
+          size="md"
+          showText={true}
           onClick={() => setActiveTab('directory')}
-          className="flex items-center gap-3 cursor-pointer group shrink-0"
-        >
-          <div className="relative flex items-center justify-center">
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shadow-xs group-hover:border-indigo-300 transition-all">
-              <Sparkles className="w-5 h-5 text-indigo-600" />
-            </div>
-          </div>
-          <div className="flex flex-col">
-            <span className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 leading-none">
-              AIFlux
-            </span>
-            <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider mt-0.5 hidden sm:inline">
-              Intelligence Directory & Metrics
-            </span>
-          </div>
-        </div>
+        />
 
         {/* Primary Navigation Tabs */}
         <nav className="hidden lg:flex items-center gap-1 xl:gap-2">

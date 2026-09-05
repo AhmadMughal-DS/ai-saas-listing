@@ -39,7 +39,7 @@ const getInitialTabFromUrl = (): ActiveTab => {
 export const App: React.FC = () => {
   // Tools state initialized from localStorage or initial dataset
   const [tools, setTools] = useState<AITool[]>(() => {
-    const saved = localStorage.getItem('aiflux_tools');
+    const saved = localStorage.getItem('toolverai_tools') || localStorage.getItem('aiflux_tools');
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -52,7 +52,7 @@ export const App: React.FC = () => {
 
   // Bookmarked Tool IDs
   const [bookmarkedIds, setBookmarkedIds] = useState<string[]>(() => {
-    const saved = localStorage.getItem('aiflux_bookmarks');
+    const saved = localStorage.getItem('toolverai_bookmarks') || localStorage.getItem('aiflux_bookmarks');
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -69,7 +69,7 @@ export const App: React.FC = () => {
   const [isMatcherOpen, setIsMatcherOpen] = useState<boolean>(false);
   const [isBookmarksOpen, setIsBookmarksOpen] = useState<boolean>(false);
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => {
-    const saved = localStorage.getItem('aiflux_user');
+    const saved = localStorage.getItem('toolverai_user') || localStorage.getItem('aiflux_user');
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -118,19 +118,23 @@ export const App: React.FC = () => {
 
   // Sync tools to localStorage
   useEffect(() => {
+    localStorage.setItem('toolverai_tools', JSON.stringify(tools));
     localStorage.setItem('aiflux_tools', JSON.stringify(tools));
   }, [tools]);
 
   // Sync bookmarks to localStorage
   useEffect(() => {
+    localStorage.setItem('toolverai_bookmarks', JSON.stringify(bookmarkedIds));
     localStorage.setItem('aiflux_bookmarks', JSON.stringify(bookmarkedIds));
   }, [bookmarkedIds]);
 
   // Sync user to localStorage
   useEffect(() => {
     if (currentUser) {
+      localStorage.setItem('toolverai_user', JSON.stringify(currentUser));
       localStorage.setItem('aiflux_user', JSON.stringify(currentUser));
     } else {
+      localStorage.removeItem('toolverai_user');
       localStorage.removeItem('aiflux_user');
     }
   }, [currentUser]);

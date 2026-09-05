@@ -112,7 +112,7 @@ export const AIMatcherModal: React.FC<AIMatcherModalProps> = ({
                 Smart AI Copilot Matcher
               </h2>
               <p className="text-xs text-slate-500">
-                Powered by DeepSeek & AIFlux traffic intelligence
+                Powered by DeepSeek & ToolverAI traffic intelligence (toolverai.com)
               </p>
             </div>
           </div>

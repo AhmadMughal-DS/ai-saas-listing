@@ -125,7 +125,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
     const cleanPass = passwordInput.trim();
 
     if (
-      (cleanUser === 'admin' && (cleanPass === 'aiflux2026' || cleanPass === 'admin123' || cleanPass === 'admin')) ||
+      (cleanUser === 'admin' && (cleanPass === 'toolver2026' || cleanPass === 'aiflux2026' || cleanPass === 'admin123' || cleanPass === 'admin')) ||
+      (cleanUser === 'toolver_admin' && (cleanPass === 'toolver2026' || cleanPass === 'aiflux2026')) ||
       (cleanUser === 'aiflux_admin' && cleanPass === 'aiflux2026')
     ) {
       if (rememberMe) {
@@ -181,7 +182,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
     pros: 'High generation accuracy, Seamless developer workflow, Active updates',
     cons: 'Advanced tier required for heavy enterprise workloads',
     dealDiscount: '20% OFF',
-    dealCode: 'AIFLUX20',
+    dealCode: 'TOOLVER20',
     dealDescription: 'Exclusive discount for community members',
     dealValidUntil: '2026-12-31',
   };
@@ -568,7 +569,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
               </div>
               <div className="text-[11px] font-mono text-slate-600 flex items-center justify-between">
                 <span>User: <strong className="text-indigo-600">admin</strong></span>
-                <span>Pass: <strong className="text-indigo-600">aiflux2026</strong></span>
+                <span>Pass: <strong className="text-indigo-600">toolver2026</strong></span>
               </div>
             </div>
             
@@ -592,7 +593,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
           <div className="flex items-center gap-2 mb-3 flex-wrap">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-semibold uppercase tracking-wide shadow-xs">
               <Database className="w-3.5 h-3.5 text-indigo-600" />
-              <span>AIFlux Database Administration</span>
+              <span>ToolverAI Database Administration</span>
             </div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -657,7 +658,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                Database: <code className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-800 font-mono font-bold">aiflux_db</code> • Collection: <code className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-800 font-mono font-bold">tools</code> • Total Live Records: <span className="font-bold text-indigo-600">{tools.length}</span>
+                Database: <code className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-800 font-mono font-bold">{dbStatus?.database || 'toolver_db'}</code> • Collection: <code className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-800 font-mono font-bold">tools</code> • Total Live Records: <span className="font-bold text-indigo-600">{tools.length}</span>
               </p>
             </div>
           </div>
@@ -977,7 +978,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     type="text"
                     value={formData.dealCode}
                     onChange={(e) => setFormData({ ...formData, dealCode: e.target.value })}
-                    placeholder="e.g. AIFLUX25"
+                    placeholder="e.g. TOOLVER25"
                     className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
                   />
                 </div>

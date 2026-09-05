@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { UserAccount } from '../types';
 import { Sparkles, Mail, Lock, User, X } from 'lucide-react';
+import { Logo } from './Logo';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -37,7 +38,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           status: 'active',
           amount: 20,
           currentPeriodEnd: 'Sep 30, 2026',
-          stripeSubscriptionId: 'sub_aiflux_pro_993',
+          stripeSubscriptionId: 'sub_toolver_pro_993',
           cardBrand: 'Visa',
           cardLast4: '4242',
         },
@@ -49,7 +50,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             date: 'Aug 24, 2026',
             amount: '$20.00',
             status: 'paid',
-            invoiceNumber: 'AIFLUX-892104',
+            invoiceNumber: 'TOOLVER-892104',
             planName: 'Featured Membership',
           },
         ],
@@ -92,14 +93,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
         {/* Logo & Title */}
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600 mb-3 shadow-xs">
-            <Sparkles className="w-6 h-6" />
+          <div className="flex justify-center mb-3">
+            <Logo size="lg" showText={false} />
           </div>
           <h2 className="font-heading text-2xl font-bold text-slate-900">
-            {isSignUp ? 'Create your AIFlux Account' : 'Welcome to AIFlux'}
+            {isSignUp ? 'Create your ToolverAI Account' : 'Welcome to ToolverAI'}
           </h2>
           <p className="text-xs text-slate-500 mt-1 font-normal">
-            Real-time authentication and directory synchronization
+            Real-time authentication and directory synchronization on toolverai.com
           </p>
         </div>
 
@@ -180,7 +181,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             disabled={loading}
             className="w-full py-3 rounded-xl btn-cyan font-semibold flex items-center justify-center gap-2 shadow-xs transition-all mt-6 cursor-pointer"
           >
-            {loading ? 'Authenticating...' : isSignUp ? 'Create Account' : 'Sign In to AIFlux'}
+            {loading ? 'Authenticating...' : isSignUp ? 'Create Account' : 'Sign In to ToolverAI'}
           </button>
         </form>
 

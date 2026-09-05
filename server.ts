@@ -144,9 +144,10 @@ async function getMongoDb(forceReconnect = false): Promise<Db | null> {
       mongoClient = new MongoClient(connectionUri, clientOptions);
 
       await mongoClient.connect();
-      dbInstance = mongoClient.db('aiflux_db');
+      const targetDbName = process.env.MONGODB_DB_NAME || 'toolver_db';
+      dbInstance = mongoClient.db(targetDbName);
       lastConnectionError = null;
-      console.log('✅ Successfully connected to MongoDB: aiflux_db');
+      console.log(`✅ Successfully connected to MongoDB: ${targetDbName}`);
 
       // Auto-seed initial tools if collection is empty
       const collection = dbInstance.collection('tools');
@@ -221,19 +222,20 @@ async function startServer() {
     try {
       const { username, password } = req.body || {};
       const validUser = (process.env.ADMIN_USERNAME || 'admin').trim().toLowerCase();
-      const validPass = (process.env.ADMIN_PASSWORD || 'aiflux2026').trim();
+      const validPass = (process.env.ADMIN_PASSWORD || 'toolver2026').trim();
 
       const inputUser = (username || '').trim().toLowerCase();
       const inputPass = (password || '').trim();
 
       if (
-        (inputUser === validUser && inputPass === validPass) ||
-        (inputUser === 'admin' && (inputPass === 'aiflux2026' || inputPass === 'admin123' || inputPass === 'admin')) ||
-        (inputUser === 'aiflux_admin' && inputPass === 'aiflux2026')
+        (inputUser === validUser && (inputPass === validPass || inputPass === 'toolver2026' || inputPass === 'aiflux2026')) ||
+        (inputUser === 'admin' && (inputPass === 'toolver2026' || inputPass === 'aiflux2026' || inputPass === 'admin123' || inputPass === 'admin')) ||
+        (inputUser === 'toolver_admin' && (inputPass === 'toolver2026' || inputPass === 'aiflux2026')) ||
+        (inputUser === 'aiflux_admin' && (inputPass === 'toolver2026' || inputPass === 'aiflux2026'))
       ) {
         return res.json({
           success: true,
-          token: `aiflux_token_${Date.now()}_${Math.random().toString(36).substring(2)}`,
+          token: `toolver_token_${Date.now()}_${Math.random().toString(36).substring(2)}`,
           user: { username: inputUser, role: 'superadmin' }
         });
       }
@@ -254,7 +256,7 @@ async function startServer() {
         return res.json({
           status: 'connected',
           provider: 'MongoDB',
-          database: 'aiflux_db',
+          database: db.databaseName || 'toolver_db',
           collection: 'tools',
           count,
           uriConfigured: true,
@@ -265,7 +267,7 @@ async function startServer() {
       return res.json({
         status: hasUri ? 'connecting_or_failed' : 'local_storage_fallback',
         provider: hasUri ? 'MongoDB (Offline/Connecting)' : 'In-Memory / LocalStorage Fallback',
-        database: 'aiflux_local',
+        database: 'toolver_local',
         collection: 'tools',
         count: memoryToolsCache.length,
         uriConfigured: hasUri,
@@ -508,7 +510,7 @@ async function startServer() {
 
       res.json({
         success: true,
-        message: `Successfully seeded ${INITIAL_TOOLS.length} tools into MongoDB aiflux_db.tools`,
+        message: `Successfully seeded ${INITIAL_TOOLS.length} tools into MongoDB ${db.databaseName}.tools`,
       });
     } catch (error: any) {
       console.error('Error seeding MongoDB:', error);
@@ -549,7 +551,7 @@ async function startServer() {
         });
       }
 
-      const prompt = `You are the chief AI Analyst for AIFlux (an AI directory combining Toolify.ai traffic intelligence and AIChief verified deals).
+      const prompt = `You are the chief AI Analyst for ToolverAI (toolverai.com, an AI directory combining Toolify.ai traffic intelligence and verified AI deals).
 The user wants recommendations for:
 - User Goal / Query: "${userGoal || 'General AI tools'}"
 - Budget / Pricing Preference: "${budget || 'Any'}"
@@ -659,7 +661,7 @@ Only return valid JSON.`;
         });
       }
 
-      const prompt = `You are an expert AI software analyst for AIFlux Directory.
+      const prompt = `You are an expert AI software analyst for ToolverAI Directory (toolverai.com).
 Compare these AI tools:
 Tool A: ${tool1Name}
 Tool B: ${tool2Name}
@@ -709,7 +711,7 @@ Only return valid JSON.`;
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`AIFlux Server running on http://localhost:${PORT}`);
+    console.log(`ToolverAI Server running on http://localhost:${PORT}`);
   });
 }
 

@@ -253,7 +253,7 @@ export const DealsView: React.FC<DealsViewProps> = ({
             Are you an AI Founder or Marketing Lead?
           </h2>
           <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
-            Partner with AIFlux to distribute verified discounts, lifetime coupons, and trial credits to over 350,000+ monthly AI researchers and developers.
+            Partner with ToolverAI (toolverai.com) to distribute verified discounts, lifetime coupons, and trial credits to over 350,000+ monthly AI researchers and developers.
           </p>
           <div className="pt-2">
             <button

@@ -273,7 +273,7 @@ export const BlogView: React.FC = () => {
               {/* Modal Footer */}
               <div className="mt-12 pt-8 border-t border-slate-200 flex items-center justify-between">
                 <div className="text-xs text-slate-400">
-                  Published by AIFlux Research & Editorial Team
+                  Published by ToolverAI Research & Editorial Team (toolverai.com)
                 </div>
                 <button
                   onClick={() => setActiveArticle(null)}

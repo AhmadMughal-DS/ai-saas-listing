@@ -1,6 +1,7 @@
 import React from 'react';
-import { Sparkles, Flame, Tag, Terminal, GitCompare, Lock } from 'lucide-react';
+import { Flame, Tag, Terminal, GitCompare, Lock } from 'lucide-react';
 import { ActiveTab } from '../types';
+import { Logo } from './Logo';
 
 interface FooterProps {
   onNavigate: (tab: ActiveTab) => void;
@@ -11,17 +12,11 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
     <footer className="bg-white border-t border-slate-200 w-full py-16 px-4 sm:px-8 mt-auto relative z-10">
       <div className="max-w-[1440px] mx-auto flex flex-col items-center gap-8">
         {/* Brand */}
-        <div
+        <Logo
+          size="md"
+          showText={true}
           onClick={() => onNavigate('directory')}
-          className="flex items-center gap-2.5 cursor-pointer group"
-        >
-          <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center group-hover:border-indigo-300 transition-colors">
-            <Sparkles className="w-5 h-5 text-indigo-600" />
-          </div>
-          <span className="font-heading text-2xl font-extrabold text-slate-900 tracking-tight">
-            AIFlux
-          </span>
-        </div>
+        />
 
         {/* Navigation Links */}
         <div className="flex flex-wrap justify-center items-center gap-4 sm:gap-8 text-sm text-slate-600 font-semibold">
@@ -75,7 +70,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
 
         {/* Secondary Info & Copyright */}
         <div className="text-xs text-slate-400 text-center space-y-2">
-          <p>© {new Date().getFullYear()} AIFlux Intelligence Directory. Real-time web traffic, model comparisons, and verified coupons.</p>
+          <p>© {new Date().getFullYear()} ToolverAI Intelligence Directory (toolverai.com). Real-time web traffic, model comparisons, and verified coupons.</p>
           <div className="flex items-center justify-center gap-4 text-[11px] text-slate-400">
             <span>Benchmarked against global search velocity & developer usage statistics.</span>
             <span>•</span>

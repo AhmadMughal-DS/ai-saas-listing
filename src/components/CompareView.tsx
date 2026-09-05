@@ -276,7 +276,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
             </div>
             <div>
               <span className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-300">
-                AIFlux AI Executive Verdict
+                ToolverAI Executive Verdict
               </span>
               <h2 className="font-heading font-extrabold text-xl sm:text-2xl text-white">
                 {verdict.verdictTitle}
