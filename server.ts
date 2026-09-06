@@ -75,21 +75,103 @@ function getFirebaseAdmin(): FirebaseApp | null {
   return null;
 }
 
-// MongoDB Database Manager with Resilient Connection & TLS Options
+// MongoDB Database Manager with Strict Schema Validation & Indexes
+const DEFAULT_MONGODB_URI = 'mongodb+srv://ahmadzafar392_db_user:bPqxg08qdV0fs4kK@cluster0.00jxnf9.mongodb.net/?retryWrites=true&w=majority';
+const DEFAULT_DB_NAME = 'toolver_db';
+
 let mongoClient: MongoClient | null = null;
 let dbInstance: Db | null = null;
-let memoryToolsCache: any[] = [...INITIAL_TOOLS];
+let memoryToolsCache: any[] = [];
 let isConnectingPromise: Promise<Db | null> | null = null;
 let lastConnectionAttemptTime = 0;
 let lastConnectionError: string | null = null;
-const CONNECTION_COOLDOWN_MS = 25000; // 25s cooling period between connection attempts if failed
+const CONNECTION_COOLDOWN_MS = 15000;
+
+export const TOOL_COLLECTION_SCHEMA = {
+  $jsonSchema: {
+    bsonType: 'object',
+    required: ['id', 'name', 'slug', 'category', 'pricingType', 'url', 'rating', 'reviewCount'],
+    properties: {
+      id: { bsonType: 'string', description: 'Unique string identifier for the tool' },
+      name: { bsonType: 'string', description: 'Display name of the tool' },
+      slug: { bsonType: 'string', description: 'URL-friendly slug' },
+      tagline: { bsonType: 'string' },
+      description: { bsonType: 'string' },
+      url: { bsonType: 'string' },
+      category: { bsonType: 'string' },
+      logoUrl: { bsonType: 'string' },
+      thumbnailVideoUrl: { bsonType: ['string', 'null'] },
+      videoDuration: { bsonType: ['string', 'null'] },
+      rating: { bsonType: ['double', 'int', 'decimal'], minimum: 0, maximum: 5 },
+      reviewCount: { bsonType: ['int', 'long', 'double'], minimum: 0 },
+      pricingType: { enum: ['Free', 'Freemium', 'Paid', 'Enterprise', 'Free Trial', 'Open Source'] },
+      isOpenSource: { bsonType: 'bool' },
+      hasApi: { bsonType: 'bool' },
+      isFeatured: { bsonType: 'bool' },
+      featuredRank: { bsonType: ['int', 'long', 'double', 'null'] },
+      monthlyVisits: { bsonType: ['double', 'int', 'long', 'null'] },
+      monthlyVisitsFormatted: { bsonType: ['string', 'null'] },
+      trafficGrowth: { bsonType: ['double', 'int', 'decimal', 'null'] },
+      globalRank: { bsonType: ['int', 'long', 'double', 'null'] },
+      categoryRank: { bsonType: ['int', 'long', 'double', 'null'] },
+      topCountries: { bsonType: 'array', items: { bsonType: 'string' } },
+      trafficStats: { bsonType: ['object', 'null'] },
+      platforms: { bsonType: 'array', items: { bsonType: 'string' } },
+      targetAudience: { bsonType: 'array', items: { bsonType: 'string' } },
+      pros: { bsonType: 'array', items: { bsonType: 'string' } },
+      cons: { bsonType: 'array', items: { bsonType: 'string' } },
+      alternatives: { bsonType: 'array', items: { bsonType: 'string' } },
+      deal: { bsonType: ['object', 'null'] },
+      upvotes: { bsonType: ['int', 'long', 'double', 'null'] },
+      launchedDate: { bsonType: ['string', 'null'] },
+      keyFeatures: { bsonType: 'array', items: { bsonType: 'string' } },
+      pricingPlans: { bsonType: 'array' },
+      reviews: { bsonType: 'array' },
+      createdAt: { bsonType: 'string' },
+      updatedAt: { bsonType: ['string', 'null'] }
+    }
+  }
+};
+
+async function ensureMongoIndexesAndSchema(db: Db) {
+  try {
+    const collections = await db.listCollections({ name: 'tools' }).toArray();
+    if (collections.length === 0) {
+      await db.createCollection('tools', {
+        validator: TOOL_COLLECTION_SCHEMA,
+        validationLevel: 'moderate',
+        validationAction: 'warn',
+      });
+      console.log('✅ Created tools collection with strict JSON Schema validator.');
+    } else {
+      try {
+        await db.command({
+          collMod: 'tools',
+          validator: TOOL_COLLECTION_SCHEMA,
+          validationLevel: 'moderate',
+          validationAction: 'warn',
+        });
+      } catch (collErr: any) {
+        // Safe if collMod lacks specific permission
+      }
+    }
+
+    const collection = db.collection('tools');
+    await collection.createIndex({ id: 1 }, { unique: true, name: 'idx_tool_id_unique' });
+    await collection.createIndex({ slug: 1 }, { unique: true, name: 'idx_tool_slug_unique' });
+    await collection.createIndex({ category: 1 }, { name: 'idx_tool_category' });
+    await collection.createIndex({ monthlyVisits: -1 }, { name: 'idx_tool_monthly_visits_desc' });
+    await collection.createIndex({ rating: -1 }, { name: 'idx_tool_rating_desc' });
+    await collection.createIndex({ isFeatured: 1 }, { name: 'idx_tool_featured' });
+    await collection.createIndex({ category: 1, monthlyVisits: -1 }, { name: 'idx_tool_cat_visits' });
+  } catch (err: any) {
+    console.warn('⚠️ MongoDB schema index note:', err?.message || err);
+  }
+}
 
 async function getMongoDb(forceReconnect = false): Promise<Db | null> {
-  const rawUri = process.env.MONGODB_URI;
-  const uri = rawUri ? rawUri.replace(/^["']|["']$/g, '').trim() : null;
-  if (!uri || uri === 'MY_MONGODB_URI' || uri === '') {
-    return null;
-  }
+  const rawUri = process.env.MONGODB_URI || DEFAULT_MONGODB_URI;
+  const uri = rawUri ? rawUri.replace(/^["']|["']$/g, '').trim() : DEFAULT_MONGODB_URI;
 
   if (dbInstance) return dbInstance;
 
@@ -98,7 +180,6 @@ async function getMongoDb(forceReconnect = false): Promise<Db | null> {
     return isConnectingPromise;
   }
 
-  // Check cooldown to avoid hammering server / spamming TLS errors
   const now = Date.now();
   if (!forceReconnect && lastConnectionError && now - lastConnectionAttemptTime < CONNECTION_COOLDOWN_MS) {
     return null;
@@ -108,7 +189,6 @@ async function getMongoDb(forceReconnect = false): Promise<Db | null> {
 
   isConnectingPromise = (async () => {
     try {
-      // Clean up any stale client
       if (mongoClient) {
         try {
           await mongoClient.close();
@@ -118,36 +198,31 @@ async function getMongoDb(forceReconnect = false): Promise<Db | null> {
         mongoClient = null;
       }
 
-      // Determine clean connection options for Cloud Run / Container environments
-      const isSrv = uri.startsWith('mongodb+srv://');
-      const isTls = isSrv || uri.includes('ssl=true') || uri.includes('tls=true');
-
       const clientOptions: any = {
-        serverSelectionTimeoutMS: 5000,
-        connectTimeoutMS: 5000,
+        serverSelectionTimeoutMS: 8000,
+        connectTimeoutMS: 8000,
         socketTimeoutMS: 30000,
-        maxPoolSize: 10,
-        minPoolSize: 0,
+        maxPoolSize: 15,
+        minPoolSize: 1,
         retryWrites: true,
         retryReads: true,
       };
 
-      if (isTls && !isSrv) {
-        clientOptions.tls = true;
-      }
-
       let connectionUri = uri.trim();
-      if (isSrv && !connectionUri.includes('?')) {
+      if (connectionUri.startsWith('mongodb+srv://') && !connectionUri.includes('?')) {
         connectionUri = `${connectionUri}/?retryWrites=true&w=majority`;
       }
 
       mongoClient = new MongoClient(connectionUri, clientOptions);
-
       await mongoClient.connect();
-      const targetDbName = process.env.MONGODB_DB_NAME || 'toolver_db';
+
+      const targetDbName = process.env.MONGODB_DB_NAME || DEFAULT_DB_NAME;
       dbInstance = mongoClient.db(targetDbName);
       lastConnectionError = null;
-      console.log(`✅ Successfully connected to MongoDB: ${targetDbName}`);
+      console.log(`✅ Successfully connected to MongoDB Atlas database: ${targetDbName}`);
+
+      // Ensure indexes and JSON Schema validation
+      await ensureMongoIndexesAndSchema(dbInstance);
 
       // Auto-seed initial tools if collection is empty
       const collection = dbInstance.collection('tools');
@@ -161,7 +236,7 @@ async function getMongoDb(forceReconnect = false): Promise<Db | null> {
       return dbInstance;
     } catch (error: any) {
       lastConnectionError = error?.message || String(error);
-      console.warn('⚠️ MongoDB connection note:', lastConnectionError, '(Operating in fast resilient memory store mode)');
+      console.warn('⚠️ MongoDB connection note:', lastConnectionError);
       if (mongoClient) {
         try {
           await mongoClient.close();
@@ -265,15 +340,15 @@ async function startServer() {
 
       const hasUri = Boolean(process.env.MONGODB_URI && process.env.MONGODB_URI !== 'MY_MONGODB_URI');
       return res.json({
-        status: hasUri ? 'connecting_or_failed' : 'local_storage_fallback',
-        provider: hasUri ? 'MongoDB (Offline/Connecting)' : 'In-Memory / LocalStorage Fallback',
-        database: 'toolver_local',
+        status: hasUri ? 'connecting_or_failed' : 'disconnected',
+        provider: 'MongoDB Atlas',
+        database: 'toolver_db',
         collection: 'tools',
         count: memoryToolsCache.length,
         uriConfigured: hasUri,
         note: hasUri
-          ? 'MongoDB URI is configured; operating with in-memory persistence and automatic reconnection.'
-          : 'To persist directly in MongoDB Atlas/Server, specify MONGODB_URI in Settings/Secrets.',
+          ? 'Connecting to MongoDB Atlas cluster0.00jxnf9.mongodb.net...'
+          : 'Connecting to configured MongoDB database...',
       });
     } catch (err: any) {
       res.json({

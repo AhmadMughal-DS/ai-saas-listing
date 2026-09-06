@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { AITool, ActiveTab } from '../types';
+import { Hero3DModel } from './Hero3DModel';
 import { 
   Search, 
   Star, 
@@ -25,6 +26,7 @@ interface DirectoryViewProps {
   onOpenVideoPreview: (tool: AITool) => void;
   onNavigate: (tab: ActiveTab) => void;
   onOpenSubmit?: () => void;
+  isLoading?: boolean;
 }
 
 const CATEGORIES = [
@@ -43,6 +45,7 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
   onSelectTool,
   onOpenVideoPreview,
   onNavigate,
+  isLoading = false,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -94,21 +97,29 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
     <div className="w-full pb-24">
       {/* Hero Section */}
       <section className="relative pt-32 pb-16 px-4 sm:px-8 max-w-[1440px] mx-auto text-center flex flex-col items-center">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-semibold tracking-wide uppercase mb-6 shadow-xs">
-          <Flame className="w-3.5 h-3.5 text-orange-500" />
-          <span>Tracking 5,000+ AI Tools & 4B+ Monthly Visits</span>
+        {/* Main Headline with 3D Model in the Background */}
+        <div className="relative w-full flex flex-col items-center justify-center mb-8 py-4 sm:py-6">
+          {/* 3D WebGL Mesh Backdrop directly centered behind headline */}
+          <Hero3DModel />
+
+          <div className="relative z-10 flex flex-col items-center max-w-4xl">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-semibold tracking-wide uppercase mb-6 shadow-xs backdrop-blur-xs">
+              <Flame className="w-3.5 h-3.5 text-orange-500" />
+              <span>Tracking 5,000+ AI Tools & 4B+ Monthly Visits</span>
+            </div>
+
+            <h1 className="font-heading text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-slate-900 leading-[1.1] mb-6 drop-shadow-xs">
+              The World’s Leading{' '}
+              <span className="text-indigo-600">
+                AI Directory & Rankings
+              </span>
+            </h1>
+
+            <p className="text-base sm:text-lg text-slate-600 max-w-2xl font-normal leading-relaxed">
+              Search, benchmark, and compare monthly traffic, exclusive discount promo codes, and production prompts for frontier AI tools.
+            </p>
+          </div>
         </div>
-
-        <h1 className="font-heading text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-slate-900 max-w-4xl leading-[1.1] mb-6">
-          The World’s Leading{' '}
-          <span className="text-indigo-600">
-            AI Directory & Rankings
-          </span>
-        </h1>
-
-        <p className="text-base sm:text-lg text-slate-500 max-w-2xl font-normal mb-8 leading-relaxed">
-          Search, benchmark, and compare monthly traffic, exclusive discount promo codes, and production prompts for frontier AI tools.
-        </p>
 
         {/* Global Live Search Bar */}
         <div className="w-full max-w-2xl relative mb-6 group">
@@ -340,7 +351,52 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
         </div>
 
         {/* Tools Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((idx) => (
+              <div
+                key={idx}
+                className="bg-white border border-slate-200 rounded-3xl overflow-hidden animate-pulse shadow-xs"
+              >
+                <div className="aspect-[16/9] w-full bg-slate-100" />
+                <div className="p-6 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-slate-100 shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 bg-slate-100 rounded-md w-3/4" />
+                      <div className="h-3 bg-slate-100 rounded-md w-1/2" />
+                    </div>
+                  </div>
+                  <div className="space-y-2 pt-2">
+                    <div className="h-3 bg-slate-100 rounded w-full" />
+                    <div className="h-3 bg-slate-100 rounded w-4/5" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filteredTools.length === 0 ? (
+          <div className="py-16 text-center bg-white border border-slate-200 rounded-3xl p-8 max-w-xl mx-auto shadow-xs">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-4">
+              <Search className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 mb-1">No AI tools found</h3>
+            <p className="text-sm text-slate-500 mb-6">
+              No tools match your current search and filter criteria.
+            </p>
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                setSelectedCategory('All');
+                setFeatureFilter('all');
+              }}
+              className="px-5 py-2.5 rounded-xl btn-purple text-xs font-semibold cursor-pointer shadow-xs"
+            >
+              Reset All Filters
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredTools.slice(0, visibleCount).map((tool) => (
             <div
               key={tool.id}
@@ -485,6 +541,7 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
             </div>
           ))}
         </div>
+        )}
 
         {/* Load More Button */}
         {visibleCount < filteredTools.length && (

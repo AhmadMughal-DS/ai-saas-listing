@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { AITool, ActiveTab, ToolReview, UserAccount } from './types';
-import { INITIAL_TOOLS } from './data/initialData';
 import { CyberBackground } from './components/CyberBackground';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
@@ -18,7 +17,20 @@ import { AIMatcherModal } from './components/AIMatcherModal';
 import { BookmarksDrawer } from './components/BookmarksDrawer';
 import { AuthModal } from './components/AuthModal';
 import { UserAccountModal } from './components/UserAccountModal';
+import { SEOManager } from './components/SEOManager';
 import { Bot, Sparkles } from 'lucide-react';
+
+// Helper to extract tool identifier from path or hash (e.g. /tool/cursor-ai or #tool-cursor)
+const getToolIdentifierFromUrl = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  const path = window.location.pathname;
+  const match = path.match(/\/tool\/([^/?#]+)/i);
+  if (match && match[1]) return decodeURIComponent(match[1]);
+  const hash = window.location.hash;
+  const hashMatch = hash.match(/#\/?tool[-/]([^/?#]+)/i);
+  if (hashMatch && hashMatch[1]) return decodeURIComponent(hashMatch[1]);
+  return null;
+};
 
 // Helper to parse URL path/hash
 const getInitialTabFromUrl = (): ActiveTab => {
@@ -26,6 +38,7 @@ const getInitialTabFromUrl = (): ActiveTab => {
   const path = window.location.pathname.toLowerCase();
   const hash = window.location.hash.toLowerCase();
 
+  if (path.includes('/tool/') || hash.includes('tool-') || hash.includes('tool/')) return 'tool-detail';
   if (path.includes('admin') || hash.includes('admin')) return 'admin';
   if (path.includes('rankings') || hash.includes('rankings')) return 'rankings';
   if (path.includes('compare') || hash.includes('compare')) return 'compare';
@@ -37,18 +50,9 @@ const getInitialTabFromUrl = (): ActiveTab => {
 };
 
 export const App: React.FC = () => {
-  // Tools state initialized from localStorage or initial dataset
-  const [tools, setTools] = useState<AITool[]>(() => {
-    const saved = localStorage.getItem('toolverai_tools') || localStorage.getItem('aiflux_tools');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        return INITIAL_TOOLS;
-      }
-    }
-    return INITIAL_TOOLS;
-  });
+  // Tools state initialized solely from MongoDB Atlas API (No localStorage caching for tools)
+  const [tools, setTools] = useState<AITool[]>([]);
+  const [isLoadingTools, setIsLoadingTools] = useState<boolean>(true);
 
   // Bookmarked Tool IDs
   const [bookmarkedIds, setBookmarkedIds] = useState<string[]>(() => {
@@ -82,6 +86,16 @@ export const App: React.FC = () => {
   const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
   const [isAccountOpen, setIsAccountOpen] = useState<boolean>(false);
 
+  // Clear any residual tools from localStorage to ensure 100% pure MongoDB usage
+  useEffect(() => {
+    try {
+      localStorage.removeItem('toolverai_tools');
+      localStorage.removeItem('aiflux_tools');
+    } catch {
+      // ignore
+    }
+  }, []);
+
   // Sync URL changes and popstate (browser back/forward & direct links)
   useEffect(() => {
     const handleLocationChange = () => {
@@ -97,30 +111,42 @@ export const App: React.FC = () => {
     };
   }, []);
 
-  // Fetch latest tools from MongoDB API on load
+  // Fetch tools directly from MongoDB Atlas backend API
   const fetchApiTools = async () => {
+    setIsLoadingTools(true);
     try {
       const res = await fetch('/api/tools');
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           setTools(data);
+
+          // Restore tool detail from URL if direct link visited
+          const toolParam = getToolIdentifierFromUrl();
+          if (toolParam) {
+            const matched = data.find(
+              (t: AITool) =>
+                t.slug?.toLowerCase() === toolParam.toLowerCase() ||
+                t.id.toLowerCase() === toolParam.toLowerCase() ||
+                t.name.toLowerCase().replace(/[^a-z0-9]/g, '-') === toolParam.toLowerCase()
+            );
+            if (matched) {
+              setSelectedTool(matched);
+              setActiveTab('tool-detail');
+            }
+          }
         }
       }
     } catch (e) {
-      console.warn('Using local tools dataset:', e);
+      console.error('Error fetching tools from MongoDB Atlas API:', e);
+    } finally {
+      setIsLoadingTools(false);
     }
   };
 
   useEffect(() => {
     fetchApiTools();
   }, []);
-
-  // Sync tools to localStorage
-  useEffect(() => {
-    localStorage.setItem('toolverai_tools', JSON.stringify(tools));
-    localStorage.setItem('aiflux_tools', JSON.stringify(tools));
-  }, [tools]);
 
   // Sync bookmarks to localStorage
   useEffect(() => {
@@ -139,27 +165,55 @@ export const App: React.FC = () => {
     }
   }, [currentUser]);
 
-  const handleToolAdded = (newTool: AITool) => {
+  const handleToolAdded = async (newTool: AITool) => {
     setTools((prev) => [newTool, ...prev.filter((t) => t.id !== newTool.id)]);
+    try {
+      await fetch('/api/tools', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newTool),
+      });
+    } catch (err) {
+      console.error('Failed to store tool in MongoDB:', err);
+    }
   };
 
-  const handleToolUpdated = (updatedTool: AITool) => {
+  const handleToolUpdated = async (updatedTool: AITool) => {
     setTools((prev) => prev.map((t) => (t.id === updatedTool.id ? { ...t, ...updatedTool } : t)));
     if (selectedTool?.id === updatedTool.id) {
       setSelectedTool(updatedTool);
     }
+    try {
+      await fetch(`/api/tools/${updatedTool.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedTool),
+      });
+    } catch (err) {
+      console.error('Failed to update tool in MongoDB:', err);
+    }
   };
 
-  const handleToolDeleted = (toolId: string) => {
+  const handleToolDeleted = async (toolId: string) => {
     setTools((prev) => prev.filter((t) => t.id !== toolId));
     if (selectedTool?.id === toolId) {
       setSelectedTool(null);
       setActiveTab('directory');
     }
+    try {
+      await fetch(`/api/tools/${toolId}`, {
+        method: 'DELETE',
+      });
+    } catch (err) {
+      console.error('Failed to delete tool from MongoDB:', err);
+    }
   };
 
   // Scroll to top on tab change & update URL pathname
   const handleTabChange = (tab: ActiveTab) => {
+    if (tab !== 'tool-detail') {
+      setSelectedTool(null);
+    }
     setActiveTab(tab);
     try {
       const targetPath = tab === 'directory' ? '/' : `/${tab}`;
@@ -180,6 +234,19 @@ export const App: React.FC = () => {
   const handleSelectTool = (tool: AITool) => {
     setSelectedTool(tool);
     setActiveTab('tool-detail');
+    try {
+      const toolSlug = tool.slug || tool.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+      const targetPath = `/tool/${toolSlug}`;
+      if (window.location.pathname !== targetPath) {
+        window.history.pushState({ tab: 'tool-detail', toolId: tool.id }, '', targetPath);
+      }
+    } catch (e) {
+      try {
+        window.location.hash = `#tool-${tool.slug || tool.id}`;
+      } catch (err) {
+        // ignore
+      }
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -193,7 +260,8 @@ export const App: React.FC = () => {
     setBookmarkedIds([]);
   };
 
-  const handleAddReview = (toolId: string, review: ToolReview) => {
+  const handleAddReview = async (toolId: string, review: ToolReview) => {
+    let updatedTargetTool: AITool | null = null;
     setTools((prev) =>
       prev.map((t) => {
         if (t.id === toolId) {
@@ -207,6 +275,7 @@ export const App: React.FC = () => {
             reviewCount: updatedReviews.length,
             rating: parseFloat(avgRating.toFixed(1)),
           };
+          updatedTargetTool = updatedTool;
           if (selectedTool?.id === toolId) {
             setSelectedTool(updatedTool);
           }
@@ -215,12 +284,27 @@ export const App: React.FC = () => {
         return t;
       })
     );
+
+    if (updatedTargetTool) {
+      try {
+        await fetch(`/api/tools/${toolId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updatedTargetTool),
+        });
+      } catch (err) {
+        console.error('Failed to persist review to MongoDB:', err);
+      }
+    }
   };
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F8FAFC] text-slate-900 relative overflow-x-hidden selection:bg-indigo-600 selection:text-white font-sans">
-      {/* Dynamic Cyber Background & WebGL Torus Sculpture on Directory */}
-      <CyberBackground showHeroSculpture={activeTab === 'directory'} />
+      {/* Dynamic SEO Meta Tag Manager */}
+      <SEOManager activeTab={activeTab} selectedTool={selectedTool} />
+
+      {/* Dynamic Cyber Background */}
+      <CyberBackground />
 
       {/* Navigation */}
       <Navbar
@@ -246,6 +330,7 @@ export const App: React.FC = () => {
         {activeTab === 'directory' && (
           <DirectoryView
             tools={tools}
+            isLoading={isLoadingTools}
             onSelectTool={handleSelectTool}
             onOpenVideoPreview={(tool) => setVideoPreviewTool(tool)}
             onNavigate={handleTabChange}

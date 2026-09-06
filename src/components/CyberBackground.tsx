@@ -1,13 +1,11 @@
 import React, { useEffect, useRef } from 'react';
-import * as THREE from 'three';
 
 interface CyberBackgroundProps {
   showHeroSculpture?: boolean;
 }
 
-export const CyberBackground: React.FC<CyberBackgroundProps> = ({ showHeroSculpture = true }) => {
+export const CyberBackground: React.FC<CyberBackgroundProps> = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const sculptureContainerRef = useRef<HTMLDivElement | null>(null);
 
   // Soft Ambient Wave Canvas
   useEffect(() => {
@@ -121,71 +119,6 @@ export const CyberBackground: React.FC<CyberBackgroundProps> = ({ showHeroSculpt
     };
   }, []);
 
-  // Clean Minimalist Wireframe Sculpture in Hero
-  useEffect(() => {
-    if (!showHeroSculpture || !sculptureContainerRef.current) return;
-
-    const container = sculptureContainerRef.current;
-    const width = container.clientWidth || 450;
-    const height = container.clientHeight || 450;
-
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(70, width / height, 0.1, 1000);
-    camera.position.z = 4.8;
-
-    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-    renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    container.innerHTML = '';
-    container.appendChild(renderer.domElement);
-
-    // Minimalist Geometric Wireframe
-    const geometry = new THREE.TorusKnotGeometry(1.3, 0.35, 120, 24);
-    const material = new THREE.MeshBasicMaterial({
-      color: 0x6366f1, // Indigo 500
-      wireframe: true,
-      transparent: true,
-      opacity: 0.25,
-    });
-
-    const mesh = new THREE.Mesh(geometry, material);
-    scene.add(mesh);
-
-    let animId: number;
-    let clock = new THREE.Clock();
-
-    const animate = () => {
-      animId = requestAnimationFrame(animate);
-      const elapsedTime = clock.getElapsedTime();
-
-      mesh.rotation.x = elapsedTime * 0.15;
-      mesh.rotation.y = elapsedTime * 0.2;
-
-      renderer.render(scene, camera);
-    };
-
-    animate();
-
-    const handleResize = () => {
-      if (!container) return;
-      const newWidth = container.clientWidth || 450;
-      const newHeight = container.clientHeight || 450;
-      camera.aspect = newWidth / newHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(newWidth, newHeight);
-    };
-
-    window.addEventListener('resize', handleResize);
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      cancelAnimationFrame(animId);
-      renderer.dispose();
-      geometry.dispose();
-      material.dispose();
-    };
-  }, [showHeroSculpture]);
-
   return (
     <>
       <canvas
@@ -194,12 +127,6 @@ export const CyberBackground: React.FC<CyberBackgroundProps> = ({ showHeroSculpt
       />
       <div className="fixed inset-0 pointer-events-none -z-10 bg-grid-pattern opacity-40" />
       <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-indigo-500/5 blur-[120px] rounded-full pointer-events-none -z-10" />
-      {showHeroSculpture && (
-        <div
-          ref={sculptureContainerRef}
-          className="absolute top-1/2 right-0 -translate-y-1/2 w-full md:w-1/2 h-[450px] pointer-events-none opacity-40 z-0 overflow-hidden hidden md:block"
-        />
-      )}
     </>
   );
 };
