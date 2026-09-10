@@ -22,7 +22,7 @@ export const PricingView: React.FC<PricingViewProps> = ({
       <div className="text-center max-w-3xl mx-auto mb-16">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-semibold uppercase mb-4 shadow-xs">
           <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-          <span>Transparent Stripe-Powered Memberships</span>
+          <span>Transparent Pro Memberships</span>
         </div>
 
         <h1 className="font-heading text-4xl sm:text-6xl font-extrabold text-slate-900 tracking-tight mb-4">
@@ -33,7 +33,7 @@ export const PricingView: React.FC<PricingViewProps> = ({
         </h1>
 
         <p className="text-base sm:text-lg text-slate-500 font-normal leading-relaxed">
-          The ultimate directory for developers, founders, and creators. Secure payment via Stripe, instant activation, and guaranteed VIP indexing.
+          The ultimate directory for developers, founders, and creators. Instant activation and guaranteed VIP indexing.
         </p>
 
         {user?.subscription && user.subscription.status === 'active' && (
@@ -140,7 +140,7 @@ export const PricingView: React.FC<PricingViewProps> = ({
 
                 <p className="text-[11px] text-slate-400 text-center mt-3 flex items-center justify-center gap-1">
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-                  Encrypted Stripe Checkout
+                  Encrypted Secure Checkout
                 </p>
               </div>
             </div>

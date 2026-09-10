@@ -38,7 +38,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           status: 'active',
           amount: 20,
           currentPeriodEnd: 'Sep 30, 2026',
-          stripeSubscriptionId: 'sub_toolver_pro_993',
           cardBrand: 'Visa',
           cardLast4: '4242',
         },

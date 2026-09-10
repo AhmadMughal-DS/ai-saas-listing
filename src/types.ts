@@ -158,8 +158,6 @@ export interface UserSubscription {
   status: 'active' | 'canceled' | 'past_due';
   amount: number;
   currentPeriodEnd: string;
-  stripeCustomerId?: string;
-  stripeSubscriptionId?: string;
   cardBrand?: string;
   cardLast4?: string;
 }

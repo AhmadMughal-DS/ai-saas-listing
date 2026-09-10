@@ -184,7 +184,7 @@ export const UserAccountModal: React.FC<UserAccountModalProps> = ({
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <span className="text-xs uppercase font-semibold text-indigo-600 tracking-wider">
-                    Current Stripe Plan
+                    Current Plan
                   </span>
                   <h3 className="font-heading text-2xl font-bold text-slate-900 mt-1">
                     {user.subscription?.planName || 'Free'} Plan
