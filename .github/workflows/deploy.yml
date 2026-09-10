@@ -26,8 +26,8 @@ jobs:
       - name: Login to DockerHub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          username: ${{ secrets.DOCKER_USERNAME || secrets.USERNAME_DOCKER || secrets.DOCKERHUB_USERNAME || 'ahmad928' }}
+          password: ${{ secrets.DOCKER_PERSONAL_TOKEN || secrets.DOCKERHUB_TOKEN || secrets.DOCKER_TOKEN }}
 
       - name: Extract metadata (tags, labels)
         id: meta
@@ -52,10 +52,10 @@ jobs:
             VITE_FIREBASE_PROJECT_ID=${{ secrets.VITE_FIREBASE_PROJECT_ID }}
 
   # ──────────────────────────────────────────────
-  # Job 2: Deploy to Oracle VM via SSH
+  # Job 2: Deploy to VM via SSH
   # ──────────────────────────────────────────────
   deploy:
-    name: 🚀 Deploy to Oracle VM
+    name: 🚀 Deploy to VM
     runs-on: ubuntu-latest
     needs: build-and-push
 
@@ -63,9 +63,9 @@ jobs:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.ORACLE_VM_HOST }}
-          username: ${{ secrets.ORACLE_VM_USER }}
-          key: ${{ secrets.ORACLE_VM_SSH_KEY }}
+          host: ${{ secrets.VM_IP || secrets.ORACLE_VM_HOST }}
+          username: ${{ secrets.VM_USERNAME || secrets.ORACLE_VM_USER }}
+          key: ${{ secrets.VM_PRIVATE_KEY || secrets.ORACLE_VM_SSH_KEY }}
           script: |
             set -e
 
@@ -86,7 +86,10 @@ jobs:
               -p 3000:3000 \
               -e DEEPSEEK_API_KEY="${{ secrets.DEEPSEEK_API_KEY }}" \
               -e MONGODB_URI="${{ secrets.MONGODB_URI }}" \
+              -e FIREBASE_SERVICE_ACCOUNT_PATH="${{ secrets.FIREBASE_SERVICE_ACCOUNT_PATH }}" \
+              -e GOOGLE_APPLICATION_CREDENTIALS="${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}" \
               -e FIREBASE_SERVICE_ACCOUNT="${{ secrets.FIREBASE_SERVICE_ACCOUNT }}" \
+              -e VITE_FIREBASE_PROJECT_ID="${{ secrets.VITE_FIREBASE_PROJECT_ID }}" \
               -e NODE_ENV=production \
               $IMAGE
 
