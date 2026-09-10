@@ -15,8 +15,26 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <meta name="theme-color" content="#F8FAFC" />
+    <script>
+      (function() {
+        try {
+          var saved = localStorage.getItem('toolver_theme');
+          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (saved === 'dark' || (!saved && prefersDark)) {
+            document.documentElement.classList.add('dark');
+            document.documentElement.setAttribute('data-theme', 'dark');
+            document.documentElement.style.colorScheme = 'dark';
+          } else {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.setAttribute('data-theme', 'light');
+            document.documentElement.style.colorScheme = 'light';
+          }
+        } catch(e) {}
+      })();
+    </script>
   </head>
-  <body class="bg-[#F8FAFC] text-slate-900 antialiased selection:bg-indigo-500 selection:text-white overflow-x-hidden">
+  <body class="bg-[var(--color-bg-base,#F8FAFC)] text-[var(--color-text-main,#0F172A)] antialiased selection:bg-indigo-500 selection:text-white overflow-x-hidden">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

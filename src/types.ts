@@ -83,6 +83,8 @@ export interface AITool {
   hasApi?: boolean;
   isFeatured?: boolean;
   featuredRank?: number;
+  isVerified?: boolean;
+  verifiedBadgeText?: string;
   monthlyVisits?: number;
   monthlyVisitsFormatted?: string;
   trafficGrowth?: number;
@@ -184,6 +186,22 @@ export interface SubmissionFormData {
   keyFeatures: string[];
   tags: string[];
   submitterEmail: string;
+}
+
+export interface ToolSubmission {
+  id: string;
+  name: string;
+  description: string;
+  websiteUrl: string;
+  category: AITool['category'];
+  imageUrl: string;
+  pricingType?: PricingType;
+  submitterEmail?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  submittedAt: string;
+  reviewedAt?: string;
+  reviewNotes?: string;
+  approvedToolId?: string;
 }
 
 export type ActiveTab = 

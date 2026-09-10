@@ -269,10 +269,28 @@ export const RankingsView: React.FC<RankingsViewProps> = ({
                           />
                         </div>
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="font-heading font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
                               {tool.name}
                             </span>
+                            {tool.isVerified && (
+                              <span
+                                title="Verified AI Tool: Tested & benchmarked"
+                                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              >
+                                <ShieldCheck className="w-2.5 h-2.5 text-emerald-600" />
+                                <span>Verified</span>
+                              </span>
+                            )}
+                            {tool.isFeatured && (
+                              <span
+                                title="Featured Partner"
+                                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-50 text-amber-800 border border-amber-200"
+                              >
+                                <Sparkles className="w-2.5 h-2.5 fill-amber-500 text-amber-600" />
+                                <span>Featured</span>
+                              </span>
+                            )}
                             {tool.hasApi && (
                               <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
                                 API

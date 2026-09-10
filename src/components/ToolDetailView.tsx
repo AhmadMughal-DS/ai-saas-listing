@@ -137,6 +137,18 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
                 <span className="px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
                   {tool.category}
                 </span>
+                {tool.isFeatured && (
+                  <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1 shadow-xs">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-600 fill-amber-500" />
+                    <span>Featured Partner</span>
+                  </span>
+                )}
+                {tool.isVerified && (
+                  <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1 shadow-xs">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Verified AI Tool</span>
+                  </span>
+                )}
                 {tool.hasApi && (
                   <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
                     API Available

@@ -110,13 +110,13 @@ export const Logo: React.FC<LogoProps> = ({
       {showText && (
         <div className="flex flex-col">
           <div className="flex items-center gap-1 leading-none">
-            <span className={`font-heading ${titleSize} font-extrabold tracking-tight text-slate-900`}>
-              Toolver<span className="text-indigo-600 font-black">AI</span>
+            <span className={`font-heading ${titleSize} font-extrabold tracking-tight text-slate-900 dark:text-white transition-colors`}>
+              Toolver<span className="text-indigo-600 dark:text-indigo-400 font-black">AI</span>
             </span>
           </div>
 
           {subtitle && (
-            <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider mt-1 hidden sm:inline leading-none">
+            <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mt-1 hidden sm:inline leading-none">
               {subtitle}
             </span>
           )}

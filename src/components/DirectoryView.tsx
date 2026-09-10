@@ -17,7 +17,8 @@ import {
   GitCompare,
   Tag,
   Code2,
-  LockOpen
+  LockOpen,
+  Plus
 } from 'lucide-react';
 
 interface DirectoryViewProps {
@@ -45,11 +46,12 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
   onSelectTool,
   onOpenVideoPreview,
   onNavigate,
+  onOpenSubmit,
   isLoading = false,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [featureFilter, setFeatureFilter] = useState<'all' | 'traffic' | 'growth' | 'deals' | 'api' | 'opensource'>('all');
+  const [featureFilter, setFeatureFilter] = useState<'all' | 'traffic' | 'growth' | 'deals' | 'api' | 'opensource' | 'featured' | 'verified'>('all');
   const [sortBy, setSortBy] = useState<'popular' | 'traffic' | 'rating' | 'newest'>('popular');
   const [visibleCount, setVisibleCount] = useState(9);
 
@@ -76,6 +78,8 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
       if (featureFilter === 'opensource') matchesFeature = Boolean(t.isOpenSource);
       if (featureFilter === 'traffic') matchesFeature = (t.monthlyVisits || 0) >= 10000000;
       if (featureFilter === 'growth') matchesFeature = (t.trafficGrowth || 0) >= 30;
+      if (featureFilter === 'featured') matchesFeature = Boolean(t.isFeatured);
+      if (featureFilter === 'verified') matchesFeature = Boolean(t.isVerified);
 
       return matchesCategory && matchesSearch && matchesFeature;
     });
@@ -184,6 +188,28 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
             <span>Fastest Growing</span>
           </button>
           <button
+            onClick={() => setFeatureFilter('featured')}
+            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+              featureFilter === 'featured'
+                ? 'bg-amber-500 text-white shadow-xs'
+                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+            <span>Featured</span>
+          </button>
+          <button
+            onClick={() => setFeatureFilter('verified')}
+            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+              featureFilter === 'verified'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Verified</span>
+          </button>
+          <button
             onClick={() => setFeatureFilter('deals')}
             className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
               featureFilter === 'deals'
@@ -267,11 +293,20 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
                     />
                   </div>
                   <div>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <h3 className="font-heading text-xl font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
                         {partner.name}
                       </h3>
-                      <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-50 text-amber-800 border border-amber-200">
+                        <Sparkles className="w-2.5 h-2.5 fill-amber-500 text-amber-600" />
+                        <span>Featured</span>
+                      </span>
+                      {partner.isVerified && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                          <span>Verified</span>
+                        </span>
+                      )}
                     </div>
                     <span className="text-xs font-semibold text-indigo-600">
                       {partner.category}
@@ -332,7 +367,18 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
             </span>
           </div>
 
-          <div className="flex items-center gap-3 self-end sm:self-auto">
+          <div className="flex items-center gap-3 self-end sm:self-auto flex-wrap">
+            {onOpenSubmit && (
+              <button
+                onClick={onOpenSubmit}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold transition-all cursor-pointer shadow-xs"
+                title="Suggest a new AI Tool to be added to the directory"
+              >
+                <Plus className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Suggest a Tool</span>
+              </button>
+            )}
+
             <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-600 shadow-xs">
               <Filter className="w-3.5 h-3.5 text-indigo-600" />
               <span>Sort by:</span>
@@ -384,23 +430,37 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
             <p className="text-sm text-slate-500 mb-6">
               No tools match your current search and filter criteria.
             </p>
-            <button
-              onClick={() => {
-                setSearchQuery('');
-                setSelectedCategory('All');
-                setFeatureFilter('all');
-              }}
-              className="px-5 py-2.5 rounded-xl btn-purple text-xs font-semibold cursor-pointer shadow-xs"
-            >
-              Reset All Filters
-            </button>
+            <div className="flex items-center justify-center gap-3 flex-wrap">
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedCategory('All');
+                  setFeatureFilter('all');
+                }}
+                className="px-5 py-2.5 rounded-xl btn-purple text-xs font-semibold cursor-pointer shadow-xs"
+              >
+                Reset All Filters
+              </button>
+              {onOpenSubmit && (
+                <button
+                  onClick={onOpenSubmit}
+                  className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold cursor-pointer transition-colors"
+                >
+                  Suggest a Tool
+                </button>
+              )}
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredTools.slice(0, visibleCount).map((tool) => (
             <div
               key={tool.id}
-              className="bg-white border border-slate-200 rounded-3xl overflow-hidden card-3d flex flex-col justify-between group shadow-xs hover:border-indigo-200"
+              className={`bg-white rounded-3xl overflow-hidden card-3d flex flex-col justify-between group shadow-xs transition-all ${
+                tool.isFeatured
+                  ? 'border-2 border-amber-300/80 hover:border-amber-400 shadow-amber-500/5'
+                  : 'border border-slate-200 hover:border-indigo-200'
+              }`}
             >
               <div>
                 {/* Video / Thumbnail Banner */}
@@ -433,12 +493,26 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
                     </button>
                   )}
 
-                  {/* Traffic Metric Badge on top left */}
-                  <div className="absolute top-3 left-3">
+                  {/* Metric & Status Badges on top left */}
+                  <div className="absolute top-3 left-3 flex items-center gap-1.5 flex-wrap max-w-[75%] pointer-events-none">
                     <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-slate-900/90 text-white backdrop-blur-md flex items-center gap-1 shadow-xs border border-white/10">
                       <Flame className="w-3.5 h-3.5 text-orange-400" />
                       <span>{tool.monthlyVisitsFormatted || '10M+'}</span>
                     </span>
+
+                    {tool.isFeatured && (
+                      <span className="px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-amber-400 text-amber-950 flex items-center gap-1 shadow-xs backdrop-blur-md border border-amber-300">
+                        <Sparkles className="w-3 h-3 text-amber-950 fill-amber-950" />
+                        <span>Featured</span>
+                      </span>
+                    )}
+
+                    {tool.isVerified && (
+                      <span className="px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-emerald-500 text-white flex items-center gap-1 shadow-xs backdrop-blur-md border border-emerald-400">
+                        <ShieldCheck className="w-3.5 h-3.5 text-white" />
+                        <span>Verified</span>
+                      </span>
+                    )}
                   </div>
 
                   {/* Pricing Badge on top right */}
@@ -460,14 +534,36 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
                 {/* Card Body */}
                 <div className="p-6">
                   <div className="flex items-start justify-between gap-3 mb-2">
-                    <div>
-                      <h3
-                        onClick={() => onSelectTool(tool)}
-                        className="font-heading text-xl font-bold text-slate-900 group-hover:text-indigo-600 transition-colors cursor-pointer"
-                      >
-                        {tool.name}
-                      </h3>
-                      <span className="text-xs text-indigo-600 font-semibold">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <h3
+                          onClick={() => onSelectTool(tool)}
+                          className="font-heading text-xl font-bold text-slate-900 group-hover:text-indigo-600 transition-colors cursor-pointer"
+                        >
+                          {tool.name}
+                        </h3>
+
+                        {tool.isVerified && (
+                          <span
+                            title="Verified AI Tool: Evaluated, benchmarked & tested by ToolverAI analysts"
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0 cursor-help"
+                          >
+                            <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                            <span>Verified</span>
+                          </span>
+                        )}
+
+                        {tool.isFeatured && (
+                          <span
+                            title="Featured AI Tool: Verified ecosystem partner"
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-50 text-amber-800 border border-amber-200 shrink-0 cursor-help"
+                          >
+                            <Sparkles className="w-2.5 h-2.5 text-amber-600 fill-amber-500" />
+                            <span>Featured</span>
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs text-indigo-600 font-semibold block mt-0.5">
                         {tool.category}
                       </span>
                     </div>

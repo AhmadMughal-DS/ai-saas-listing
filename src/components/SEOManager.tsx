@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ActiveTab, AITool } from '../types';
 import { generateSEOData, applySEOMetaTags, SEOData } from '../utils/seo';
-import { Globe, Copy, Check, Eye, X, Code, Share2, Sparkles, Search, CheckCircle2 } from 'lucide-react';
+import { Globe, Copy, Check, Eye, X, Code, Share2, Sparkles, Search, CheckCircle2, ExternalLink } from 'lucide-react';
 
 interface SEOManagerProps {
   activeTab: ActiveTab;
@@ -283,10 +283,21 @@ export const SEOManager: React.FC<SEOManagerProps> = ({
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 border-t border-slate-100 bg-white flex items-center justify-between text-xs text-slate-500">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-indigo-600" />
-                <span>Automatically synced whenever you navigate or select a tool.</span>
+            <div className="p-4 border-t border-slate-100 bg-white flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
+              <div className="flex items-center gap-3">
+                <a
+                  href="/sitemap.xml"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold rounded-lg text-xs transition-colors border border-indigo-200 shadow-xs"
+                  title="Open dynamic server-side XML sitemap in new tab"
+                >
+                  <Globe className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Dynamic sitemap.xml</span>
+                  <ExternalLink className="w-3 h-3 text-indigo-500" />
+                </a>
+                <span className="hidden sm:inline text-slate-400">•</span>
+                <span className="hidden sm:inline">Synced with live database tools</span>
               </div>
               <button
                 onClick={() => setIsInspectorOpen(false)}

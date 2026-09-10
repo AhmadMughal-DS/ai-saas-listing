@@ -7,6 +7,7 @@ import { MongoClient, Db } from 'mongodb';
 import { initializeApp as initFirebaseApp, cert, applicationDefault, App as FirebaseApp } from 'firebase-admin/app';
 import dotenv from 'dotenv';
 import { INITIAL_TOOLS } from './src/data/initialData';
+import { buildSitemapXml, generateSitemapEntries } from './src/server/sitemap';
 
 dotenv.config();
 
@@ -82,10 +83,67 @@ const DEFAULT_DB_NAME = 'toolver_db';
 let mongoClient: MongoClient | null = null;
 let dbInstance: Db | null = null;
 let memoryToolsCache: any[] = [];
+let memorySubscribersCache: any[] = [];
+
+export const INITIAL_SUBMISSIONS = [
+  {
+    id: 'sub-init-1',
+    name: 'Bolt.new',
+    description: 'AI-powered in-browser full-stack development sandbox that prompts, builds, runs, and deploys web applications entirely in your browser using WebContainers.',
+    websiteUrl: 'https://bolt.new',
+    category: 'Coding',
+    imageUrl: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=150&auto=format&fit=crop&q=80',
+    pricingType: 'Freemium',
+    submitterEmail: 'developer@bolt.new',
+    status: 'pending',
+    submittedAt: new Date(Date.now() - 3600000 * 12).toISOString(),
+  },
+  {
+    id: 'sub-init-2',
+    name: 'Suno v3.5',
+    description: 'Generative AI music engine creating broadcast-quality, full-length 2-minute songs with vocals, instrumentals, and rich song structures from simple natural language prompts.',
+    websiteUrl: 'https://suno.com',
+    category: 'Audio AI',
+    imageUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=150&auto=format&fit=crop&q=80',
+    pricingType: 'Freemium',
+    submitterEmail: 'creator@suno.ai',
+    status: 'pending',
+    submittedAt: new Date(Date.now() - 3600000 * 24).toISOString(),
+  },
+  {
+    id: 'sub-init-3',
+    name: 'Ideogram 2.0',
+    description: 'Frontier AI image generator specializing in photorealistic typography, graphic design, posters, and consistent text rendering inside generated artwork.',
+    websiteUrl: 'https://ideogram.ai',
+    category: 'Image AI',
+    imageUrl: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=150&auto=format&fit=crop&q=80',
+    pricingType: 'Freemium',
+    submitterEmail: 'design@ideogram.ai',
+    status: 'pending',
+    submittedAt: new Date(Date.now() - 3600000 * 48).toISOString(),
+  }
+];
+
+let memorySubmissionsCache: any[] = [...INITIAL_SUBMISSIONS];
 let isConnectingPromise: Promise<Db | null> | null = null;
 let lastConnectionAttemptTime = 0;
 let lastConnectionError: string | null = null;
 const CONNECTION_COOLDOWN_MS = 15000;
+
+export const SUBSCRIBER_COLLECTION_SCHEMA = {
+  $jsonSchema: {
+    bsonType: 'object',
+    required: ['email', 'subscribedAt', 'status'],
+    properties: {
+      email: { bsonType: 'string', description: 'Subscriber email address' },
+      subscribedAt: { bsonType: 'string', description: 'Timestamp when subscriber joined' },
+      status: { enum: ['active', 'unsubscribed'] },
+      source: { bsonType: 'string', description: 'Origin location of the subscription' },
+      topics: { bsonType: 'array', items: { bsonType: 'string' } },
+      updatedAt: { bsonType: 'string' },
+    },
+  },
+};
 
 export const TOOL_COLLECTION_SCHEMA = {
   $jsonSchema: {
@@ -108,6 +166,7 @@ export const TOOL_COLLECTION_SCHEMA = {
       isOpenSource: { bsonType: 'bool' },
       hasApi: { bsonType: 'bool' },
       isFeatured: { bsonType: 'bool' },
+      isVerified: { bsonType: 'bool' },
       featuredRank: { bsonType: ['int', 'long', 'double', 'null'] },
       monthlyVisits: { bsonType: ['double', 'int', 'long', 'null'] },
       monthlyVisitsFormatted: { bsonType: ['string', 'null'] },
@@ -163,7 +222,34 @@ async function ensureMongoIndexesAndSchema(db: Db) {
     await collection.createIndex({ monthlyVisits: -1 }, { name: 'idx_tool_monthly_visits_desc' });
     await collection.createIndex({ rating: -1 }, { name: 'idx_tool_rating_desc' });
     await collection.createIndex({ isFeatured: 1 }, { name: 'idx_tool_featured' });
+    await collection.createIndex({ isVerified: 1 }, { name: 'idx_tool_verified' });
     await collection.createIndex({ category: 1, monthlyVisits: -1 }, { name: 'idx_tool_cat_visits' });
+
+    // Initialize newsletter_subscribers collection & indexes
+    const subCollections = await db.listCollections({ name: 'newsletter_subscribers' }).toArray();
+    if (subCollections.length === 0) {
+      await db.createCollection('newsletter_subscribers', {
+        validator: SUBSCRIBER_COLLECTION_SCHEMA,
+        validationLevel: 'moderate',
+        validationAction: 'warn',
+      });
+      console.log('✅ Created newsletter_subscribers collection in MongoDB.');
+    }
+    const subscribersCollection = db.collection('newsletter_subscribers');
+    await subscribersCollection.createIndex({ email: 1 }, { unique: true, name: 'idx_subscriber_email_unique' });
+    await subscribersCollection.createIndex({ subscribedAt: -1 }, { name: 'idx_subscriber_date_desc' });
+
+    // Initialize tool_submissions collection & indexes
+    const submissionCollections = await db.listCollections({ name: 'tool_submissions' }).toArray();
+    if (submissionCollections.length === 0) {
+      await db.createCollection('tool_submissions');
+      console.log('✅ Created tool_submissions collection in MongoDB.');
+      await db.collection('tool_submissions').insertMany(INITIAL_SUBMISSIONS.map((s) => ({ ...s, _id: s.id as any })));
+    }
+    const submissionsColl = db.collection('tool_submissions');
+    await submissionsColl.createIndex({ id: 1 }, { unique: true, name: 'idx_submission_id_unique' });
+    await submissionsColl.createIndex({ status: 1 }, { name: 'idx_submission_status' });
+    await submissionsColl.createIndex({ submittedAt: -1 }, { name: 'idx_submission_date_desc' });
   } catch (err: any) {
     console.warn('⚠️ MongoDB schema index note:', err?.message || err);
   }
@@ -266,6 +352,97 @@ async function startServer() {
   try {
     getFirebaseAdmin();
   } catch {}
+
+  // Helper: resolve canonical base URL for SEO indexing
+  function resolveBaseUrl(req: express.Request): string {
+    const envSiteUrl = process.env.SITE_URL || process.env.CANONICAL_DOMAIN;
+    if (envSiteUrl && envSiteUrl.trim() && envSiteUrl !== 'http://localhost:3000') {
+      const clean = envSiteUrl.trim().replace(/\/+$/, '');
+      return clean.startsWith('http') ? clean : `https://${clean}`;
+    }
+
+    const proto = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'https';
+    const host = (req.headers['x-forwarded-host'] as string) || req.headers.host || 'toolverai.com';
+    return `${proto}://${host}`.replace(/\/+$/, '');
+  }
+
+  // Helper: fetch all tools from MongoDB Atlas or fallback to memory cache / initial dataset
+  async function getToolsFromDbOrFallback(): Promise<any[]> {
+    try {
+      const db = await getMongoDb();
+      if (db) {
+        const tools = await db.collection('tools').find({}).toArray();
+        if (tools && tools.length > 0) {
+          return tools.map((t) => {
+            const { _id, ...rest } = t;
+            return { id: rest.id || _id?.toString(), ...rest };
+          });
+        }
+      }
+    } catch (err) {
+      console.warn('⚠️ Error fetching tools from MongoDB for sitemap:', err);
+    }
+
+    if (memoryToolsCache && memoryToolsCache.length > 0) {
+      return memoryToolsCache;
+    }
+
+    return INITIAL_TOOLS;
+  }
+
+  // Dynamic XML Sitemap for Search Engines (Google, Bing, etc.)
+  app.get('/sitemap.xml', async (req, res) => {
+    try {
+      const baseUrl = resolveBaseUrl(req);
+      const tools = await getToolsFromDbOrFallback();
+      const xml = buildSitemapXml(baseUrl, tools);
+
+      res.header('Content-Type', 'application/xml; charset=utf-8');
+      res.header('Cache-Control', 'public, max-age=3600, s-maxage=14400');
+      res.header('X-Robots-Tag', 'noindex');
+      return res.status(200).send(xml);
+    } catch (error: any) {
+      console.error('Error generating dynamic sitemap.xml:', error);
+      res.status(500).header('Content-Type', 'text/plain; charset=utf-8').send('Error generating XML sitemap');
+    }
+  });
+
+  // Dynamic robots.txt pointing to the dynamic sitemap
+  app.get('/robots.txt', (req, res) => {
+    const baseUrl = resolveBaseUrl(req);
+    res.type('text/plain');
+    res.header('Cache-Control', 'public, max-age=86400');
+    res.send(`User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin
+
+# Dynamic XML Sitemap based on live database tools
+Sitemap: ${baseUrl}/sitemap.xml
+`);
+  });
+
+  // Sitemap Inspection / Stats Endpoint
+  app.get('/api/sitemap/stats', async (req, res) => {
+    try {
+      const baseUrl = resolveBaseUrl(req);
+      const tools = await getToolsFromDbOrFallback();
+      const entries = generateSitemapEntries(baseUrl, tools);
+      const uniqueCategories = new Set(tools.map((t) => t.category).filter(Boolean));
+
+      res.json({
+        success: true,
+        totalUrls: entries.length,
+        toolsCount: tools.length,
+        categoriesCount: uniqueCategories.size,
+        baseUrl,
+        generatedAt: new Date().toISOString(),
+        sitemapUrl: `${baseUrl}/sitemap.xml`,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
 
   // API Routes
   app.get('/api/health', (req, res) => {
@@ -392,10 +569,12 @@ async function startServer() {
       const db = await getMongoDb();
       if (db) {
         const tools = await db.collection('tools').find({}).toArray();
-        // Normalize _id to id
+        // Normalize _id to id and ensure isVerified/isFeatured flags
         const cleanTools = tools.map((t) => {
           const { _id, ...rest } = t;
-          return { id: rest.id || _id?.toString(), ...rest };
+          const initialMatch = INITIAL_TOOLS.find((it) => it.id === (rest.id || _id?.toString()));
+          const isVerified = rest.isVerified !== undefined ? Boolean(rest.isVerified) : Boolean(initialMatch?.isVerified ?? (rest.isFeatured && (rest.rating || 0) >= 4.8));
+          return { id: rest.id || _id?.toString(), ...rest, isVerified };
         });
         memoryToolsCache = cleanTools;
         return res.json(cleanTools);
@@ -449,6 +628,7 @@ async function startServer() {
         isOpenSource: Boolean(toolData.isOpenSource),
         hasApi: Boolean(toolData.hasApi),
         isFeatured: Boolean(toolData.isFeatured),
+        isVerified: Boolean(toolData.isVerified),
         featuredRank: toolData.isFeatured ? 1 : undefined,
         monthlyVisits,
         monthlyVisitsFormatted,
@@ -590,6 +770,420 @@ async function startServer() {
     } catch (error: any) {
       console.error('Error seeding MongoDB:', error);
       res.status(500).json({ error: error?.message || 'Failed to seed tools' });
+    }
+  });
+
+  // Newsletter Subscription API
+  app.post('/api/newsletter/subscribe', async (req, res) => {
+    try {
+      const { email, source, topics } = req.body || {};
+      if (!email || typeof email !== 'string') {
+        return res.status(400).json({ success: false, error: 'Email address is required.' });
+      }
+
+      const cleanEmail = email.trim().toLowerCase();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(cleanEmail)) {
+        return res.status(400).json({ success: false, error: 'Please enter a valid email address.' });
+      }
+
+      const chosenTopics = Array.isArray(topics) && topics.length > 0
+        ? topics
+        : ['Weekly AI Roundup', 'Exclusive Deals', 'Model Benchmarks'];
+
+      const subscriberDoc = {
+        email: cleanEmail,
+        source: source || 'join_newsletter_component',
+        topics: chosenTopics,
+        status: 'active',
+        subscribedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      const db = await getMongoDb();
+      let alreadySubscribed = false;
+
+      if (db) {
+        const collection = db.collection('newsletter_subscribers');
+        const existing = await collection.findOne({ email: cleanEmail });
+        if (existing) {
+          alreadySubscribed = true;
+          await collection.updateOne(
+            { email: cleanEmail },
+            {
+              $set: {
+                status: 'active',
+                updatedAt: new Date().toISOString(),
+                topics: chosenTopics,
+                source: subscriberDoc.source,
+              },
+            }
+          );
+          console.log(`ℹ️ Updated preferences for existing newsletter subscriber: ${cleanEmail}`);
+        } else {
+          await collection.insertOne({ ...subscriberDoc, _id: cleanEmail as any });
+          console.log(`✅ Stored new newsletter subscriber in MongoDB: ${cleanEmail}`);
+        }
+      }
+
+      // Keep resilient in-memory cache synchronized
+      const existingIdx = memorySubscribersCache.findIndex((s) => s.email === cleanEmail);
+      if (existingIdx >= 0) {
+        alreadySubscribed = true;
+        memorySubscribersCache[existingIdx] = {
+          ...memorySubscribersCache[existingIdx],
+          ...subscriberDoc,
+        };
+      } else {
+        memorySubscribersCache.unshift(subscriberDoc);
+      }
+
+      return res.json({
+        success: true,
+        alreadySubscribed,
+        message: alreadySubscribed
+          ? 'Welcome back! Your newsletter preferences have been updated.'
+          : 'Thank you for subscribing! You will receive our weekly curated AI breakthroughs and verified discounts.',
+        subscriber: {
+          email: cleanEmail,
+          subscribedAt: subscriberDoc.subscribedAt,
+          topics: subscriberDoc.topics,
+        },
+      });
+    } catch (err: any) {
+      console.error('Error in POST /api/newsletter/subscribe:', err);
+      res.status(500).json({
+        success: false,
+        error: err.message || 'Failed to register newsletter subscription. Please try again.',
+      });
+    }
+  });
+
+  // Newsletter Subscribers Count for Social Proof
+  app.get('/api/newsletter/count', async (req, res) => {
+    try {
+      const db = await getMongoDb();
+      let realCount = 0;
+      if (db) {
+        realCount = await db.collection('newsletter_subscribers').countDocuments({ status: 'active' });
+      } else {
+        realCount = memorySubscribersCache.length;
+      }
+      const displayCount = 18450 + realCount;
+      res.json({
+        count: realCount,
+        displayCount,
+        displayCountFormatted: `${(displayCount / 1000).toFixed(1)}k+`,
+      });
+    } catch (err: any) {
+      res.json({ count: memorySubscribersCache.length, displayCount: 18450, displayCountFormatted: '18.4k+' });
+    }
+  });
+
+  // Get Newsletter Subscribers (Admin / Overview)
+  app.get('/api/newsletter/subscribers', async (req, res) => {
+    try {
+      const db = await getMongoDb();
+      if (db) {
+        const subscribers = await db
+          .collection('newsletter_subscribers')
+          .find()
+          .sort({ subscribedAt: -1 })
+          .limit(100)
+          .toArray();
+        const count = await db.collection('newsletter_subscribers').countDocuments();
+        return res.json({ count, subscribers });
+      }
+      return res.json({ count: memorySubscribersCache.length, subscribers: memorySubscribersCache });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Tool Submissions API (Community Suggestions Queue)
+  app.post('/api/submissions', async (req, res) => {
+    try {
+      const { name, description, websiteUrl, category, imageUrl, pricingType, submitterEmail } = req.body || {};
+
+      if (!name || typeof name !== 'string' || !name.trim()) {
+        return res.status(400).json({ success: false, error: 'Tool Name is required.' });
+      }
+      if (!description || typeof description !== 'string' || !description.trim()) {
+        return res.status(400).json({ success: false, error: 'Description is required.' });
+      }
+      if (!websiteUrl || typeof websiteUrl !== 'string' || !websiteUrl.trim()) {
+        return res.status(400).json({ success: false, error: 'Website URL is required.' });
+      }
+      if (!category || typeof category !== 'string' || !category.trim()) {
+        return res.status(400).json({ success: false, error: 'Category is required.' });
+      }
+      if (!imageUrl || typeof imageUrl !== 'string' || !imageUrl.trim()) {
+        return res.status(400).json({ success: false, error: 'Image URL is required.' });
+      }
+
+      const id = `sub-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+      const cleanWebsite = websiteUrl.trim().startsWith('http') ? websiteUrl.trim() : `https://${websiteUrl.trim()}`;
+
+      const newSubmission = {
+        id,
+        name: name.trim(),
+        description: description.trim(),
+        websiteUrl: cleanWebsite,
+        category: category.trim(),
+        imageUrl: imageUrl.trim(),
+        pricingType: pricingType || 'Freemium',
+        submitterEmail: submitterEmail?.trim() || 'community@toolverai.com',
+        status: 'pending',
+        submittedAt: new Date().toISOString(),
+      };
+
+      const db = await getMongoDb();
+      if (db) {
+        await db.collection('tool_submissions').replaceOne(
+          { id: newSubmission.id },
+          { ...newSubmission, _id: newSubmission.id as any },
+          { upsert: true }
+        );
+        console.log(`✅ Stored new tool suggestion "${newSubmission.name}" in MongoDB collection tool_submissions.`);
+      }
+
+      memorySubmissionsCache = [newSubmission, ...memorySubmissionsCache.filter((s) => s.id !== newSubmission.id)];
+
+      res.status(201).json({
+        success: true,
+        message: 'Your tool suggestion has been successfully submitted and added to the admin review queue!',
+        submission: newSubmission,
+      });
+    } catch (err: any) {
+      console.error('Error in POST /api/submissions:', err);
+      res.status(500).json({ success: false, error: err.message || 'Failed to submit tool suggestion.' });
+    }
+  });
+
+  // Get Tool Submissions Queue (Admin)
+  app.get('/api/submissions', async (req, res) => {
+    try {
+      const db = await getMongoDb();
+      if (db) {
+        const submissions = await db
+          .collection('tool_submissions')
+          .find({})
+          .sort({ submittedAt: -1 })
+          .toArray();
+
+        const clean = submissions.map((s) => {
+          const { _id, ...rest } = s;
+          return { id: rest.id || _id?.toString(), ...rest };
+        });
+
+        memorySubmissionsCache = clean;
+        const pendingCount = clean.filter((s: any) => s.status === 'pending').length;
+        return res.json({ success: true, submissions: clean, pendingCount, totalCount: clean.length });
+      }
+
+      const pendingCount = memorySubmissionsCache.filter((s: any) => s.status === 'pending').length;
+      res.json({
+        success: true,
+        submissions: memorySubmissionsCache,
+        pendingCount,
+        totalCount: memorySubmissionsCache.length,
+      });
+    } catch (err: any) {
+      console.error('Error in GET /api/submissions:', err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // Approve a Tool Submission (Creates tool in directory & updates queue)
+  app.post('/api/submissions/:id/approve', async (req, res) => {
+    try {
+      const { id } = req.params;
+      let submission = memorySubmissionsCache.find((s) => s.id === id);
+
+      const db = await getMongoDb();
+      if (db) {
+        const dbSub = await db.collection('tool_submissions').findOne({ id });
+        if (dbSub) {
+          submission = dbSub;
+        }
+      }
+
+      if (!submission) {
+        return res.status(404).json({ success: false, error: 'Submission not found in review queue.' });
+      }
+
+      const toolId = `tool-${Date.now()}`;
+      const slug = submission.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+      const newTool = {
+        id: toolId,
+        name: submission.name,
+        slug,
+        tagline: `Innovative ${submission.category} AI tool for creators and professionals`,
+        description: submission.description,
+        url: submission.websiteUrl.startsWith('http') ? submission.websiteUrl : `https://${submission.websiteUrl}`,
+        category: submission.category,
+        logoUrl: submission.imageUrl,
+        thumbnailVideoUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80',
+        videoDuration: '02:45',
+        rating: 4.8,
+        reviewCount: 1,
+        pricingType: submission.pricingType || 'Freemium',
+        isOpenSource: false,
+        hasApi: true,
+        isFeatured: false,
+        monthlyVisits: 115000,
+        monthlyVisitsFormatted: '115K',
+        trafficGrowth: 22.4,
+        globalRank: 165,
+        categoryRank: 4,
+        topCountries: ['United States (40%)', 'United Kingdom (14%)', 'Germany (10%)'],
+        trafficStats: {
+          monthlyVisits: 115000,
+          monthlyVisitsFormatted: '115K',
+          trafficGrowth: 22.4,
+          globalRank: 165,
+          categoryRank: 4,
+          topCountry: 'United States (40%)',
+          avgDuration: '04:30',
+          bounceRate: '34.5%',
+        },
+        platforms: ['Web'],
+        targetAudience: ['Developers', 'Designers', 'Founders'],
+        pros: ['Streamlined workflow', 'Responsive performance', 'Intuitive interface'],
+        cons: ['Free plan has standard rate limits'],
+        alternatives: [],
+        upvotes: 8,
+        launchedDate: new Date().toISOString().split('T')[0],
+        keyFeatures: ['Automated AI Processing', 'High-Speed Cloud Execution', 'API Integration'],
+        pricingPlans: [
+          {
+            id: `${toolId}-starter`,
+            name: 'Free Starter',
+            price: '$0',
+            billingPeriod: 'forever',
+            features: ['Essential capabilities', 'Standard speed', 'Community support'],
+          },
+          {
+            id: `${toolId}-pro`,
+            name: 'Pro Tier',
+            price: '$19',
+            billingPeriod: 'monthly',
+            features: ['Unlimited generation', 'Priority speed', 'API Access', 'Priority support'],
+            isPopular: true,
+          },
+        ],
+        reviews: [
+          {
+            id: `rev-${Date.now()}`,
+            authorName: 'ToolverAI Verification Team',
+            authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
+            rating: 5,
+            comment: `Reviewed and approved for official ToolverAI directory indexing. High potential in the ${submission.category} space!`,
+            date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            verified: true,
+          },
+        ],
+        createdAt: new Date().toISOString(),
+        submittedBy: submission.submitterEmail,
+      };
+
+      if (db) {
+        // 1. Insert tool into tools collection
+        await db.collection('tools').replaceOne(
+          { id: newTool.id },
+          { ...newTool, _id: newTool.id as any },
+          { upsert: true }
+        );
+        // 2. Update submission status in tool_submissions
+        await db.collection('tool_submissions').updateOne(
+          { id },
+          {
+            $set: {
+              status: 'approved',
+              reviewedAt: new Date().toISOString(),
+              approvedToolId: newTool.id,
+            },
+          }
+        );
+      }
+
+      // Update in-memory caches
+      memoryToolsCache = [newTool, ...memoryToolsCache.filter((t) => t.id !== newTool.id)];
+      memorySubmissionsCache = memorySubmissionsCache.map((s) =>
+        s.id === id
+          ? {
+              ...s,
+              status: 'approved',
+              reviewedAt: new Date().toISOString(),
+              approvedToolId: newTool.id,
+            }
+          : s
+      );
+
+      res.json({
+        success: true,
+        message: `Tool "${newTool.name}" has been approved and published to the live directory!`,
+        tool: newTool,
+      });
+    } catch (err: any) {
+      console.error('Error in POST /api/submissions/:id/approve:', err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // Reject a Tool Submission
+  app.post('/api/submissions/:id/reject', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { notes } = req.body || {};
+
+      const db = await getMongoDb();
+      if (db) {
+        await db.collection('tool_submissions').updateOne(
+          { id },
+          {
+            $set: {
+              status: 'rejected',
+              reviewedAt: new Date().toISOString(),
+              reviewNotes: notes || 'Does not meet minimum verification criteria',
+            },
+          }
+        );
+      }
+
+      memorySubmissionsCache = memorySubmissionsCache.map((s) =>
+        s.id === id
+          ? {
+              ...s,
+              status: 'rejected',
+              reviewedAt: new Date().toISOString(),
+              reviewNotes: notes || 'Does not meet minimum verification criteria',
+            }
+          : s
+      );
+
+      res.json({ success: true, message: 'Submission marked as rejected.' });
+    } catch (err: any) {
+      console.error('Error in POST /api/submissions/:id/reject:', err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // Delete a Tool Submission
+  app.delete('/api/submissions/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const db = await getMongoDb();
+      if (db) {
+        await db.collection('tool_submissions').deleteOne({ id });
+      }
+
+      memorySubmissionsCache = memorySubmissionsCache.filter((s) => s.id !== id);
+      res.json({ success: true, message: 'Submission removed from queue.' });
+    } catch (err: any) {
+      console.error('Error in DELETE /api/submissions/:id:', err);
+      res.status(500).json({ success: false, error: err.message });
     }
   });
 

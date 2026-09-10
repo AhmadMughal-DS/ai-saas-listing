@@ -17,7 +17,9 @@ import { AIMatcherModal } from './components/AIMatcherModal';
 import { BookmarksDrawer } from './components/BookmarksDrawer';
 import { AuthModal } from './components/AuthModal';
 import { UserAccountModal } from './components/UserAccountModal';
+import { SuggestToolModal } from './components/SuggestToolModal';
 import { SEOManager } from './components/SEOManager';
+import { JoinNewsletter } from './components/JoinNewsletter';
 import { Bot, Sparkles } from 'lucide-react';
 
 // Helper to extract tool identifier from path or hash (e.g. /tool/cursor-ai or #tool-cursor)
@@ -85,6 +87,7 @@ export const App: React.FC = () => {
   });
   const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
   const [isAccountOpen, setIsAccountOpen] = useState<boolean>(false);
+  const [isSuggestOpen, setIsSuggestOpen] = useState<boolean>(false);
 
   // Clear any residual tools from localStorage to ensure 100% pure MongoDB usage
   useEffect(() => {
@@ -299,7 +302,7 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F8FAFC] text-slate-900 relative overflow-x-hidden selection:bg-indigo-600 selection:text-white font-sans">
+    <div className="min-h-screen flex flex-col bg-[var(--color-bg-base,#F8FAFC)] text-[var(--color-text-main,#0F172A)] dark:bg-[#090D16] dark:text-slate-100 relative overflow-x-hidden selection:bg-indigo-600 selection:text-white font-sans transition-colors duration-200">
       {/* Dynamic SEO Meta Tag Manager */}
       <SEOManager activeTab={activeTab} selectedTool={selectedTool} />
 
@@ -317,6 +320,7 @@ export const App: React.FC = () => {
             searchInput?.focus();
           }, 50);
         }}
+        onOpenSuggestTool={() => setIsSuggestOpen(true)}
         onOpenMatcher={() => setIsMatcherOpen(true)}
         onOpenBookmarks={() => setIsBookmarksOpen(true)}
         bookmarkCount={bookmarkedIds.length}
@@ -334,7 +338,7 @@ export const App: React.FC = () => {
             onSelectTool={handleSelectTool}
             onOpenVideoPreview={(tool) => setVideoPreviewTool(tool)}
             onNavigate={handleTabChange}
-            onOpenSubmit={() => setIsMatcherOpen(true)}
+            onOpenSubmit={() => setIsSuggestOpen(true)}
           />
         )}
 
@@ -466,10 +470,16 @@ export const App: React.FC = () => {
           onSelectTool={handleSelectTool}
           onOpenSubmitTool={() => {
             setIsAccountOpen(false);
-            setIsMatcherOpen(true);
+            setIsSuggestOpen(true);
           }}
         />
       )}
+
+      {/* Suggest a Tool Modal */}
+      <SuggestToolModal
+        isOpen={isSuggestOpen}
+        onClose={() => setIsSuggestOpen(false)}
+      />
 
       {/* Floating Ask AI Matcher Copilot Widget (Bottom Right) */}
       <div className="fixed bottom-6 right-6 z-40">
@@ -503,8 +513,13 @@ export const App: React.FC = () => {
         </button>
       </div>
 
+      {/* Join Newsletter Lead Capture Component */}
+      {activeTab !== 'admin' && (
+        <JoinNewsletter source={`page_${activeTab}`} />
+      )}
+
       {/* Global Clean Minimal Footer */}
-      <Footer onNavigate={handleTabChange} />
+      <Footer onNavigate={handleTabChange} onOpenSuggestTool={() => setIsSuggestOpen(true)} />
     </div>
   );
 };
