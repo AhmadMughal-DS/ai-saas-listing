@@ -393,18 +393,22 @@ async function startServer() {
   // ── SEO: Security & Crawl Headers Middleware ──────────────────────────
   app.use((req, res, next) => {
     // Only for HTML pages, not APIs or assets
-    const isHtmlReq = !req.path.startsWith('/api/') && !req.path.match(/\.(js|css|png|jpg|svg|woff2?|ico|json|xml|txt)$/);
+    const isHtmlReq = !req.path.startsWith('/api/') && !req.path.match(/\.(js|css|png|jpg|svg|woff2?|ico|json|xml|txt|html)$/);
     if (isHtmlReq) {
       res.setHeader('X-Content-Type-Options', 'nosniff');
       res.setHeader('X-Frame-Options', 'SAMEORIGIN');
       res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
       res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+      // Block indexing of admin routes at HTTP header level
+      if (req.path === '/admin' || req.path.startsWith('/admin/')) {
+        res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+      }
     }
     next();
   });
 
   // ── SEO: Dynamic XML Sitemap ───────────────────────────────────────────
-  // FIXED: Removed X-Robots-Tag: noindex which was blocking Google from reading the sitemap
+  // NO X-Robots-Tag: noindex here — the sitemap itself must be crawlable by Googlebot
   app.get('/sitemap.xml', async (req, res) => {
     try {
       const baseUrl = resolveBaseUrl(req);
@@ -412,9 +416,8 @@ async function startServer() {
       const xml = buildSitemapXml(baseUrl, tools);
 
       res.header('Content-Type', 'application/xml; charset=utf-8');
-      // Cache 1 hour in CDN, 4 hours in browser — sitemap must be publicly readable by Googlebot
+      // Cache 1 hour in CDN, 4 hours in browser
       res.header('Cache-Control', 'public, max-age=3600, s-maxage=14400');
-      // NO X-Robots-Tag: noindex here — the sitemap itself must be crawlable
       return res.status(200).send(xml);
     } catch (error: any) {
       console.error('Error generating dynamic sitemap.xml:', error);
@@ -427,30 +430,49 @@ async function startServer() {
     const baseUrl = resolveBaseUrl(req);
     res.type('text/plain');
     res.header('Cache-Control', 'public, max-age=86400');
-    // Comprehensive robots.txt: block admin/API, allow all important content pages
     res.send([
       '# ToolverAI — robots.txt',
       '# https://toolverai.com',
+      '# Updated: 2026-10-01',
       '',
       'User-agent: *',
       'Allow: /',
       '',
-      '# Block private admin & API endpoints',
+      '# Block admin and API routes',
       'Disallow: /admin',
+      'Disallow: /admin/',
       'Disallow: /api/',
       '',
-      '# Allow important assets (CSS, JS, images needed by Google)',
+      '# Block query-parameter duplicate-content variations',
+      'Disallow: /*?sort=',
+      'Disallow: /*?page=',
+      'Disallow: /*?filter=',
+      'Disallow: /*?search=',
+      'Disallow: /*?category=',
+      'Disallow: /*?pricing=',
+      '',
+      '# Explicitly allow all indexable content pages',
+      'Allow: /tool/',
+      'Allow: /categories/',
+      'Allow: /compare',
+      'Allow: /deals',
+      'Allow: /rankings',
+      'Allow: /prompts',
+      'Allow: /blog',
+      'Allow: /about',
+      'Allow: /privacy-policy',
+      'Allow: /terms',
+      'Allow: /affiliate-disclosure',
+      'Allow: /submit-tool',
+      '',
+      '# Allow important static assets (needed by Google for rendering)',
       'Allow: /assets/',
-      'Allow: /public/',
+      'Allow: /manifest.json',
       '',
-      '# Block internal/utility endpoints',
-      'Disallow: /api/admin/',
-      'Disallow: /api/firebase/',
-      '',
-      '# Crawl delay for courtesy',
+      '# Courtesy crawl delay (respected by Bing, Yandex — not Google)',
       'Crawl-delay: 1',
       '',
-      `# Dynamic XML Sitemap (auto-generated from live database)`,
+      `# Dynamic XML Sitemap — auto-generated from live MongoDB database`,
       `Sitemap: ${baseUrl}/sitemap.xml`,
     ].join('\n'));
   });
@@ -1584,7 +1606,7 @@ Only return valid JSON.`;
           `<meta name="robots" content="index, follow, max-image-preview:large" />`,
           `<meta property="og:title" content="${title.replace(/"/g,'&quot;')}" />`,
           `<meta property="og:description" content="${desc.replace(/"/g,'&quot;')}" />`,
-          `<meta property="og:type" content="website" />`,
+          `<meta property="og:type" content="product" />`,
           `<meta property="og:url" content="${canonical}" />`,
           `<meta property="og:image" content="${ogImage}" />`,
           `<meta name="twitter:title" content="${title.replace(/"/g,'&quot;')}" />`,
@@ -1674,12 +1696,136 @@ Only return valid JSON.`;
       }
     });
 
+    // ── Static Trust & Legal Pages ─────────────────────────────────────
+    // Serve pre-built HTML pages for About, Privacy, Terms, and Affiliate Disclosure
+    // These are served as static HTML files (not SPA) so they are immediately crawlable
+    const staticPageMap: Record<string, string> = {
+      '/about': 'about.html',
+      '/privacy-policy': 'privacy-policy.html',
+      '/terms': 'terms.html',
+      '/affiliate-disclosure': 'affiliate-disclosure.html',
+    };
+
+    Object.entries(staticPageMap).forEach(([routePath, fileName]) => {
+      app.get(routePath, (req, res) => {
+        const filePath = path.join(process.cwd(), 'public', fileName);
+        if (fs.existsSync(filePath)) {
+          res.header('Content-Type', 'text/html; charset=utf-8');
+          res.header('Cache-Control', 'public, max-age=86400, s-maxage=604800');
+          return res.status(200).sendFile(filePath);
+        }
+        // Fallback to SPA if file doesn't exist
+        res.sendFile(path.join(distPath, 'index.html'));
+      });
+    });
+
+    // ── SSR for submit-tool page ────────────────────────────────────────
+    app.get('/submit-tool', (req, res) => {
+      try {
+        const htmlTemplate = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
+        const baseUrl = resolveBaseUrl(req);
+        const title = 'Submit an AI Tool — Get Listed on ToolverAI';
+        const desc = 'Submit your AI tool to the ToolverAI directory. Get reviewed, verified, and listed alongside 1000+ AI tools ranked by real monthly traffic.';
+        const canonical = `${baseUrl}/submit-tool`;
+        const injectedMeta = [
+          `<title>${title}</title>`,
+          `<meta name="description" content="${desc.replace(/"/g, '&quot;')}" />`,
+          `<link rel="canonical" href="${canonical}" />`,
+          `<meta name="robots" content="index, follow" />`,
+          `<meta property="og:title" content="${title.replace(/"/g, '&quot;')}" />`,
+          `<meta property="og:description" content="${desc.replace(/"/g, '&quot;')}" />`,
+          `<meta property="og:type" content="website" />`,
+          `<meta property="og:url" content="${canonical}" />`,
+          `<meta property="og:image" content="${baseUrl}/og-banner.png" />`,
+          `<meta name="twitter:card" content="summary_large_image" />`,
+          `<meta name="twitter:title" content="${title.replace(/"/g, '&quot;')}" />`,
+          `<meta name="twitter:description" content="${desc.replace(/"/g, '&quot;')}" />`,
+        ].join('\n    ');
+        const finalHtml = htmlTemplate.replace(/\<title\>ToolverAI[^\<]*\<\/title\>/, injectedMeta);
+        res.header('Content-Type', 'text/html; charset=utf-8');
+        res.header('Cache-Control', 'public, max-age=3600, s-maxage=86400');
+        return res.status(200).send(finalHtml);
+      } catch (err: any) {
+        res.sendFile(path.join(distPath, 'index.html'));
+      }
+    });
+
+    // ── SSR for major section pages ─────────────────────────────────────
+    const majorPageSeo: Record<string, { title: string; desc: string }> = {
+      '/rankings': {
+        title: 'Top AI Tools by Monthly Traffic — Verified Rankings 2026 | ToolverAI',
+        desc: 'Explore verified monthly traffic statistics, growth velocity, and user volume leaderboards across Coding, LLMs, Image, and Audio AI platforms. Updated weekly on ToolverAI.',
+      },
+      '/compare': {
+        title: 'Compare AI Tools Side-by-Side — Features, Pricing & Traffic | ToolverAI',
+        desc: 'Compare top AI tools head-to-head on pricing, monthly traffic, API availability, supported platforms, and user ratings. Free comparison tool at ToolverAI.',
+      },
+      '/deals': {
+        title: 'Best AI Tool Deals & Promo Codes — Verified Discounts 2026 | ToolverAI',
+        desc: 'Save on leading AI software with exclusive verified coupon codes, lifetime deals, and extended free trials. All deals manually verified and updated daily.',
+      },
+      '/prompts': {
+        title: 'AI Prompt Engineering Library — Templates for ChatGPT, Claude & More | ToolverAI',
+        desc: 'Master ChatGPT, Claude, Midjourney, and Cursor AI with battle-tested prompts for coding, SEO, marketing, and workflow automation. Free prompt engineering library.',
+      },
+      '/categories': {
+        title: 'AI Tools by Category — Coding, Writing, Image, Video & More | ToolverAI',
+        desc: 'Browse 1000+ AI tools organized by category. Find the best Coding AI, Writing AI, Image Generation, Video AI, Marketing AI tools — all ranked and verified on ToolverAI.',
+      },
+      '/blog': {
+        title: 'AI Tools Blog — News, Reviews & Tutorials | ToolverAI',
+        desc: 'Read expert AI tool analysis, LLM benchmark comparisons, step-by-step tutorials, and the latest AI software news at ToolverAI.',
+      },
+    };
+
+    Object.entries(majorPageSeo).forEach(([routePath, seo]) => {
+      app.get(routePath, (req, res) => {
+        try {
+          const htmlTemplate = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
+          const baseUrl = resolveBaseUrl(req);
+          const canonical = `${baseUrl}${routePath}`;
+          const injectedMeta = [
+            `<title>${seo.title.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</title>`,
+            `<meta name="description" content="${seo.desc.replace(/"/g, '&quot;')}" />`,
+            `<link rel="canonical" href="${canonical}" />`,
+            `<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />`,
+            `<meta property="og:title" content="${seo.title.replace(/"/g, '&quot;')}" />`,
+            `<meta property="og:description" content="${seo.desc.replace(/"/g, '&quot;')}" />`,
+            `<meta property="og:type" content="website" />`,
+            `<meta property="og:url" content="${canonical}" />`,
+            `<meta property="og:image" content="${baseUrl}/og-banner.png" />`,
+            `<meta name="twitter:card" content="summary_large_image" />`,
+            `<meta name="twitter:site" content="@toolverai" />`,
+            `<meta name="twitter:title" content="${seo.title.replace(/"/g, '&quot;')}" />`,
+            `<meta name="twitter:description" content="${seo.desc.replace(/"/g, '&quot;')}" />`,
+          ].join('\n    ');
+          const finalHtml = htmlTemplate.replace(/\<title\>ToolverAI[^\<]*\<\/title\>/, injectedMeta);
+          res.header('Content-Type', 'text/html; charset=utf-8');
+          res.header('Cache-Control', 'public, max-age=300, s-maxage=3600');
+          return res.status(200).send(finalHtml);
+        } catch (err: any) {
+          console.error(`SSR error for ${routePath}:`, err);
+          res.sendFile(path.join(distPath, 'index.html'));
+        }
+      });
+    });
+
     // ── Catch-all: serve SPA with proper cache control ─────────────────
     app.get('*', (req, res) => {
       // Return 404 status for unrecognized paths while still serving SPA
-      const knownRoutes = ['/', '/rankings', '/compare', '/deals', '/prompts', '/categories', '/blog', '/submit-tool', '/about'];
-      const isKnown = knownRoutes.includes(req.path) || req.path.startsWith('/tool/') || req.path.startsWith('/categories/');
+      const knownRoutes = [
+        '/', '/rankings', '/compare', '/deals', '/prompts', '/categories',
+        '/blog', '/submit-tool', '/about', '/privacy-policy', '/terms', '/affiliate-disclosure',
+      ];
+      const isKnown = knownRoutes.includes(req.path)
+        || req.path.startsWith('/tool/')
+        || req.path.startsWith('/categories/')
+        || req.path.startsWith('/blog/');
       const status = isKnown ? 200 : 404;
+      // For true 404s, add noindex header
+      if (status === 404) {
+        res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+      }
       res.status(status).sendFile(path.join(distPath, 'index.html'));
     });
   }

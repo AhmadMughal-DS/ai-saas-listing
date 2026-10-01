@@ -104,6 +104,36 @@ export function generateSitemapEntries(baseUrl: string, tools: any[] = []): Site
       lastmod: today,
       changefreq: 'daily',
       priority: '0.8',
+    },
+    {
+      loc: `${cleanBaseUrl}/submit-tool`,
+      lastmod: today,
+      changefreq: 'monthly',
+      priority: '0.6',
+    },
+    {
+      loc: `${cleanBaseUrl}/about`,
+      lastmod: today,
+      changefreq: 'monthly',
+      priority: '0.5',
+    },
+    {
+      loc: `${cleanBaseUrl}/privacy-policy`,
+      lastmod: today,
+      changefreq: 'yearly',
+      priority: '0.3',
+    },
+    {
+      loc: `${cleanBaseUrl}/terms`,
+      lastmod: today,
+      changefreq: 'yearly',
+      priority: '0.3',
+    },
+    {
+      loc: `${cleanBaseUrl}/affiliate-disclosure`,
+      lastmod: today,
+      changefreq: 'yearly',
+      priority: '0.3',
     }
   );
 
@@ -128,23 +158,29 @@ export function generateSitemapEntries(baseUrl: string, tools: any[] = []): Site
 
 
   // 3. Blog Articles & Technical Guides
+  // NOTE: Blog posts use /blog/[slug] path format for proper crawlability.
+  // Hash-based URLs (#slug) are NOT crawlable by search engines.
+  // Until individual blog post routes are implemented server-side, we only
+  // include the /blog index page (already added above).
+  // Individual blog post pages will be added here when /blog/:slug routes exist.
   try {
     if (Array.isArray(INITIAL_BLOG_POSTS)) {
       INITIAL_BLOG_POSTS.forEach((post) => {
-        if (post && (post.slug || post.id)) {
-          entries.push({
-            loc: `${cleanBaseUrl}/blog#${encodeURIComponent(post.slug || post.id)}`,
-            lastmod: formatLastMod(post.publishedDate),
-            changefreq: 'monthly',
-            priority: '0.7',
-            image: post.coverImage
-              ? {
-                  loc: post.coverImage,
-                  title: post.title,
-                  caption: post.excerpt,
-                }
-              : undefined,
-          });
+        const postSlug = post.slug || post.id;
+        if (post && postSlug) {
+          // Only include if we're confident the URL serves an actual page
+          // Currently blog uses hash routing — only add proper path URLs
+          // Comment out hash-based entries to avoid submitting non-crawlable URLs:
+          // entries.push({ loc: `${cleanBaseUrl}/blog#${postSlug}`, ... }) // NOT crawlable
+          //
+          // Future: when /blog/:slug routes are live, uncomment:
+          // entries.push({
+          //   loc: `${cleanBaseUrl}/blog/${encodeURIComponent(postSlug)}`,
+          //   lastmod: formatLastMod(post.publishedDate),
+          //   changefreq: 'monthly',
+          //   priority: '0.7',
+          //   image: post.coverImage ? { loc: post.coverImage, title: post.title } : undefined,
+          // });
         }
       });
     }

@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { AITool, ActiveTab } from '../types';
+import { trackSearch, trackCategoryView } from '../lib/analytics';
 import { Hero3DModel } from './Hero3DModel';
 import { 
   Search, 
@@ -96,6 +97,19 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
 
     return list;
   }, [tools, selectedCategory, searchQuery, featureFilter, sortBy]);
+
+  // Debounced search tracking for GA4 — fires only when user pauses typing (700ms)
+  useEffect(() => {
+    const trimmed = searchQuery.trim();
+    if (!trimmed || trimmed.length < 2) return;
+    const timer = setTimeout(() => {
+      trackSearch({
+        search_term: trimmed,
+        result_count: filteredTools.length,
+      });
+    }, 700);
+    return () => clearTimeout(timer);
+  }, [searchQuery, filteredTools.length]);
 
   return (
     <div className="w-full pb-24">
@@ -249,7 +263,12 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
           {CATEGORIES.map((cat) => (
             <button
               key={cat}
-              onClick={() => setSelectedCategory(cat)}
+              onClick={() => {
+                setSelectedCategory(cat);
+                if (cat !== 'All') {
+                  trackCategoryView({ category_name: cat });
+                }
+              }}
               className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition-all duration-150 cursor-pointer ${
                 selectedCategory === cat
                   ? 'bg-slate-900 text-white shadow-xs font-semibold'

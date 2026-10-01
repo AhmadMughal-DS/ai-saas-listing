@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { AIDeal, AITool, ActiveTab } from '../types';
 import { INITIAL_DEALS } from '../data/initialData';
+import { trackDealClick } from '../lib/analytics';
 import { 
   Tag, 
   Copy, 
@@ -54,6 +55,14 @@ export const DealsView: React.FC<DealsViewProps> = ({
       setTimeout(() => {
         setCopiedCodeId(null);
       }, 2500);
+      // Track deal_click with action: copy_code
+      trackDealClick({
+        deal_id: deal.id,
+        deal_tool_name: deal.toolName,
+        deal_type: deal.dealType,
+        deal_discount: deal.discount,
+        action: 'copy_code',
+      });
     }
   };
 
@@ -62,6 +71,14 @@ export const DealsView: React.FC<DealsViewProps> = ({
     setDeals((prev) =>
       prev.map((d) => (d.id === deal.id ? { ...d, claimedCount: d.claimedCount + 1 } : d))
     );
+    // Track deal_click with action: claim (opening the deal URL)
+    trackDealClick({
+      deal_id: deal.id,
+      deal_tool_name: deal.toolName,
+      deal_type: deal.dealType,
+      deal_discount: deal.discount,
+      action: 'claim',
+    });
     window.open(deal.url, '_blank', 'noopener,noreferrer');
   };
 

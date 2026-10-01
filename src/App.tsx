@@ -21,6 +21,7 @@ import { SuggestToolModal } from './components/SuggestToolModal';
 import { SEOManager } from './components/SEOManager';
 import { JoinNewsletter } from './components/JoinNewsletter';
 import { Bot, Sparkles } from 'lucide-react';
+import { trackPageView, trackEvent, trackToolView, trackCategoryView } from './lib/analytics';
 
 // Helper to extract tool identifier from path or hash (e.g. /tool/cursor-ai or #tool-cursor)
 const getToolIdentifierFromUrl = (): string | null => {
@@ -43,44 +44,16 @@ const getInitialTabFromUrl = (): ActiveTab => {
   if (path.startsWith('/tool/') || hash.includes('tool-') || hash.includes('tool/')) return 'tool-detail';
   if (path === '/admin' || path.startsWith('/admin/') || hash.includes('admin')) return 'admin';
   if (path === '/rankings' || hash.includes('rankings')) return 'rankings';
-  if (path === '/compare' || hash.includes('compare')) return 'compare';
-  if (path === '/deals' || hash.includes('deals')) return 'deals';
+  if (path === '/compare' || path.startsWith('/compare/') || hash.includes('compare')) return 'compare';
+  if (path === '/deals' || path.startsWith('/deals/') || hash.includes('deals')) return 'deals';
   if (path === '/prompts' || hash.includes('prompts')) return 'prompts';
   if (path === '/categories' || path.startsWith('/categories/') || hash.includes('categories')) return 'categories';
   if (path === '/blog' || path.startsWith('/blog/') || hash.includes('news') || hash.includes('blog')) return 'blog';
+  // submit-tool opens directory with submit modal; handled by onOpenSubmit trigger
+  if (path === '/submit-tool') return 'directory';
   return 'directory';
 };
 
-// ── GA4 Analytics Helper ─────────────────────────────────────────────────
-declare global {
-  interface Window {
-    gtag?: (...args: any[]) => void;
-    dataLayer?: any[];
-  }
-}
-
-function trackEvent(eventName: string, params?: Record<string, any>) {
-  try {
-    if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
-      window.gtag('event', eventName, params || {});
-    }
-  } catch {
-    // GA4 not loaded or blocked — silent fail
-  }
-}
-
-function trackPageView(path: string, title?: string) {
-  try {
-    if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
-      window.gtag('config', (import.meta as any).env?.VITE_GA4_MEASUREMENT_ID || '', {
-        page_path: path,
-        page_title: title || document.title,
-      });
-    }
-  } catch {
-    // silent
-  }
-}
 
 export const App: React.FC = () => {
   // Tools state initialized solely from MongoDB Atlas API (No localStorage caching for tools)
@@ -199,6 +172,20 @@ export const App: React.FC = () => {
     }
   }, [currentUser]);
 
+  // Fire the initial GA4 page_view on mount.
+  // index.html sets send_page_view: false on the gtag config to prevent the
+  // automatic hit. We fire it here once React has mounted so the page title
+  // is already set by SEOManager and we know the real current path.
+  useEffect(() => {
+    const initialPath = window.location.pathname || '/';
+    const initialTitle = document.title;
+    // Small delay so SEOManager has time to update document.title first
+    const timer = setTimeout(() => {
+      trackPageView(initialPath, document.title || initialTitle);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleToolAdded = async (newTool: AITool) => {
     setTools((prev) => [newTool, ...prev.filter((t) => t.id !== newTool.id)]);
     try {
@@ -265,9 +252,11 @@ export const App: React.FC = () => {
       if (window.location.pathname !== targetPath) {
         window.history.pushState({ tab }, '', targetPath);
       }
-      // Track GA4 page view
+      // Don't track admin navigation in GA4
+      if (tab === 'admin') return;
+      // Track SPA page_view for this route change
       trackPageView(targetPath);
-      // Track category/page view event
+      // Also fire a named section event for funnel reporting
       if (tab !== 'directory' && tab !== 'tool-detail') {
         trackEvent(`${tab}_view`, { tab_name: tab, page_path: targetPath });
       }
@@ -290,8 +279,8 @@ export const App: React.FC = () => {
       if (window.location.pathname !== targetPath) {
         window.history.pushState({ tab: 'tool-detail', toolId: tool.id }, '', targetPath);
       }
-      // GA4: Track tool view event
-      trackEvent('tool_view', {
+      // Typed tool_view event via centralized analytics module
+      trackToolView({
         tool_id: tool.id,
         tool_name: tool.name,
         tool_category: tool.category,
@@ -429,7 +418,8 @@ export const App: React.FC = () => {
         {activeTab === 'categories' && (
           <CategoriesView
             tools={tools}
-            onSelectCategory={() => {
+            onSelectCategory={(categoryName) => {
+              trackCategoryView({ category_name: categoryName });
               handleTabChange('directory');
             }}
           />

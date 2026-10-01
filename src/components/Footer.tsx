@@ -166,15 +166,42 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenSuggestTool })
               </ul>
             </div>
 
-            {/* Legal — placeholder for future content */}
+            {/* Legal */}
             <div>
               <h3 className="font-semibold text-slate-800 dark:text-slate-200 mb-3 text-xs uppercase tracking-wider">Legal</h3>
-              <ul className="space-y-2 text-slate-500 dark:text-slate-400 text-xs">
-                {/* TODO: Add real legal pages when content is ready */}
-                <li><span className="opacity-50 cursor-default">Privacy Policy</span></li>
-                <li><span className="opacity-50 cursor-default">Terms of Service</span></li>
-                <li><span className="opacity-50 cursor-default">Affiliate Disclosure</span></li>
-                <li><span className="opacity-50 cursor-default">Editorial Policy</span></li>
+              <ul className="space-y-2 text-sm">
+                <li>
+                  <a
+                    href="/privacy-policy"
+                    className="text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                  >
+                    Privacy Policy
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="/terms"
+                    className="text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                  >
+                    Terms of Service
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="/affiliate-disclosure"
+                    className="text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                  >
+                    Affiliate Disclosure
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="/about"
+                    className="text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                  >
+                    About ToolverAI
+                  </a>
+                </li>
               </ul>
             </div>
 

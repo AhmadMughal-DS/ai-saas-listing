@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AITool, ToolReview, UserAccount } from '../types';
+import { trackOutboundToolClick } from '../lib/analytics';
 import { 
   Star, 
   CheckCircle, 
@@ -104,19 +105,15 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
     }
   };
 
-  // GA4: Track outbound clicks to a tool's official website
+  // Track outbound clicks to a tool's official website via centralized analytics module
   const handleOutboundClick = (destination: string, label: string) => {
-    try {
-      if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
-        window.gtag('event', 'outbound_tool_click', {
-          tool_id: tool.id,
-          tool_name: tool.name,
-          tool_category: tool.category,
-          destination_url: destination,
-          link_label: label,
-        });
-      }
-    } catch { /* silent */ }
+    trackOutboundToolClick({
+      tool_id: tool.id,
+      tool_name: tool.name,
+      tool_category: tool.category,
+      destination_url: destination,
+      link_label: label,
+    });
   };
 
   const toolSlug = tool.slug || tool.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');

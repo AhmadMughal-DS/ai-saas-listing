@@ -37,8 +37,8 @@ export const SEOManager: React.FC<SEOManagerProps> = ({
 
   return (
     <>
-      {/* Floating SEO Inspector Toggle Button */}
-      {showFloatingInspectorButton && (
+      {/* Floating SEO Inspector Toggle Button — development only */}
+      {showFloatingInspectorButton && (import.meta as any).env?.DEV && (
         <div className="fixed bottom-5 left-5 z-40">
           <button
             onClick={() => setIsInspectorOpen(true)}

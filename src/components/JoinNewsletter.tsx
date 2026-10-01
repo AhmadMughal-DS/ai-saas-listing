@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { trackNewsletterSignup } from '../lib/analytics';
 import { 
   Mail, 
   Sparkles, 
@@ -83,6 +84,13 @@ export const JoinNewsletter: React.FC<JoinNewsletterProps> = ({
         setAlreadySubscribed(Boolean(data.alreadySubscribed));
         setMessage(data.message || 'Thank you for subscribing to ToolverAI Weekly!');
         setEmail('');
+
+        // Track newsletter_signup event in GA4
+        trackNewsletterSignup({
+          source,
+          topics: selectedTopics,
+          already_subscribed: Boolean(data.alreadySubscribed),
+        });
       } else {
         setStatus('error');
         setMessage(data.error || 'Failed to subscribe. Please try again.');

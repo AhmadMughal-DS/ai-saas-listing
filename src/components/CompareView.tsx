@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { AITool, ActiveTab } from '../types';
+import { trackComparisonView } from '../lib/analytics';
 import { 
   GitCompare, 
   Check, 
@@ -76,10 +77,24 @@ export const CompareView: React.FC<CompareViewProps> = ({
     if (found2) setTool2Id(found2.id);
     setShowThirdTool(false);
     setVerdict(null);
+
+    if (found1 && found2) {
+      trackComparisonView({
+        tool_1_name: found1.name,
+        tool_2_name: found2.name,
+        tool_count: 2,
+      });
+    }
   };
 
   const handleGenerateVerdict = async () => {
     setIsGeneratingVerdict(true);
+    trackComparisonView({
+      tool_1_name: tool1.name,
+      tool_2_name: tool2.name,
+      tool_3_name: tool3?.name,
+      tool_count: tool3 ? 3 : 2,
+    });
     try {
       const res = await fetch('/api/ai/compare-verdict', {
         method: 'POST',

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AITool, ToolSubmission, PricingType } from '../types';
+import { trackSubmitTool } from '../lib/analytics';
 import { 
   X, 
   Sparkles, 
@@ -148,6 +149,13 @@ export const SuggestToolModal: React.FC<SuggestToolModalProps> = ({
       if (onToolSubmitted) {
         onToolSubmitted(data.submission);
       }
+
+      // Track submit_tool event in GA4
+      trackSubmitTool({
+        tool_name: name.trim(),
+        tool_category: category,
+        tool_pricing_type: pricingType,
+      });
     } catch (err: any) {
       console.error('Submission error:', err);
       setErrorMessage(err.message || 'An unexpected error occurred while submitting.');

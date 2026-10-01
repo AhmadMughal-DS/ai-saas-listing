@@ -66,11 +66,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
 
     <!-- ── Google Analytics 4 (GA4) ─────────────────────────── -->
-    <!-- Loads only if VITE_GA4_MEASUREMENT_ID is set in .env -->
+    <!-- Loads only if VITE_GA4_MEASUREMENT_ID is set in .env   -->
+    <!-- send_page_view: false — React fires page_view manually  -->
+    <!-- via src/lib/analytics.ts to avoid SPA duplicate hits.   -->
     <script>
       (function() {
         var gid = '%VITE_GA4_MEASUREMENT_ID%';
-        if (!gid || gid === '%VITE_GA4_MEASUREMENT_ID%' || gid.trim() === '') return;
+        if (!gid || gid === '%VITE_GA4_MEASUREMENT_ID%' || !gid.startsWith('G-')) return;
         var s = document.createElement('script');
         s.async = true;
         s.src = 'https://www.googletagmanager.com/gtag/js?id=' + gid;
@@ -80,8 +82,7 @@
         window.gtag = gtag;
         gtag('js', new Date());
         gtag('config', gid, {
-          page_path: window.location.pathname,
-          send_page_view: true,
+          send_page_view: false,
           cookie_flags: 'SameSite=None;Secure'
         });
       })();
