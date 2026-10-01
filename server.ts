@@ -8,6 +8,12 @@ import { initializeApp as initFirebaseApp, cert, applicationDefault, App as Fire
 import dotenv from 'dotenv';
 import { INITIAL_TOOLS } from './src/data/initialData';
 import { buildSitemapXml, generateSitemapEntries } from './src/server/sitemap';
+import {
+  submitToIndexNow,
+  triggerToolContentChange,
+  getCorePublicUrls,
+  INDEXNOW_DEFAULT_KEY,
+} from './src/server/indexnow';
 
 dotenv.config();
 
@@ -478,78 +484,42 @@ async function startServer() {
   });
 
   // ── SEO: IndexNow Key File ─────────────────────────────────────────────
-  // Serve the IndexNow key as a text file at /{key}.txt
+  // Serve the IndexNow key as a text file at /{key}.txt and /indexnow-key.txt
   app.get('/indexnow-key.txt', (req, res) => {
-    const key = (process.env.INDEXNOW_KEY || '').trim();
-    if (!key) return res.status(404).send('IndexNow key not configured');
-    res.type('text/plain');
+    const key = (process.env.INDEXNOW_KEY || INDEXNOW_DEFAULT_KEY).trim();
+    res.type('text/plain; charset=utf-8');
     res.header('Cache-Control', 'public, max-age=86400');
     res.send(key);
   });
 
   // Dynamic key-based route: /{INDEXNOW_KEY}.txt (required by IndexNow spec)
   app.get('/:key.txt', (req, res, next) => {
-    const configuredKey = (process.env.INDEXNOW_KEY || '').trim();
+    const configuredKey = (process.env.INDEXNOW_KEY || INDEXNOW_DEFAULT_KEY).trim();
     if (!configuredKey || req.params.key !== configuredKey) return next();
-    res.type('text/plain');
+    res.type('text/plain; charset=utf-8');
     res.header('Cache-Control', 'public, max-age=86400');
     res.send(configuredKey);
   });
 
   // ── SEO: IndexNow Submission API ───────────────────────────────────────
-  // Called internally when new tools/pages are published
+  // Reusable API to submit URLs on-demand to Microsoft Bing IndexNow
   app.post('/api/indexnow/submit', async (req, res) => {
     try {
-      const key = (process.env.INDEXNOW_KEY || '').trim();
-      if (!key) {
-        return res.status(400).json({ success: false, error: 'INDEXNOW_KEY not configured in .env' });
-      }
-
       const baseUrl = resolveBaseUrl(req);
       const { urls } = req.body || {};
 
-      // Accept array of URLs or auto-generate from recent tools
-      let urlList: string[] = [];
+      let targetUrls: string[] = [];
       if (Array.isArray(urls) && urls.length > 0) {
-        urlList = urls.filter((u: any) => typeof u === 'string' && u.startsWith('http')).slice(0, 10000);
+        targetUrls = urls;
       } else {
-        // Default: submit main pages
-        urlList = [
-          `${baseUrl}/`,
-          `${baseUrl}/rankings`,
-          `${baseUrl}/deals`,
-          `${baseUrl}/compare`,
-          `${baseUrl}/categories`,
-          `${baseUrl}/blog`,
-          `${baseUrl}/prompts`,
-        ];
+        // Default: submit today's core public hub pages
+        targetUrls = getCorePublicUrls(baseUrl);
       }
 
-      if (urlList.length === 0) {
-        return res.status(400).json({ success: false, error: 'No valid URLs to submit' });
-      }
+      const result = await submitToIndexNow(targetUrls, { baseUrl });
+      const httpCode = result.status >= 200 && result.status < 300 ? 200 : (result.status || 500);
 
-      const host = new URL(baseUrl).hostname;
-      const payload = { host, key, keyLocation: `${baseUrl}/${key}.txt`, urlList };
-
-      // Submit to Bing IndexNow (which distributes to Yandex, Seznam, etc.)
-      const indexnowRes = await fetch('https://api.indexnow.org/indexnow', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json; charset=utf-8' },
-        body: JSON.stringify(payload),
-      }).catch(() => null);
-
-      const statusCode = indexnowRes?.status || 0;
-      console.log(`IndexNow submission: ${urlList.length} URLs → HTTP ${statusCode}`);
-
-      return res.json({
-        success: statusCode === 200 || statusCode === 202,
-        urlsSubmitted: urlList.length,
-        indexnowStatus: statusCode,
-        message: statusCode === 200 || statusCode === 202
-          ? `Successfully submitted ${urlList.length} URLs to IndexNow`
-          : `IndexNow responded with status ${statusCode}`,
-      });
+      return res.status(httpCode).json(result);
     } catch (error: any) {
       console.error('IndexNow submission error:', error);
       res.status(500).json({ success: false, error: error?.message || 'IndexNow submission failed' });
@@ -833,6 +803,12 @@ async function startServer() {
       // Update memory cache
       memoryToolsCache = [newTool, ...memoryToolsCache.filter((t) => t.id !== newTool.id)];
 
+      // Automatically notify IndexNow of new tool content (asynchronous fire-and-forget)
+      const baseUrl = resolveBaseUrl(req);
+      triggerToolContentChange(newTool, 'create', baseUrl).catch((err) =>
+        console.warn('[IndexNow Trigger Warning]', err?.message)
+      );
+
       res.status(201).json({
         success: true,
         message: db ? 'Tool successfully saved in MongoDB' : 'Tool saved (local cache fallback)',
@@ -856,6 +832,13 @@ async function startServer() {
       }
 
       memoryToolsCache = memoryToolsCache.map((t) => (t.id === id ? { ...t, ...updates } : t));
+      const updatedTool = memoryToolsCache.find((t) => t.id === id) || { id, ...updates };
+
+      // Automatically notify IndexNow of updated tool content
+      const baseUrl = resolveBaseUrl(req);
+      triggerToolContentChange(updatedTool, 'update', baseUrl).catch((err) =>
+        console.warn('[IndexNow Trigger Warning]', err?.message)
+      );
 
       res.json({ success: true, message: 'Tool updated successfully' });
     } catch (error: any) {
@@ -868,6 +851,7 @@ async function startServer() {
   app.delete('/api/tools/:id', async (req, res) => {
     try {
       const { id } = req.params;
+      const deletedTool = memoryToolsCache.find((t) => t.id === id) || { id };
 
       const db = await getMongoDb();
       if (db) {
@@ -875,6 +859,12 @@ async function startServer() {
       }
 
       memoryToolsCache = memoryToolsCache.filter((t) => t.id !== id);
+
+      // Automatically notify IndexNow of removed tool content
+      const baseUrl = resolveBaseUrl(req);
+      triggerToolContentChange(deletedTool, 'delete', baseUrl).catch((err) =>
+        console.warn('[IndexNow Trigger Warning]', err?.message)
+      );
 
       res.json({ success: true, message: 'Tool deleted successfully' });
     } catch (error: any) {
@@ -1253,6 +1243,12 @@ async function startServer() {
               approvedToolId: newTool.id,
             }
           : s
+      );
+
+      // Automatically notify IndexNow of approved and published tool (fire-and-forget)
+      const baseUrl = resolveBaseUrl(req);
+      triggerToolContentChange(newTool, 'create', baseUrl).catch((err) =>
+        console.warn('[IndexNow Trigger Warning]', err?.message)
       );
 
       res.json({
