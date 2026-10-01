@@ -94,16 +94,6 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenSuggestTool })
                     Browse Categories
                   </button>
                 </li>
-                {onOpenSuggestTool && (
-                  <li>
-                    <button
-                      onClick={onOpenSuggestTool}
-                      className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 font-semibold transition-colors text-left w-full cursor-pointer"
-                    >
-                      + Submit a Tool
-                    </button>
-                  </li>
-                )}
               </ul>
             </div>
 

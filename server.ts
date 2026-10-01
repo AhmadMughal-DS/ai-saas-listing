@@ -530,7 +530,7 @@ async function startServer() {
       }
 
       const host = new URL(baseUrl).hostname;
-      const payload = { host, key, keyLocation: `${baseUrl}/indexnow-key.txt`, urlList };
+      const payload = { host, key, keyLocation: `${baseUrl}/${key}.txt`, urlList };
 
       // Submit to Bing IndexNow (which distributes to Yandex, Seznam, etc.)
       const indexnowRes = await fetch('https://api.indexnow.org/indexnow', {
