@@ -34,22 +34,53 @@ const getToolIdentifierFromUrl = (): string | null => {
   return null;
 };
 
-// Helper to parse URL path/hash
+// Helper to parse URL path/hash into ActiveTab
 const getInitialTabFromUrl = (): ActiveTab => {
   if (typeof window === 'undefined') return 'directory';
   const path = window.location.pathname.toLowerCase();
   const hash = window.location.hash.toLowerCase();
 
-  if (path.includes('/tool/') || hash.includes('tool-') || hash.includes('tool/')) return 'tool-detail';
-  if (path.includes('admin') || hash.includes('admin')) return 'admin';
-  if (path.includes('rankings') || hash.includes('rankings')) return 'rankings';
-  if (path.includes('compare') || hash.includes('compare')) return 'compare';
-  if (path.includes('deals') || hash.includes('deals')) return 'deals';
-  if (path.includes('prompts') || hash.includes('prompts')) return 'prompts';
-  if (path.includes('categories') || hash.includes('categories')) return 'categories';
-  if (path.includes('news') || path.includes('blog') || hash.includes('news') || hash.includes('blog')) return 'blog';
+  if (path.startsWith('/tool/') || hash.includes('tool-') || hash.includes('tool/')) return 'tool-detail';
+  if (path === '/admin' || path.startsWith('/admin/') || hash.includes('admin')) return 'admin';
+  if (path === '/rankings' || hash.includes('rankings')) return 'rankings';
+  if (path === '/compare' || hash.includes('compare')) return 'compare';
+  if (path === '/deals' || hash.includes('deals')) return 'deals';
+  if (path === '/prompts' || hash.includes('prompts')) return 'prompts';
+  if (path === '/categories' || path.startsWith('/categories/') || hash.includes('categories')) return 'categories';
+  if (path === '/blog' || path.startsWith('/blog/') || hash.includes('news') || hash.includes('blog')) return 'blog';
   return 'directory';
 };
+
+// ── GA4 Analytics Helper ─────────────────────────────────────────────────
+declare global {
+  interface Window {
+    gtag?: (...args: any[]) => void;
+    dataLayer?: any[];
+  }
+}
+
+function trackEvent(eventName: string, params?: Record<string, any>) {
+  try {
+    if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
+      window.gtag('event', eventName, params || {});
+    }
+  } catch {
+    // GA4 not loaded or blocked — silent fail
+  }
+}
+
+function trackPageView(path: string, title?: string) {
+  try {
+    if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
+      window.gtag('config', (import.meta as any).env?.VITE_GA4_MEASUREMENT_ID || '', {
+        page_path: path,
+        page_title: title || document.title,
+      });
+    }
+  } catch {
+    // silent
+  }
+}
 
 export const App: React.FC = () => {
   // Tools state initialized solely from MongoDB Atlas API (No localStorage caching for tools)
@@ -219,12 +250,28 @@ export const App: React.FC = () => {
     }
     setActiveTab(tab);
     try {
-      const targetPath = tab === 'directory' ? '/' : `/${tab}`;
+      // Map tabs to clean SEO-friendly URL paths
+      const tabPaths: Partial<Record<ActiveTab, string>> = {
+        directory: '/',
+        rankings: '/rankings',
+        compare: '/compare',
+        deals: '/deals',
+        prompts: '/prompts',
+        categories: '/categories',
+        blog: '/blog',
+        admin: '/admin',
+      };
+      const targetPath = tabPaths[tab] ?? `/${tab}`;
       if (window.location.pathname !== targetPath) {
         window.history.pushState({ tab }, '', targetPath);
       }
+      // Track GA4 page view
+      trackPageView(targetPath);
+      // Track category/page view event
+      if (tab !== 'directory' && tab !== 'tool-detail') {
+        trackEvent(`${tab}_view`, { tab_name: tab, page_path: targetPath });
+      }
     } catch (e) {
-      // Fallback for sandboxed iframes
       try {
         window.location.hash = `#${tab}`;
       } catch (err) {
@@ -238,11 +285,20 @@ export const App: React.FC = () => {
     setSelectedTool(tool);
     setActiveTab('tool-detail');
     try {
-      const toolSlug = tool.slug || tool.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+      const toolSlug = tool.slug || tool.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
       const targetPath = `/tool/${toolSlug}`;
       if (window.location.pathname !== targetPath) {
         window.history.pushState({ tab: 'tool-detail', toolId: tool.id }, '', targetPath);
       }
+      // GA4: Track tool view event
+      trackEvent('tool_view', {
+        tool_id: tool.id,
+        tool_name: tool.name,
+        tool_category: tool.category,
+        tool_pricing: tool.pricingType,
+        page_path: targetPath,
+      });
+      trackPageView(targetPath, `${tool.name} — ToolverAI`);
     } catch (e) {
       try {
         window.location.hash = `#tool-${tool.slug || tool.id}`;

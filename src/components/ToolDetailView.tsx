@@ -104,18 +104,52 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
     }
   };
 
+  // GA4: Track outbound clicks to a tool's official website
+  const handleOutboundClick = (destination: string, label: string) => {
+    try {
+      if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
+        window.gtag('event', 'outbound_tool_click', {
+          tool_id: tool.id,
+          tool_name: tool.name,
+          tool_category: tool.category,
+          destination_url: destination,
+          link_label: label,
+        });
+      }
+    } catch { /* silent */ }
+  };
+
+  const toolSlug = tool.slug || tool.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  const categorySlug = (tool.category || 'tools').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
   return (
     <div className="w-full pt-28 pb-24 px-4 sm:px-8 max-w-[1440px] mx-auto">
+
+      {/* SEO Breadcrumb Navigation */}
+      <nav aria-label="Breadcrumb" className="mb-4">
+        <ol className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 flex-wrap">
+          <li><button onClick={onBack} className="hover:text-indigo-600 transition-colors cursor-pointer">Home</button></li>
+          <li aria-hidden="true"><span>/</span></li>
+          <li><button onClick={onBack} className="hover:text-indigo-600 transition-colors cursor-pointer">AI Tools</button></li>
+          <li aria-hidden="true"><span>/</span></li>
+          <li><span className="text-slate-500">{tool.category}</span></li>
+          <li aria-hidden="true"><span>/</span></li>
+          <li className="text-slate-700 dark:text-slate-300 font-medium truncate max-w-[150px] sm:max-w-xs">{tool.name}</li>
+        </ol>
+      </nav>
+
       {/* Back Button */}
       <button
         onClick={onBack}
         className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-indigo-600 mb-8 transition-colors cursor-pointer group"
+        aria-label="Back to AI Tools Directory"
       >
         <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
         <span>Back to Directory</span>
       </button>
 
       {/* Main Tool Header Card */}
+
       <div className="bg-white rounded-3xl p-6 sm:p-10 mb-10 border border-slate-200 shadow-sm relative overflow-hidden">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">

@@ -107,7 +107,7 @@ export function generateSitemapEntries(baseUrl: string, tools: any[] = []): Site
     }
   );
 
-  // 2. Dynamic Categories from Tools
+  // 2. Dynamic Category Pages — SEO-friendly /categories/{slug} URLs
   const categorySet = new Set<string>();
   tools.forEach((t) => {
     if (t.category && typeof t.category === 'string') {
@@ -116,14 +116,16 @@ export function generateSitemapEntries(baseUrl: string, tools: any[] = []): Site
   });
 
   categorySet.forEach((category) => {
-    const encodedCat = encodeURIComponent(category.toLowerCase());
+    // Convert to SEO-friendly slug: "Coding" => "coding", "AI Writing" => "ai-writing"
+    const categorySlug = category.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     entries.push({
-      loc: `${cleanBaseUrl}/?category=${encodedCat}`,
+      loc: `${cleanBaseUrl}/categories/${encodeURIComponent(categorySlug)}`,
       lastmod: today,
       changefreq: 'weekly',
       priority: '0.75',
     });
   });
+
 
   // 3. Blog Articles & Technical Guides
   try {

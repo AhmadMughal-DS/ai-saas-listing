@@ -390,7 +390,21 @@ async function startServer() {
     return INITIAL_TOOLS;
   }
 
-  // Dynamic XML Sitemap for Search Engines (Google, Bing, etc.)
+  // ── SEO: Security & Crawl Headers Middleware ──────────────────────────
+  app.use((req, res, next) => {
+    // Only for HTML pages, not APIs or assets
+    const isHtmlReq = !req.path.startsWith('/api/') && !req.path.match(/\.(js|css|png|jpg|svg|woff2?|ico|json|xml|txt)$/);
+    if (isHtmlReq) {
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+      res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+      res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    }
+    next();
+  });
+
+  // ── SEO: Dynamic XML Sitemap ───────────────────────────────────────────
+  // FIXED: Removed X-Robots-Tag: noindex which was blocking Google from reading the sitemap
   app.get('/sitemap.xml', async (req, res) => {
     try {
       const baseUrl = resolveBaseUrl(req);
@@ -398,8 +412,9 @@ async function startServer() {
       const xml = buildSitemapXml(baseUrl, tools);
 
       res.header('Content-Type', 'application/xml; charset=utf-8');
+      // Cache 1 hour in CDN, 4 hours in browser — sitemap must be publicly readable by Googlebot
       res.header('Cache-Control', 'public, max-age=3600, s-maxage=14400');
-      res.header('X-Robots-Tag', 'noindex');
+      // NO X-Robots-Tag: noindex here — the sitemap itself must be crawlable
       return res.status(200).send(xml);
     } catch (error: any) {
       console.error('Error generating dynamic sitemap.xml:', error);
@@ -407,22 +422,119 @@ async function startServer() {
     }
   });
 
-  // Dynamic robots.txt pointing to the dynamic sitemap
+  // ── SEO: Dynamic robots.txt ────────────────────────────────────────────
   app.get('/robots.txt', (req, res) => {
     const baseUrl = resolveBaseUrl(req);
     res.type('text/plain');
     res.header('Cache-Control', 'public, max-age=86400');
-    res.send(`User-agent: *
-Allow: /
-Disallow: /api/
-Disallow: /admin
-
-# Dynamic XML Sitemap based on live database tools
-Sitemap: ${baseUrl}/sitemap.xml
-`);
+    // Comprehensive robots.txt: block admin/API, allow all important content pages
+    res.send([
+      '# ToolverAI — robots.txt',
+      '# https://toolverai.com',
+      '',
+      'User-agent: *',
+      'Allow: /',
+      '',
+      '# Block private admin & API endpoints',
+      'Disallow: /admin',
+      'Disallow: /api/',
+      '',
+      '# Allow important assets (CSS, JS, images needed by Google)',
+      'Allow: /assets/',
+      'Allow: /public/',
+      '',
+      '# Block internal/utility endpoints',
+      'Disallow: /api/admin/',
+      'Disallow: /api/firebase/',
+      '',
+      '# Crawl delay for courtesy',
+      'Crawl-delay: 1',
+      '',
+      `# Dynamic XML Sitemap (auto-generated from live database)`,
+      `Sitemap: ${baseUrl}/sitemap.xml`,
+    ].join('\n'));
   });
 
-  // Sitemap Inspection / Stats Endpoint
+  // ── SEO: IndexNow Key File ─────────────────────────────────────────────
+  // Serve the IndexNow key as a text file at /{key}.txt
+  app.get('/indexnow-key.txt', (req, res) => {
+    const key = (process.env.INDEXNOW_KEY || '').trim();
+    if (!key) return res.status(404).send('IndexNow key not configured');
+    res.type('text/plain');
+    res.header('Cache-Control', 'public, max-age=86400');
+    res.send(key);
+  });
+
+  // Dynamic key-based route: /{INDEXNOW_KEY}.txt (required by IndexNow spec)
+  app.get('/:key.txt', (req, res, next) => {
+    const configuredKey = (process.env.INDEXNOW_KEY || '').trim();
+    if (!configuredKey || req.params.key !== configuredKey) return next();
+    res.type('text/plain');
+    res.header('Cache-Control', 'public, max-age=86400');
+    res.send(configuredKey);
+  });
+
+  // ── SEO: IndexNow Submission API ───────────────────────────────────────
+  // Called internally when new tools/pages are published
+  app.post('/api/indexnow/submit', async (req, res) => {
+    try {
+      const key = (process.env.INDEXNOW_KEY || '').trim();
+      if (!key) {
+        return res.status(400).json({ success: false, error: 'INDEXNOW_KEY not configured in .env' });
+      }
+
+      const baseUrl = resolveBaseUrl(req);
+      const { urls } = req.body || {};
+
+      // Accept array of URLs or auto-generate from recent tools
+      let urlList: string[] = [];
+      if (Array.isArray(urls) && urls.length > 0) {
+        urlList = urls.filter((u: any) => typeof u === 'string' && u.startsWith('http')).slice(0, 10000);
+      } else {
+        // Default: submit main pages
+        urlList = [
+          `${baseUrl}/`,
+          `${baseUrl}/rankings`,
+          `${baseUrl}/deals`,
+          `${baseUrl}/compare`,
+          `${baseUrl}/categories`,
+          `${baseUrl}/blog`,
+          `${baseUrl}/prompts`,
+        ];
+      }
+
+      if (urlList.length === 0) {
+        return res.status(400).json({ success: false, error: 'No valid URLs to submit' });
+      }
+
+      const host = new URL(baseUrl).hostname;
+      const payload = { host, key, keyLocation: `${baseUrl}/indexnow-key.txt`, urlList };
+
+      // Submit to Bing IndexNow (which distributes to Yandex, Seznam, etc.)
+      const indexnowRes = await fetch('https://api.indexnow.org/indexnow', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify(payload),
+      }).catch(() => null);
+
+      const statusCode = indexnowRes?.status || 0;
+      console.log(`IndexNow submission: ${urlList.length} URLs → HTTP ${statusCode}`);
+
+      return res.json({
+        success: statusCode === 200 || statusCode === 202,
+        urlsSubmitted: urlList.length,
+        indexnowStatus: statusCode,
+        message: statusCode === 200 || statusCode === 202
+          ? `Successfully submitted ${urlList.length} URLs to IndexNow`
+          : `IndexNow responded with status ${statusCode}`,
+      });
+    } catch (error: any) {
+      console.error('IndexNow submission error:', error);
+      res.status(500).json({ success: false, error: error?.message || 'IndexNow submission failed' });
+    }
+  });
+
+  // ── SEO: Sitemap Stats ─────────────────────────────────────────────────
   app.get('/api/sitemap/stats', async (req, res) => {
     try {
       const baseUrl = resolveBaseUrl(req);
@@ -1364,7 +1476,7 @@ Only return valid JSON.`;
     }
   });
 
-  // Vite middleware setup
+  // ── Vite / Static File Middleware ─────────────────────────────────────
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -1373,14 +1485,209 @@ Only return valid JSON.`;
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
+    app.use(express.static(distPath, {
+      maxAge: '30d',
+      etag: true,
+      setHeaders: (res, filePath) => {
+        // Do not cache index.html — always fresh
+        if (filePath.endsWith('index.html')) {
+          res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+          res.setHeader('Pragma', 'no-cache');
+        }
+      },
+    }));
+
+    // ── SSR Meta Injection for tool/category pages ────────────────────────
+    // Google crawls JS SPAs but with delay. We inject critical SEO meta tags
+    // server-side into the HTML for tool and category pages so Googlebot
+    // sees them immediately without waiting for React to hydrate.
+    app.get('/tool/:slug', async (req, res) => {
+      try {
+        const { slug } = req.params;
+        const tools = await getToolsFromDbOrFallback();
+        const tool = tools.find(
+          (t: any) =>
+            t.slug?.toLowerCase() === slug.toLowerCase() ||
+            t.id?.toLowerCase() === slug.toLowerCase()
+        );
+
+        const htmlTemplate = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
+        const baseUrl = resolveBaseUrl(req);
+
+        if (!tool) {
+          // Tool not found — serve 404 with noindex
+          const notFoundHtml = htmlTemplate
+            .replace('<title>', '<meta name="robots" content="noindex, nofollow" />\n    <title>')
+            .replace(
+              /<title>[^<]*<\/title>/,
+              '<title>Tool Not Found — ToolverAI</title>'
+            );
+          return res.status(404).send(notFoundHtml);
+        }
+
+        const cleanName = (tool.name || '').trim();
+        const title = `${cleanName} Review: Features, Pricing & Alternatives (2026) | ToolverAI`;
+        const desc = `${cleanName} (${tool.pricingType || 'Freemium'}): ${(tool.tagline || tool.description || '').slice(0, 130)}. Compare pricing, features, monthly traffic (${tool.monthlyVisitsFormatted || 'N/A'}) and top alternatives on ToolverAI.`.slice(0, 160);
+        const canonical = `${baseUrl}/tool/${tool.slug || tool.id}`;
+        const ogImage = tool.logoUrl && !tool.logoUrl.includes('unsplash') ? tool.logoUrl : `${baseUrl}/og-banner.png`;
+
+        // JSON-LD for SoftwareApplication
+        const hasRealReviews = (tool.reviewCount || 0) >= 1;
+        const schemaJsonLd = JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'SoftwareApplication',
+          name: cleanName,
+          description: tool.description || tool.tagline || '',
+          applicationCategory: tool.category || 'Utilities',
+          operatingSystem: (tool.platforms || ['Web']).join(', '),
+          url: tool.url || canonical,
+          image: ogImage,
+          ...(tool.pricingPlans?.[0]?.price ? {
+            offers: {
+              '@type': 'Offer',
+              price: tool.pricingPlans[0].price.replace(/[^0-9.]/g, '') || '0',
+              priceCurrency: 'USD',
+              availability: 'https://schema.org/InStock',
+            }
+          } : {}),
+          ...(hasRealReviews ? {
+            aggregateRating: {
+              '@type': 'AggregateRating',
+              ratingValue: String(tool.rating || 4.5),
+              reviewCount: String(tool.reviewCount || 1),
+              bestRating: '5',
+              worstRating: '1',
+            }
+          } : {}),
+          publisher: {
+            '@type': 'Organization',
+            name: 'ToolverAI',
+            url: baseUrl,
+          },
+        });
+
+        const breadcrumbJsonLd = JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: `${baseUrl}/` },
+            { '@type': 'ListItem', position: 2, name: 'AI Tools', item: `${baseUrl}/` },
+            { '@type': 'ListItem', position: 3, name: tool.category || 'Tools', item: `${baseUrl}/categories/${encodeURIComponent((tool.category || 'tools').toLowerCase().replace(/[^a-z0-9]+/g, '-'))}` },
+            { '@type': 'ListItem', position: 4, name: cleanName, item: canonical },
+          ],
+        });
+
+        const injectedMeta = [
+          `<title>${title.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</title>`,
+          `<meta name="description" content="${desc.replace(/"/g,'&quot;')}" />`,
+          `<link rel="canonical" href="${canonical}" />`,
+          `<meta name="robots" content="index, follow, max-image-preview:large" />`,
+          `<meta property="og:title" content="${title.replace(/"/g,'&quot;')}" />`,
+          `<meta property="og:description" content="${desc.replace(/"/g,'&quot;')}" />`,
+          `<meta property="og:type" content="website" />`,
+          `<meta property="og:url" content="${canonical}" />`,
+          `<meta property="og:image" content="${ogImage}" />`,
+          `<meta name="twitter:title" content="${title.replace(/"/g,'&quot;')}" />`,
+          `<meta name="twitter:description" content="${desc.replace(/"/g,'&quot;')}" />`,
+          `<meta name="twitter:image" content="${ogImage}" />`,
+          `<script type="application/ld+json">${schemaJsonLd}</script>`,
+          `<script type="application/ld+json">${breadcrumbJsonLd}</script>`,
+        ].join('\n    ');
+
+        // Replace the placeholder title with injected SEO meta
+        const finalHtml = htmlTemplate
+          .replace(
+            /<title>ToolverAI[^<]*<\/title>/,
+            injectedMeta
+          );
+
+        res.header('Content-Type', 'text/html; charset=utf-8');
+        res.header('Cache-Control', 'public, max-age=300, s-maxage=1800');
+        return res.status(200).send(finalHtml);
+      } catch (err: any) {
+        console.error('SSR meta injection error for /tool/:slug:', err);
+        // Fallback to standard index.html
+        res.sendFile(path.join(distPath, 'index.html'));
+      }
+    });
+
+    // ── SSR for Category pages ─────────────────────────────────────────
+    app.get('/categories/:category', async (req, res) => {
+      try {
+        const { category } = req.params;
+        const baseUrl = resolveBaseUrl(req);
+        const htmlTemplate = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
+        const tools = await getToolsFromDbOrFallback();
+
+        const categoryName = decodeURIComponent(category)
+          .replace(/-/g, ' ')
+          .replace(/\b\w/g, (l: string) => l.toUpperCase());
+        const categoryTools = tools.filter(
+          (t: any) => t.category?.toLowerCase().replace(/[^a-z0-9]+/g, '-') === category.toLowerCase()
+        );
+
+        const canonical = `${baseUrl}/categories/${category}`;
+        const title = `Best ${categoryName} Tools — Ranked by Traffic & Reviews | ToolverAI`;
+        const desc = `Discover the best ${categoryName} tools in 2026. Compare ${categoryTools.length}+ verified AI tools ranked by monthly traffic, pricing, and user reviews on ToolverAI.`;
+
+        const breadcrumbJsonLd = JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: `${baseUrl}/` },
+            { '@type': 'ListItem', position: 2, name: 'Categories', item: `${baseUrl}/categories` },
+            { '@type': 'ListItem', position: 3, name: categoryName, item: canonical },
+          ],
+        });
+
+        const collectionJsonLd = JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'CollectionPage',
+          name: `Best ${categoryName} Tools`,
+          description: desc,
+          url: canonical,
+          publisher: { '@type': 'Organization', name: 'ToolverAI', url: baseUrl },
+        });
+
+        const injectedMeta = [
+          `<title>${title.replace(/</g,'&lt;')}</title>`,
+          `<meta name="description" content="${desc.replace(/"/g,'&quot;')}" />`,
+          `<link rel="canonical" href="${canonical}" />`,
+          `<meta property="og:title" content="${title.replace(/"/g,'&quot;')}" />`,
+          `<meta property="og:description" content="${desc.replace(/"/g,'&quot;')}" />`,
+          `<meta property="og:url" content="${canonical}" />`,
+          `<script type="application/ld+json">${breadcrumbJsonLd}</script>`,
+          `<script type="application/ld+json">${collectionJsonLd}</script>`,
+        ].join('\n    ');
+
+        const finalHtml = htmlTemplate.replace(
+          /<title>ToolverAI[^<]*<\/title>/,
+          injectedMeta
+        );
+
+        res.header('Content-Type', 'text/html; charset=utf-8');
+        res.header('Cache-Control', 'public, max-age=300, s-maxage=3600');
+        return res.status(200).send(finalHtml);
+      } catch (err: any) {
+        console.error('SSR error for /categories/:category:', err);
+        res.sendFile(path.join(distPath, 'index.html'));
+      }
+    });
+
+    // ── Catch-all: serve SPA with proper cache control ─────────────────
     app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+      // Return 404 status for unrecognized paths while still serving SPA
+      const knownRoutes = ['/', '/rankings', '/compare', '/deals', '/prompts', '/categories', '/blog', '/submit-tool', '/about'];
+      const isKnown = knownRoutes.includes(req.path) || req.path.startsWith('/tool/') || req.path.startsWith('/categories/');
+      const status = isKnown ? 200 : 404;
+      res.status(status).sendFile(path.join(distPath, 'index.html'));
     });
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`ToolverAI Server running on http://localhost:${PORT}`);
+    console.log(`✅ ToolverAI Server running on http://localhost:${PORT}`);
+    console.log(`📡 Sitemap: http://localhost:${PORT}/sitemap.xml`);
+    console.log(`🤖 Robots: http://localhost:${PORT}/robots.txt`);
   });
 }
 
