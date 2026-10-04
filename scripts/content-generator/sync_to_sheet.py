@@ -19,7 +19,7 @@ sys.stdout.reconfigure(encoding='utf-8')
 # Import generator
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.append(str(SCRIPT_DIR))
-from generator import generate_tool_content, load_cache
+from generator import generate_tool_content, load_cache, needs_generation, SCRIPT_VERSION
 
 BASE_DIR = SCRIPT_DIR.parent.parent
 ENV_PATH = BASE_DIR / ".env"
@@ -60,10 +60,9 @@ def main():
 
     # 2. Check Cache & Generate Missing Content via DeepSeek
     cache = load_cache()
-    cached_count = sum(1 for t in tools if str(t.get("_id") or t.get("name")) in cache)
-    print(f"[*] Cache Status: {cached_count}/{total_tools} tools already generated.")
-
-    missing_tools = [t for t in tools if str(t.get("_id") or t.get("name")) not in cache]
+    missing_tools = [t for t in tools if needs_generation(t, cache)]
+    cached_count = total_tools - len(missing_tools)
+    print(f"[*] Cache Status: {cached_count}/{total_tools} tools up to date (script v{SCRIPT_VERSION}).")
     
     if missing_tools:
         print(f"[*] Generating AI Video Scripts & Social Captions for {len(missing_tools)} tools using DeepSeek...")
@@ -112,7 +111,7 @@ def main():
         "ToolverAI Live Page",
         "Exclusive Deal / Promo Code",
         "Key Features",
-        "🎬 Viral Video Script (Google Flow / Vids)",
+        "🎬 Video Script · 3 Clips × 10s (Google Vids)",
         "📝 Social Post & Video Caption (IG / LinkedIn / X / FB)",
         "Video Production Status",
         "Target Social Platforms",

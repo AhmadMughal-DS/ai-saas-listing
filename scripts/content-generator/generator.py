@@ -2,14 +2,17 @@
 DeepSeek AI Content & Video Script Generator for ToolverAI
 ============================================================
 Generates:
-1. Viral 45-60s Video Generation Script (Google Flow / Vids / Reels / TikTok / Shorts)
-   - Visual Cues & Spoken Voiceover
-   - Hook (0-3s), Problem (3-15s), Solution & Demo (15-35s), Business Value (35-45s), CTA (45-55s)
+1. 3-Chunk Video Script for Google Vids (each clip max ~10s)
+   - STYLE LOCK: identical character / setting / camera / lighting descriptors
+     repeated in every chunk so the 3 independently generated clips look like ONE video
+   - Each chunk: "Video Prompt", "Voiceover", "On-Screen Text" (all in quotes) + continuity link
+   - Chunk 1 (0-10s) Hook + Problem | Chunk 2 (10-20s) Solution | Chunk 3 (20-30s) Value + CTA
+   - Logo slots marked for manual tool-logo placement in Google Vids
 2. Complete Social Media Post & Video Description (Instagram / LinkedIn / Facebook / X)
    - Catchy headline, problem/solution, business value, ToolverAI link, deal code, hashtags
 """
 
-import os, json, time, threading, requests
+import json, time, threading, requests
 from pathlib import Path
 from dotenv import dotenv_values
 
@@ -18,12 +21,24 @@ ENV_PATH = BASE_DIR / ".env"
 CACHE_DIR = Path(__file__).resolve().parent / "cache"
 CACHE_FILE = CACHE_DIR / "scripts_cache.json"
 
+# Bump this whenever the video script format changes -> scripts regenerate, captions are kept
+SCRIPT_VERSION = 2
+
+# Voiceover limits per chunk (~2.3 words/sec natural pace -> fits 8-10s clip)
+VO_MIN_WORDS = 14
+VO_MAX_WORDS = 24
+
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 cache_lock = threading.Lock()
 
 env_vars = dotenv_values(ENV_PATH)
 DEEPSEEK_API_KEY = env_vars.get("DEEPSEEK_API_KEY")
+DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
 
+
+# ----------------------------------------------------------------------------
+# Cache helpers
+# ----------------------------------------------------------------------------
 def load_cache():
     with cache_lock:
         if CACHE_FILE.exists():
@@ -34,10 +49,6 @@ def load_cache():
                 return {}
         return {}
 
-def save_cache(cache):
-    with cache_lock:
-        with open(CACHE_FILE, "w", encoding="utf-8") as f:
-            json.dump(cache, f, indent=2, ensure_ascii=False)
 
 def update_cache_item(tool_id, data):
     with cache_lock:
@@ -52,26 +63,27 @@ def update_cache_item(tool_id, data):
         with open(CACHE_FILE, "w", encoding="utf-8") as f:
             json.dump(current, f, indent=2, ensure_ascii=False)
 
-def generate_tool_content(tool_data, max_retries=3):
-    tool_id = str(tool_data.get("_id") or tool_data.get("name"))
-    
-    # Check cache first
-    cached = load_cache()
-    if tool_id in cached and cached[tool_id].get("video_script"):
-        return cached[tool_id]
 
-    if not DEEPSEEK_API_KEY:
-        raise ValueError("Missing DEEPSEEK_API_KEY in .env")
+def tool_cache_id(tool_data):
+    return str(tool_data.get("_id") or tool_data.get("name"))
 
+
+def needs_generation(tool_data, cache):
+    entry = cache.get(tool_cache_id(tool_data))
+    if not entry:
+        return True
+    if not entry.get("social_caption"):
+        return True
+    return entry.get("script_version") != SCRIPT_VERSION or not entry.get("video_script")
+
+
+# ----------------------------------------------------------------------------
+# Tool context
+# ----------------------------------------------------------------------------
+def _tool_context(tool_data):
     name = tool_data.get("name", "")
     slug = tool_data.get("slug", name.lower().replace(" ", "-"))
     category = tool_data.get("category", "")
-    pricing = tool_data.get("pricingType", "Freemium")
-    tagline = tool_data.get("tagline", "")
-    desc = tool_data.get("description", "")
-    features = ", ".join(tool_data.get("keyFeatures", [])[:4])
-    toolver_url = f"https://toolverai.com/tool/{slug}"
-
     deal_info = tool_data.get("deal")
     deal_str = "None"
     if deal_info and isinstance(deal_info, dict):
@@ -79,87 +91,252 @@ def generate_tool_content(tool_data, max_retries=3):
         code = deal_info.get("code", "")
         if discount or code:
             deal_str = f"{discount} with code '{code}'" if code else discount
-
-    prompt = f"""You are a viral AI video director, social media producer, and growth strategist for ToolverAI (https://toolverai.com).
-
-Generate high-converting content for this AI tool:
-Tool Name: {name}
-Category: {category}
-Pricing: {pricing}
-Tagline: {tagline}
-Description: {desc}
-Key Features: {features}
-ToolverAI Live Page: {toolver_url}
-Exclusive Deal / Discount: {deal_str}
-
-Please generate two detailed, ready-to-use outputs:
-
-1. VIDEO SCRIPT (Optimized for Google Flow / Google Vids / Runway / InVideo / Reels / TikTok / YouTube Shorts / X):
-Format strictly like this with visual prompts in brackets and exact voiceover lines:
-🎬 [0-3s VIRAL HOOK]: (Visual action that stops scrolling) + Voiceover line.
-⚠️ [3-15s THE PROBLEM]: (Visual: real-world pain point or bottleneck) + Voiceover explaining exactly why traditional manual methods waste time or cause frustration.
-💡 [15-35s THE SOLUTION & DEMO]: (Visual walkthrough of {name} UI & key features) + Voiceover showcasing how {name} solves this pain point instantly.
-📈 [35-45s BUSINESS & LIFE VALUE]: (Visual: results, speed, ROI) + Voiceover explaining concrete hours saved (e.g. 10-20 hrs/week) or business revenue impact.
-👉 [45-55s CALL TO ACTION]: (Visual: pointing to screen or ToolverAI UI) + Voiceover driving viewers to check user reviews and grab deals at ToolverAI: {toolver_url}
-
-2. SOCIAL MEDIA POST & VIDEO CAPTION (Optimized for Instagram, LinkedIn, Facebook, and X / Twitter):
-Format strictly like this:
-🚀 [Catchy Scroll-Stopping Headline with Emojis]
-🔥 The Problem: (2-3 punchy sentences on the real bottleneck professionals face)
-✨ The Solution: (How {name} solves this seamlessly with AI)
-💼 Business & Daily Life Impact: (Specific time saved, productivity unlocked, and workflow benefits)
-🔗 Direct Access & Reviews: {toolver_url}
-🏷️ Exclusive Deal: {deal_str}
-📌 Viral Hashtags: #{name.replace(' ', '')} #AITools #{category.replace(' ', '')} #ToolverAI #Productivity #AIWorkflow #TechTrends
-
-Respond ONLY with a valid JSON object matching this schema:
-{{
-  "video_script": "Full multi-line video script...",
-  "social_caption": "Full multi-line social media post caption..."
-}}
-"""
-
-    headers = {
-        "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
-        "Content-Type": "application/json"
+    return {
+        "name": name,
+        "slug": slug,
+        "category": category,
+        "pricing": tool_data.get("pricingType", "Freemium"),
+        "tagline": tool_data.get("tagline", ""),
+        "desc": tool_data.get("description", ""),
+        "features": ", ".join(tool_data.get("keyFeatures", [])[:4]),
+        "toolver_url": f"https://toolverai.com/tool/{slug}",
+        "deal_str": deal_str,
     }
 
+
+def _call_deepseek(system_msg, user_msg, max_tokens, temperature=0.75):
+    headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
     payload = {
         "model": "deepseek-chat",
         "messages": [
-            {"role": "system", "content": "You are an elite viral AI video scriptwriter and social media growth strategist."},
-            {"role": "user", "content": prompt}
+            {"role": "system", "content": system_msg},
+            {"role": "user", "content": user_msg},
         ],
         "response_format": {"type": "json_object"},
-        "max_tokens": 1500,
-        "temperature": 0.7
+        "max_tokens": max_tokens,
+        "temperature": temperature,
+    }
+    res = requests.post(DEEPSEEK_URL, headers=headers, json=payload, timeout=60)
+    if res.status_code != 200:
+        raise RuntimeError(f"DeepSeek HTTP {res.status_code}: {res.text[:200]}")
+    return json.loads(res.json()["choices"][0]["message"]["content"])
+
+
+# ----------------------------------------------------------------------------
+# 1) 3-chunk Google Vids script
+# ----------------------------------------------------------------------------
+CHUNK_PLAN = [
+    ("HOOK + PROBLEM", "0-10s"),
+    ("THE SOLUTION", "10-20s"),
+    ("RESULT + CTA", "20-30s"),
+]
+
+
+def _script_prompt(c):
+    return f"""Create a production-grade 30-second vertical (9:16) social video for the AI tool below, split into EXACTLY 3 chunks.
+Each chunk is generated SEPARATELY in Google Vids (AI video model, max ~8-10 seconds per clip), then the 3 clips are joined in order.
+Because each clip is generated independently, continuity must be engineered into the prompts.
+
+TOOL
+- Name: {c['name']}
+- Category: {c['category']}
+- Pricing: {c['pricing']}
+- Tagline: {c['tagline']}
+- Description: {c['desc']}
+- Key features: {c['features']}
+
+STORY STRUCTURE
+- Chunk 1 (0-10s) HOOK + PROBLEM: scroll-stopping first second, then the real, specific pain this tool removes.
+- Chunk 2 (10-20s) THE SOLUTION: the same person discovers {c['name']}; show the transformation of the SAME task, now effortless.
+- Chunk 3 (20-30s) RESULT + CTA: concrete payoff (time saved / money / output), then call to action to find it on ToolverAI.
+
+CONTINUITY RULES (critical)
+1. Write a "style_lock": one paragraph fixing ONE protagonist (age, ethnicity, hair, outfit with colors), ONE location (with props and color palette), lighting, camera/lens, color grade and overall look. Cinematic, photoreal, premium commercial quality.
+2. Every "video_prompt" must REPEAT the protagonist + location + lighting + camera descriptors from style_lock word-for-word, so it works when pasted alone.
+3. Chunk 1 ends on a specific frame; Chunk 2 must START on that exact frame/pose. Same for Chunk 2 -> Chunk 3. Describe these in "start_frame" and "end_frame".
+4. Each video_prompt = ONE continuous shot, 8-10 seconds, one clear action, explicit camera move (e.g. slow push-in, orbit, handheld). 45-80 words.
+5. NO readable text, words, letters, logos, or brand names inside the video_prompt visuals (AI video garbles text). Describe screens as "glowing clean dashboard interface, abstract UI shapes". The tool logo is added manually later.
+6. Chunk 3 must end with clean negative space (center of frame) for a manually pasted logo end card.
+
+VOICEOVER RULES
+- One confident, natural narrator voice across all 3 chunks; the 3 lines must read as ONE continuous sentence flow.
+- Each "voiceover" MUST be {VO_MIN_WORDS}-{VO_MAX_WORDS} words (fits in ~8-10 seconds). Count carefully.
+- Chunk 1 opens with a hook (question or bold claim). Chunk 2 names "{c['name']}". Chunk 3 ends with: "Find it on ToolverAI dot com."
+- Also provide "voice_style": short direction for the narrator (tone, pace, energy) used for all chunks.
+
+ON-SCREEN TEXT RULES
+- "on_screen_text": max 6 words per chunk, punchy caption overlay to type in Google Vids. Chunk 3 = "toolverai.com".
+
+Respond ONLY with valid JSON:
+{{
+  "style_lock": "...",
+  "voice_style": "...",
+  "chunks": [
+    {{"start_frame": "...", "video_prompt": "...", "voiceover": "...", "on_screen_text": "...", "end_frame": "..."}},
+    {{"start_frame": "...", "video_prompt": "...", "voiceover": "...", "on_screen_text": "...", "end_frame": "..."}},
+    {{"start_frame": "...", "video_prompt": "...", "voiceover": "...", "on_screen_text": "...", "end_frame": "..."}}
+  ]
+}}"""
+
+
+def _validate_chunks(data):
+    chunks = data.get("chunks")
+    if not data.get("style_lock") or not isinstance(chunks, list) or len(chunks) != 3:
+        return False, "bad structure"
+    for i, ch in enumerate(chunks, 1):
+        for key in ("video_prompt", "voiceover", "on_screen_text", "end_frame"):
+            if not str(ch.get(key, "")).strip():
+                return False, f"chunk {i} missing {key}"
+        words = len(str(ch["voiceover"]).split())
+        if words > VO_MAX_WORDS + 2:
+            return False, f"chunk {i} voiceover too long ({words} words)"
+    return True, ""
+
+
+def _q(text):
+    """Wrap in quotes, replacing inner double quotes so copy-paste stays clean."""
+    return '"' + str(text).strip().replace('"', "'") + '"'
+
+
+def format_chunked_script(data, c):
+    chunks = data["chunks"]
+    out = [
+        f"🎥 {c['name'].upper()} · 30s VIDEO = 3 CLIPS × 10s (Google Vids)",
+        "Generate each chunk as a separate clip → place in order 1-2-3 → add voiceover + text + logo.",
+        "",
+        f"🎨 STYLE LOCK (keep identical in all 3 clips):\n{_q(data['style_lock'])}",
+        f"🗣️ VOICE STYLE (same narrator for all 3): {_q(data.get('voice_style', 'Confident, warm, energetic, natural pace'))}",
+    ]
+    logo_notes = [
+        "",
+        f"🏷️ LOGO: paste {c['name']} logo small in top-right corner the moment it is named (~10s)",
+        f"🏷️ LOGO: paste {c['name']} logo large in center negative space for the final 2s end card",
+    ]
+    for i, (ch, (title, span)) in enumerate(zip(chunks, CHUNK_PLAN), 1):
+        out.append("")
+        out.append(f"━━━━━━━━ CHUNK {i}/3 · {title} ({span}) ━━━━━━━━")
+        if i > 1:
+            out.append(f"🔗 STARTS FROM (end of chunk {i-1}): {ch.get('start_frame') or chunks[i-2]['end_frame']}")
+        out.append(f"🎬 VIDEO PROMPT: {_q(ch['video_prompt'])}")
+        out.append(f"🎙️ VOICEOVER: {_q(ch['voiceover'])}")
+        out.append(f"💬 ON-SCREEN TEXT: {_q(ch['on_screen_text'])}")
+        out.append(f"⏭️ ENDS ON: {ch['end_frame']}")
+        if logo_notes[i - 1]:
+            out.append(logo_notes[i - 1])
+    out.append("")
+    out.append(f"🔗 Link for description / pinned comment: {c['toolver_url']}")
+    return "\n".join(out)
+
+
+def _fallback_chunks(c):
+    look = ("a 28-year-old South Asian woman with shoulder-length dark hair in a mustard-yellow sweater, "
+            "modern minimalist home office with a walnut desk, a large monitor and a green plant, warm golden-hour "
+            "window light, 35mm lens, shallow depth of field, cinematic teal-and-amber color grade, photoreal, 9:16 vertical")
+    return {
+        "style_lock": look,
+        "voice_style": "Confident, warm, energetic, natural conversational pace",
+        "chunks": [
+            {"start_frame": "",
+             "video_prompt": f"{look}. She stares at a cluttered glowing monitor full of abstract windows, rubs her temples and sighs; slow push-in on her frustrated face. No text on screen.",
+             "voiceover": f"Still spending hours on {c['category'].lower()} work that should take minutes? You're not slow. Your tools are.",
+             "on_screen_text": "Hours wasted. Every week.",
+             "end_frame": "Close-up of her tired face lit by the monitor glow."},
+            {"start_frame": "Close-up of her tired face lit by the monitor glow.",
+             "video_prompt": f"{look}. Starting on a close-up of her tired face, she taps the keyboard, the monitor fills with a clean glowing dashboard of abstract UI shapes; her expression turns to surprise; camera slowly orbits to over-the-shoulder. No text on screen.",
+             "voiceover": f"Meet {c['name']}. It handles the heavy lifting with AI, so the same task is done in seconds, not hours.",
+             "on_screen_text": "Done in seconds.",
+             "end_frame": "Over-the-shoulder shot, she leans back smiling at the screen."},
+            {"start_frame": "Over-the-shoulder shot, she leans back smiling at the screen.",
+             "video_prompt": f"{look}. She leans back smiling, closes the laptop and picks up her coffee as warm light floods the room; camera pulls back slowly to a wide shot leaving clean empty space in the center of the frame. No text on screen.",
+             "voiceover": "Save ten plus hours every week and get your focus back. Find it on ToolverAI dot com.",
+             "on_screen_text": "toolverai.com",
+             "end_frame": "Wide calm shot with clean negative space in the center for the logo."},
+        ],
     }
 
-    for attempt in range(max_retries):
+
+def generate_video_script(tool_data, max_retries=3):
+    c = _tool_context(tool_data)
+    system_msg = ("You are an award-winning commercial director and AI-video prompt engineer who writes "
+                  "multi-clip scripts for Google Vids / Veo with flawless shot-to-shot continuity.")
+    last_err = ""
+    for _ in range(max_retries):
         try:
-            res = requests.post("https://api.deepseek.com/chat/completions", headers=headers, json=payload, timeout=40)
-            if res.status_code == 200:
-                data = res.json()
-                content = data["choices"][0]["message"]["content"]
-                parsed = json.loads(content)
-                
-                result = {
-                    "video_script": parsed.get("video_script", "").strip(),
-                    "social_caption": parsed.get("social_caption", "").strip()
-                }
-
-                if result["video_script"] and result["social_caption"]:
-                    update_cache_item(tool_id, result)
-                    return result
-            else:
-                time.sleep(2)
+            data = _call_deepseek(system_msg, _script_prompt(c), max_tokens=2000)
+            ok, last_err = _validate_chunks(data)
+            if ok:
+                return format_chunked_script(data, c), data
         except Exception as e:
-            time.sleep(2)
+            last_err = str(e)
+        time.sleep(2)
+    print(f"    [fallback] {c['name']}: {last_err}")
+    data = _fallback_chunks(c)
+    return format_chunked_script(data, c), data
 
-    # Fallback template if network/API fails
-    fallback = {
-        "video_script": f"🎬 [0-3s HOOK]: (Visual: Frustrated creator working late) Still doing {category.lower()} manually? Stop right now.\n⚠️ [3-15s PROBLEM]: (Visual: Clock spinning fast) Wasting hours on repetitive {category.lower()} bottlenecks drains your creative energy and profits.\n💡 [15-35s SOLUTION]: (Visual: {name} dashboard in action) {name} automates your entire workflow in seconds with cutting-edge AI.\n📈 [35-45s BUSINESS VALUE]: (Visual: Clean workflow & high output) Save 10+ hours every week and scale your productivity 3x.\n👉 [45-55s CALL TO ACTION]: (Visual: ToolverAI logo) Discover {name}, read verified ratings, and get discounts at ToolverAI: {toolver_url}",
-        "social_caption": f"🚀 Supercharge your workflow with {name}!\n\n🔥 The Problem: Spending countless hours on tedious {category.lower()} tasks slows down your momentum and kills focus.\n\n✨ The Solution: {name} tackles this head-on with powerful AI automation.\n\n💼 Business & Daily Life Impact: Save 10+ hours weekly and unlock unprecedented workflow speed.\n\n🔗 Full details & user reviews: {toolver_url}\n🏷️ Exclusive Deal: {deal_str}\n\n📌 Hashtags: #{name.replace(' ', '')} #AITools #ToolverAI #{category.replace(' ', '')} #Productivity"
+
+# ----------------------------------------------------------------------------
+# 2) Social caption
+# ----------------------------------------------------------------------------
+def generate_social_caption(tool_data, max_retries=3):
+    c = _tool_context(tool_data)
+    tags = f"#{c['name'].replace(' ', '')} #AITools #{c['category'].replace(' ', '').replace('&', '')} #ToolverAI #Productivity #AIWorkflow #TechTrends"
+    prompt = f"""Write a ready-to-publish video description / social post (Instagram, LinkedIn, Facebook, X) for this AI tool.
+Tool: {c['name']} | Category: {c['category']} | Pricing: {c['pricing']}
+Tagline: {c['tagline']}
+Description: {c['desc']}
+Key features: {c['features']}
+
+Format strictly:
+🚀 [Catchy Scroll-Stopping Headline with Emojis]
+🔥 The Problem: (2-3 punchy sentences on the real bottleneck)
+✨ The Solution: (How {c['name']} solves it with AI)
+💼 Business & Daily Life Impact: (specific time saved, productivity and workflow benefits)
+🔗 Direct Access & Reviews: {c['toolver_url']}
+🏷️ Exclusive Deal: {c['deal_str']}
+📌 {tags}
+
+Respond ONLY with JSON: {{"social_caption": "..."}}"""
+    for _ in range(max_retries):
+        try:
+            data = _call_deepseek("You are an elite social media growth strategist.", prompt, max_tokens=900)
+            cap = str(data.get("social_caption", "")).strip()
+            if cap:
+                return cap
+        except Exception:
+            pass
+        time.sleep(2)
+    return (f"🚀 Supercharge your workflow with {c['name']}!\n\n"
+            f"🔥 The Problem: Tedious {c['category'].lower()} tasks drain hours and focus.\n\n"
+            f"✨ The Solution: {c['name']} automates it with AI.\n\n"
+            f"💼 Business & Daily Life Impact: Save 10+ hours weekly.\n\n"
+            f"🔗 Direct Access & Reviews: {c['toolver_url']}\n🏷️ Exclusive Deal: {c['deal_str']}\n\n📌 {tags}")
+
+
+# ----------------------------------------------------------------------------
+# Public entry point
+# ----------------------------------------------------------------------------
+def generate_tool_content(tool_data, max_retries=3):
+    if not DEEPSEEK_API_KEY:
+        raise ValueError("Missing DEEPSEEK_API_KEY in .env")
+
+    tool_id = tool_cache_id(tool_data)
+    entry = load_cache().get(tool_id, {})
+
+    if entry and not needs_generation(tool_data, {tool_id: entry}):
+        return entry
+
+    caption = entry.get("social_caption") or generate_social_caption(tool_data, max_retries)
+
+    if entry.get("script_version") == SCRIPT_VERSION and entry.get("video_script"):
+        script, chunks = entry["video_script"], entry.get("video_chunks")
+    else:
+        script, chunks = generate_video_script(tool_data, max_retries)
+
+    result = {
+        "video_script": script,
+        "video_chunks": chunks,
+        "social_caption": caption,
+        "script_version": SCRIPT_VERSION,
     }
-    update_cache_item(tool_id, fallback)
-    return fallback
+    update_cache_item(tool_id, result)
+    return result

@@ -12,13 +12,18 @@ This sub-module uses **DeepSeek AI** to automatically generate high-converting, 
 
 ## 🚀 Key Features
 
-### 1. 🎬 Column: `Viral Video Script (Google Flow / Vids)`
-Designed specifically to be pasted directly into **Google Flow**, **Google Vids**, **Runway Gen-2/Gen-3**, **InVideo AI**, or read for **Instagram Reels / TikTok / YouTube Shorts**:
-* **🎬 [0-3s Viral Hook]:** Visual scene prompt + spoken scroll-stopping hook line.
-* **⚠️ [3-15s The Problem]:** Visual prompt of real-world struggle + voiceover explaining the exact bottleneck traditional tools suffer from.
-* **💡 [15-35s The Solution & Demo]:** Step-by-step feature showcase and visual prompt demonstrating how the tool resolves the problem.
-* **📈 [35-45s Business & Life Value]:** Specific time saved (10-15+ hrs/week), revenue growth, and workflow superpower.
-* **👉 [45-55s Call to Action]:** Clear CTA driving traffic directly to ToolverAI (`https://toolverai.com/tool/[slug]`) to view live metrics, reviews, and claim discount codes.
+### 1. 🎬 Column: `Video Script · 3 Clips × 10s (Google Vids)`
+Google Vids generates max ~8-10s per clip, so every script is **one 30s video split into 3 connected chunks**:
+* **🎨 Style Lock:** one fixed protagonist, location, lighting, lens and color grade — repeated word-for-word inside every chunk's video prompt, so 3 separately generated clips look like one video.
+* **🗣️ Voice Style:** one narrator direction used for all 3 voiceovers.
+* **Chunk 1 (0-10s) Hook + Problem · Chunk 2 (10-20s) Solution · Chunk 3 (20-30s) Result + CTA**, each with:
+  * `🎬 VIDEO PROMPT: "..."` — paste into Google Vids (no text/logos inside visuals; AI garbles text)
+  * `🎙️ VOICEOVER: "..."` — 14-24 words (fits 8-10s)
+  * `💬 ON-SCREEN TEXT: "..."` — max 6 words caption overlay
+  * `🔗 STARTS FROM` / `⏭️ ENDS ON` — end frame of chunk N = start frame of chunk N+1
+* **🏷️ Logo slots:** small top-right logo at ~10s (when tool is named) + large centered end card in chunk 3's empty negative space — paste manually in Vids.
+
+Bump `SCRIPT_VERSION` in `generator.py` to regenerate all scripts in a new format (captions are kept).
 
 ### 2. 📝 Column: `Social Post & Video Caption (IG / LinkedIn / X / FB)`
 Ready-to-publish social media captions for Instagram, Facebook, LinkedIn, and X:
