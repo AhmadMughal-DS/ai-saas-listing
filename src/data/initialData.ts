@@ -1133,6 +1133,270 @@ export const INITIAL_TOOLS: AITool[] = [
       }
     ],
     createdAt: '2025-01-20'
+  },
+  {
+    id: 'tool-jasper',
+    name: 'Jasper AI',
+    slug: 'jasper-ai',
+    tagline: 'Enterprise generative AI platform for high-converting marketing copy and brand voice.',
+    description: 'Jasper is the leading AI copilot for marketing and editorial teams. It writes on-brand blog posts, marketing campaigns, ad copy, and social media content across 30+ languages with built-in style guide enforcement and SEO optimization.',
+    url: 'https://jasper.ai',
+    category: 'Copywriting',
+    logoUrl: 'https://images.unsplash.com/photo-1542744094-3a31f272c490?w=150&auto=format&fit=crop&q=80',
+    thumbnailVideoUrl: 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=800&auto=format&fit=crop&q=80',
+    videoDuration: '3:45',
+    rating: 4.8,
+    reviewCount: 3920,
+    pricingType: 'Paid',
+    isOpenSource: false,
+    hasApi: true,
+    isFeatured: true,
+    featuredRank: 4,
+    isVerified: true,
+    monthlyVisits: 8900000,
+    monthlyVisitsFormatted: '8.9M',
+    trafficGrowth: 28.4,
+    globalRank: 32,
+    categoryRank: 1,
+    topCountries: ['United States (44%)', 'United Kingdom (12%)', 'Canada (8%)', 'Australia (6%)'],
+    trafficStats: {
+      monthlyVisits: 8900000,
+      monthlyVisitsFormatted: '8.9M',
+      trafficGrowth: 28.4,
+      globalRank: 32,
+      categoryRank: 1,
+      topCountry: 'United States (44%)',
+      avgDuration: '05:12',
+      bounceRate: '34.2%'
+    },
+    platforms: ['Web', 'Chrome Extension', 'API'],
+    targetAudience: ['Marketers', 'Founders', 'Creators', 'Enterprise'],
+    pros: ['Strict brand voice customization', 'End-to-end multi-channel marketing campaigns', 'Built-in Surfer SEO integration'],
+    cons: ['No permanent free tier; credit usage requires active subscription'],
+    alternatives: ['Copy.ai', 'Writesonic', 'ChatGPT', 'Claude 3.7'],
+    deal: {
+      discount: '20% OFF ANNUAL',
+      code: 'JASPER20',
+      description: 'Get 20% off Creator and Pro annual plans with 10,000 bonus words.'
+    },
+    upvotes: 6890,
+    launchedDate: '2021-02-15',
+    keyFeatures: [
+      'Company Knowledge Base & Brand Voice Memory',
+      'Multi-Channel Content Campaign Generator',
+      'SEO Mode via Surfer SEO Partnership',
+      'Browser Extension for Gmail, Google Docs & CMS',
+      'Enterprise Collaboration & Plagiarism Checker'
+    ],
+    pricingPlans: [
+      {
+        id: 'jas-creator',
+        name: 'Creator Plan',
+        price: '$39',
+        billingPeriod: 'per month (billed annually)',
+        description: 'For solo creators and freelancers requiring professional brand tone.',
+        features: ['1 Brand Voice', '50 Knowledge Assets', 'SEO Mode access', 'Browser extension'],
+        ctaText: 'Start 7-Day Trial'
+      },
+      {
+        id: 'jas-pro',
+        name: 'Pro Plan',
+        price: '$59',
+        billingPeriod: 'per seat / month (billed annually)',
+        description: 'For high-velocity marketing teams generating omnichannel assets.',
+        features: ['Up to 5 Brand Voices', 'Instant Campaign generation', '3 User Seats', 'AI Image generation included'],
+        ctaText: 'Start Pro Trial',
+        isPopular: true
+      }
+    ],
+    reviews: [
+      {
+        id: 'rev-jas-1',
+        authorName: 'Claire Vance',
+        authorRole: 'VP of Content Marketing',
+        authorCompany: 'GrowthMatrix Digital',
+        authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
+        rating: 5,
+        comment: 'Jasper reduced our 20-person marketing team draft cycle by 60%. The Brand Voice feature guarantees our corporate identity never sounds like generic AI.',
+        date: 'Feb 12, 2026',
+        verified: true,
+        helpfulCount: 142
+      }
+    ],
+    createdAt: '2024-03-10'
+  },
+  {
+    id: 'tool-julius',
+    name: 'Julius AI',
+    slug: 'julius-ai',
+    tagline: 'The AI Data Analyst that cleans spreadsheets, runs models, and visualizes trends.',
+    description: 'Julius is an intelligent data workspace that connects to CSVs, Excel workbooks, Google Sheets, and SQL databases. Ask questions in plain English to automatically execute Python calculations, build predictive models, and produce presentation-grade graphs.',
+    url: 'https://julius.ai',
+    category: 'Data & Analytics',
+    logoUrl: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=150&auto=format&fit=crop&q=80',
+    thumbnailVideoUrl: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop&q=80',
+    videoDuration: '4:30',
+    rating: 4.8,
+    reviewCount: 2410,
+    pricingType: 'Freemium',
+    isOpenSource: false,
+    hasApi: true,
+    isFeatured: true,
+    featuredRank: 5,
+    isVerified: true,
+    monthlyVisits: 6200000,
+    monthlyVisitsFormatted: '6.2M',
+    trafficGrowth: 78.5,
+    globalRank: 44,
+    categoryRank: 1,
+    topCountries: ['United States (36%)', 'India (16%)', 'United Kingdom (9%)', 'Germany (7%)'],
+    trafficStats: {
+      monthlyVisits: 6200000,
+      monthlyVisitsFormatted: '6.2M',
+      trafficGrowth: 78.5,
+      globalRank: 44,
+      categoryRank: 1,
+      topCountry: 'United States (36%)',
+      avgDuration: '07:18',
+      bounceRate: '26.8%'
+    },
+    platforms: ['Web', 'iOS', 'Android'],
+    targetAudience: ['Researchers', 'Founders', 'Marketers', 'Students'],
+    pros: ['Interprets complex multi-tab Excel files instantly', 'Outputs clean Python/R code for every graph', 'Zero statistical knowledge needed'],
+    cons: ['Free plan limited to 15 queries per month'],
+    alternatives: ['Tableau AI', 'ChatGPT Advanced Data Analysis', 'Hex', 'Columns AI'],
+    deal: {
+      discount: '15% OFF PRO',
+      code: 'JULIUSAI',
+      description: 'Receive 15% discount for your first 3 months of Julius Pro.'
+    },
+    upvotes: 5210,
+    launchedDate: '2023-08-01',
+    keyFeatures: [
+      'Direct Excel, CSV, Google Sheets & SQL Connection',
+      'Automated Outlier Detection & Data Cleaning',
+      'Publication-Ready Matplotlib & Seaborn Chart Export',
+      'Predictive Regression & Statistical Hypothesis Testing',
+      'Export to PowerPoint & Interactive Web Reports'
+    ],
+    pricingPlans: [
+      {
+        id: 'jul-free',
+        name: 'Free Analyst',
+        price: '$0',
+        billingPeriod: 'forever',
+        description: 'Great for casual exploratory data questions and small CSV files.',
+        features: ['15 queries/month', 'Basic data visualizations', 'Standard compute speed'],
+        ctaText: 'Analyze Free'
+      },
+      {
+        id: 'jul-pro',
+        name: 'Pro Analyst',
+        price: '$20',
+        billingPeriod: 'per month (billed annually)',
+        description: 'For researchers, data consultants, and startup founders analyzing daily numbers.',
+        features: ['Unlimited computations', 'Advanced Python model execution', 'Large multi-gigabyte dataset support', 'Priority GPU cluster'],
+        ctaText: 'Upgrade to Pro',
+        isPopular: true
+      }
+    ],
+    reviews: [
+      {
+        id: 'rev-jul-1',
+        authorName: 'Marcus Lind',
+        authorRole: 'Head of Growth Analytics',
+        authorCompany: 'Nordic FinTech',
+        authorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80',
+        rating: 5,
+        comment: 'Turned a 4-hour pandas data munging session into a 2-minute conversation. Julius is indispensable for anyone working with operational metrics.',
+        date: 'Jan 28, 2026',
+        verified: true,
+        helpfulCount: 96
+      }
+    ],
+    createdAt: '2024-05-18'
+  },
+  {
+    id: 'tool-devin',
+    name: 'Devin AI',
+    slug: 'devin-ai',
+    tagline: 'The world’s first autonomous AI software engineer that executes real coding tasks.',
+    description: 'Devin by Cognition Labs is an autonomous software development agent equipped with a secure shell, code editor, and dedicated web browser. Devin can plan complex multi-step engineering projects, debug third-party APIs, and submit full pull requests independently.',
+    url: 'https://cognition.ai',
+    category: 'Agents',
+    logoUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80',
+    thumbnailVideoUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&auto=format&fit=crop&q=80',
+    videoDuration: '5:20',
+    rating: 4.8,
+    reviewCount: 3120,
+    pricingType: 'Paid',
+    isOpenSource: false,
+    hasApi: true,
+    isFeatured: true,
+    featuredRank: 3,
+    isVerified: true,
+    monthlyVisits: 11500000,
+    monthlyVisitsFormatted: '11.5M',
+    trafficGrowth: 110.2,
+    globalRank: 19,
+    categoryRank: 1,
+    topCountries: ['United States (42%)', 'Japan (14%)', 'Germany (10%)', 'United Kingdom (8%)'],
+    trafficStats: {
+      monthlyVisits: 11500000,
+      monthlyVisitsFormatted: '11.5M',
+      trafficGrowth: 110.2,
+      globalRank: 19,
+      categoryRank: 1,
+      topCountry: 'United States (42%)',
+      avgDuration: '08:45',
+      bounceRate: '22.3%'
+    },
+    platforms: ['Web', 'API'],
+    targetAudience: ['Developers', 'Founders', 'Enterprise'],
+    pros: ['Fully sandboxed development environment with browser and terminal', 'Can resolve GitHub issues and generate PRs end-to-end', 'Self-corrects compilation and runtime errors'],
+    cons: ['Waitlist access / Enterprise subscription required for heavy usage'],
+    alternatives: ['Cursor AI', 'AutoGPT', 'CrewAI', 'OpenHands'],
+    deal: {
+      discount: 'PRIORITY PASS',
+      code: 'DEVINFLUX',
+      description: 'Skip standard waitlist and receive developer testing sandbox credits.'
+    },
+    upvotes: 9450,
+    launchedDate: '2024-03-12',
+    keyFeatures: [
+      'Autonomous Sandboxed Shell, Terminal & Browser',
+      'End-to-End GitHub Repository Pull Request Generation',
+      'Interactive User Steering and Progress Logging',
+      'Custom Model Fine-Tuning on Monorepos',
+      'SWE-Bench Frontier SOTA Problem Solving'
+    ],
+    pricingPlans: [
+      {
+        id: 'dev-team',
+        name: 'Team Tier',
+        price: '$500',
+        billingPeriod: 'per month',
+        description: 'For software engineering teams offloading maintenance and migration tickets.',
+        features: ['5 Concurrent Agent runs', 'GitHub PR integration', 'Slack & Jira webhook connectors', 'Dedicated compute sandbox'],
+        ctaText: 'Request Access',
+        isPopular: true
+      }
+    ],
+    reviews: [
+      {
+        id: 'rev-dev-1',
+        authorName: 'Taro Takahashi',
+        authorRole: 'CTO',
+        authorCompany: 'Tokyo Quantum AI',
+        authorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80',
+        rating: 5,
+        comment: 'Devin autonomously migrated our entire legacy Python 2 codebase to Python 3.12 over a weekend, including fixing broken unit tests. Truly astonishing autonomous capability.',
+        date: 'Feb 20, 2026',
+        verified: true,
+        helpfulCount: 310
+      }
+    ],
+    createdAt: '2024-03-12'
   }
 ];
 

@@ -129,13 +129,13 @@
     }
     </script>
 
-    <!-- ── Dark Mode Flash Prevention ─────────────────────────── -->
+    <!-- ── Light Theme Default & Theme Flash Prevention ──────────────── -->
     <script>
       (function() {
         try {
           var saved = localStorage.getItem('toolver_theme');
-          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-          if (saved === 'dark' || (!saved && prefersDark)) {
+          // Default for all new visitors is Light theme. Only switch to dark if explicitly chosen.
+          if (saved === 'dark') {
             document.documentElement.classList.add('dark');
             document.documentElement.setAttribute('data-theme', 'dark');
             document.documentElement.style.colorScheme = 'dark';

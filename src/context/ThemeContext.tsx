@@ -83,8 +83,11 @@ const getInitialTheme = (): Theme => {
   if (typeof window === 'undefined') return 'light';
   try {
     const saved = localStorage.getItem('toolver_theme');
-    if (saved === 'dark' || saved === 'light') return saved;
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    // Respect explicit user choice if they previously selected dark or light
+    if (saved === 'dark') return 'dark';
+    if (saved === 'light') return 'light';
+    // Default for all new visitors is light theme
+    return 'light';
   } catch {
     return 'light';
   }
@@ -110,18 +113,6 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     // Initial application of CSS variables
     applyThemeCssVariables(theme);
-
-    // Watch for OS preference change if user hasn't explicitly set a preference
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (e: MediaQueryListEvent) => {
-      const saved = localStorage.getItem('toolver_theme');
-      if (!saved) {
-        setTheme(e.matches ? 'dark' : 'light');
-      }
-    };
-
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
   return (
