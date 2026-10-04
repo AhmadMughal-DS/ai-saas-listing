@@ -103,6 +103,7 @@ def main():
     # 4. Build Table Rows
     headers = [
         "Tool Name",
+        "🏷️ Logo (S3 PNG · Download for Vids)",
         "Category",
         "Pricing Type",
         "Monthly Traffic",
@@ -130,6 +131,7 @@ def main():
         rating = str(t.get("rating", "4.8"))
         website = t.get("url", "")
         toolver_url = f"https://toolverai.com/tool/{slug}"
+        logo_url = t.get("logoUrl", "")
 
         deal_info = t.get("deal")
         if deal_info and isinstance(deal_info, dict):
@@ -145,11 +147,12 @@ def main():
         video_script = content.get("video_script", "")
         social_caption = content.get("social_caption", "")
 
-        status = "⏳ Ready for Google Flow"
+        status = "⏳ Ready for Google Vids"
         platforms = "Instagram Reels, TikTok, YouTube Shorts, LinkedIn, X, Facebook"
 
         rows.append([
             name,
+            logo_url,
             cat,
             pricing,
             visits,
@@ -176,7 +179,7 @@ def main():
     print("[*] Applying visual formatting...")
     try:
         # Header formatting
-        ws.format('A1:O1', {
+        ws.format('A1:P1', {
             'backgroundColor': {'red': 0.07, 'green': 0.12, 'blue': 0.22}, # Deep Navy
             'textFormat': {'bold': True, 'foregroundColor': {'red': 1.0, 'green': 1.0, 'blue': 1.0}, 'fontSize': 10},
             'horizontalAlignment': 'CENTER',
@@ -184,53 +187,33 @@ def main():
             'wrapStrategy': 'WRAP'
         })
         
-        # Freeze top row
-        ws.freeze(rows=1)
+        # Freeze top row + name column
+        ws.freeze(rows=1, cols=1)
 
-        # Set wrap strategy for content columns (Video Script in Col J, Caption in Col K)
-        ws.format('J2:K125', {
+        # Set wrap strategy for content columns (Video Script in Col K, Caption in Col L)
+        ws.format('K2:L125', {
             'wrapStrategy': 'WRAP',
             'verticalAlignment': 'TOP',
             'textFormat': {'fontSize': 9}
         })
 
-        # Center align Category, Pricing, Rating
-        ws.format('B2:E125', {
+        # Center align Category, Pricing, Traffic, Rating
+        ws.format('C2:F125', {
             'horizontalAlignment': 'CENTER',
             'verticalAlignment': 'MIDDLE'
         })
 
+        def col_width(start, end, px):
+            return {"updateDimensionProperties": {
+                "range": {"sheetId": ws.id, "dimension": "COLUMNS", "startIndex": start, "endIndex": end},
+                "properties": {"pixelSize": px}, "fields": "pixelSize"}}
+
         # Set column widths via batch update
         body = {
             "requests": [
-                {
-                    "updateDimensionProperties": {
-                        "range": {
-                            "sheetId": ws.id,
-                            "dimension": "COLUMNS",
-                            "startIndex": 9, # Col J (Video Script)
-                            "endIndex": 11   # Col K (Social Caption)
-                        },
-                        "properties": {
-                            "pixelSize": 450
-                        },
-                        "fields": "pixelSize"
-                    }
-                },
-                {
-                    "updateDimensionProperties": {
-                        "range": {
-                            "sheetId": ws.id,
-                            "dimension": "COLUMNS",
-                            "startIndex": 0, # Col A (Name)
-                            "endIndex": 1
-                        },
-                        "properties": {
-                            "pixelSize": 160
-                        },
-                        "fields": "pixelSize"
-                    }
-                }
+                col_width(0, 1, 160),    # A Tool Name
+                col_width(1, 2, 280),    # B Logo S3 URL
+                col_width(10, 12, 450),  # K-L Video Script + Social Caption
             ]
         }
         ss.batch_update(body)

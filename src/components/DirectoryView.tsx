@@ -482,19 +482,29 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
               <div>
                 {/* Video / Thumbnail Banner */}
                 <div className="relative aspect-[16/9] w-full bg-slate-100 overflow-hidden group/thumb cursor-pointer">
-                  <img
-                    src={tool.thumbnailVideoUrl || tool.logoUrl}
-                    alt={tool.name}
-                    className="w-full h-full object-cover group-hover/thumb:scale-105 transition-transform duration-500"
-                    onClick={() => {
-                      if (tool.thumbnailVideoUrl) {
-                        onOpenVideoPreview(tool);
-                      } else {
-                        onSelectTool(tool);
-                      }
-                    }}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent opacity-60" />
+                  {tool.thumbnailVideoUrl ? (
+                    <img
+                      src={tool.thumbnailVideoUrl}
+                      alt={tool.name}
+                      className="w-full h-full object-cover group-hover/thumb:scale-105 transition-transform duration-500"
+                      onClick={() => onOpenVideoPreview(tool)}
+                    />
+                  ) : (
+                    <div
+                      className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-50 via-indigo-50 to-slate-100"
+                      onClick={() => onSelectTool(tool)}
+                    >
+                      <img
+                        src={tool.logoUrl}
+                        alt={`${tool.name} logo`}
+                        loading="lazy"
+                        className="w-20 h-20 object-contain rounded-2xl bg-white p-2 shadow-sm ring-1 ring-slate-200 group-hover/thumb:scale-110 transition-transform duration-500"
+                      />
+                    </div>
+                  )}
+                  {tool.thumbnailVideoUrl && (
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent opacity-60 pointer-events-none" />
+                  )}
 
                   {/* Play Video Trigger Overlay */}
                   {tool.thumbnailVideoUrl && (
