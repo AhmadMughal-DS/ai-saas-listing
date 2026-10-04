@@ -480,45 +480,23 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
               }`}
             >
               <div>
-                {/* Video / Thumbnail Banner */}
-                <div className="relative aspect-[16/9] w-full bg-slate-100 overflow-hidden group/thumb cursor-pointer">
-                  {tool.thumbnailVideoUrl ? (
-                    <img
-                      src={tool.thumbnailVideoUrl}
-                      alt={tool.name}
-                      className="w-full h-full object-cover group-hover/thumb:scale-105 transition-transform duration-500"
-                      onClick={() => onOpenVideoPreview(tool)}
-                    />
-                  ) : (
-                    <div
-                      className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-50 via-indigo-50 to-slate-100"
-                      onClick={() => onSelectTool(tool)}
-                    >
-                      <img
-                        src={tool.logoUrl}
-                        alt={`${tool.name} logo`}
-                        loading="lazy"
-                        className="w-20 h-20 object-contain rounded-2xl bg-white p-2 shadow-sm ring-1 ring-slate-200 group-hover/thumb:scale-110 transition-transform duration-500"
-                      />
-                    </div>
-                  )}
-                  {tool.thumbnailVideoUrl && (
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent opacity-60 pointer-events-none" />
-                  )}
+                {/* Tool Brand Banner (Logo Display) */}
+                <div 
+                  className="relative aspect-[16/9] w-full bg-gradient-to-br from-slate-50 via-indigo-50/40 to-slate-100 dark:from-slate-800/80 dark:via-slate-800/50 dark:to-slate-900 flex items-center justify-center overflow-hidden group/thumb cursor-pointer border-b border-slate-100 dark:border-slate-800"
+                  onClick={() => onSelectTool(tool)}
+                >
+                  {/* Subtle pattern background */}
+                  <div className="absolute inset-0 opacity-[0.04] dark:opacity-[0.08] bg-[radial-gradient(#6366f1_1px,transparent_1px)] [background-size:14px_14px] pointer-events-none" />
 
-                  {/* Play Video Trigger Overlay */}
-                  {tool.thumbnailVideoUrl && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onOpenVideoPreview(tool);
-                      }}
-                      className="absolute bottom-3 left-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-md border border-white/20 text-xs font-semibold text-white group-hover/thumb:bg-slate-900 transition-all cursor-pointer shadow-sm"
-                    >
-                      <Play className="w-3.5 h-3.5 text-indigo-400 fill-indigo-400" />
-                      <span>{tool.videoDuration || 'Watch Demo'}</span>
-                    </button>
-                  )}
+                  {/* High-res S3 Brand Logo */}
+                  <div className="relative z-10 w-24 h-24 rounded-2xl bg-white dark:bg-slate-800 p-3 shadow-md ring-1 ring-slate-200/90 dark:ring-slate-700 flex items-center justify-center group-hover/thumb:scale-110 transition-all duration-300">
+                    <img
+                      src={tool.logoUrl}
+                      alt={`${tool.name} logo`}
+                      loading="lazy"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
 
                   {/* Metric & Status Badges on top left */}
                   <div className="absolute top-3 left-3 flex items-center gap-1.5 flex-wrap max-w-[75%] pointer-events-none">

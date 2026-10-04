@@ -1889,13 +1889,13 @@ async function run() {
   const col = db.collection('tools');
 
   // Build and insert all 120 tools
-  const fullTools = TOOLS_CATALOG.map((t, idx) => ({
-    ...t,
-    slug: t.slug || t.id.replace('tool-', ''),
-    logoUrl: `https://images.unsplash.com/photo-${1550000000000 + (idx * 179424) % 900000000}?w=150&auto=format&fit=crop&q=80`,
-    thumbnailVideoUrl: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=800&auto=format&fit=crop&q=80',
-    videoDuration: '4:15',
-    reviewCount: 1500 + (idx * 317) % 8000,
+  const fullTools = TOOLS_CATALOG.map((t, idx) => {
+    const slug = t.slug || t.id.replace('tool-', '');
+    return {
+      ...t,
+      slug,
+      logoUrl: `https://toolverai-tool-logos.s3.us-east-1.amazonaws.com/logos/${slug}.png`,
+      reviewCount: 1500 + (idx * 317) % 8000,
     isOpenSource: t.pricingType === 'Open Source',
     hasApi: true,
     isFeatured: !!t.isFeatured || idx % 7 === 0,
