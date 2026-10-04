@@ -12,7 +12,9 @@ async function seed() {
   const client = new MongoClient(uri);
   await client.connect();
 
-  const db = client.db('test');
+  const dbName = process.env.MONGODB_DB_NAME || 'toolver_db';
+  console.log(`Using database: ${dbName}`);
+  const db = client.db(dbName);
   const col = db.collection('tools');
 
   await col.deleteMany({});
