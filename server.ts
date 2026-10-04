@@ -873,6 +873,69 @@ async function startServer() {
     }
   });
 
+  // Export Live Tools to CSV (Compatible with Google Sheets =IMPORTDATA())
+  app.get('/api/tools/export/csv', async (req, res) => {
+    try {
+      const baseUrl = resolveBaseUrl(req);
+      const tools = await getToolsFromDbOrFallback();
+
+      const headers = [
+        'Tool Name',
+        'Category',
+        'Pricing Type',
+        'Monthly Visits',
+        'Rating',
+        'Website URL',
+        'ToolverAI URL',
+        'Tagline / Hook',
+        'Key Features',
+        'Deal / Promo Code',
+        'Video Review Status',
+        'Social Platform',
+        'Review Post URL',
+      ];
+
+      const escapeCsv = (val: any) => {
+        if (val === null || val === undefined) return '""';
+        const str = String(val).replace(/"/g, '""');
+        return `"${str}"`;
+      };
+
+      const rows = tools.map((t) => {
+        const toolSlug = t.slug || t.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        const toolPageUrl = `${baseUrl}/tool/${toolSlug}`;
+        const dealText = t.deal ? `${t.deal.discount || ''} (Code: ${t.deal.code || 'None'})` : 'None';
+        const featuresText = Array.isArray(t.keyFeatures) ? t.keyFeatures.join(' | ') : '';
+
+        return [
+          escapeCsv(t.name),
+          escapeCsv(t.category),
+          escapeCsv(t.pricingType),
+          escapeCsv(t.monthlyVisitsFormatted || t.monthlyVisits || 'N/A'),
+          escapeCsv(t.rating || '5.0'),
+          escapeCsv(t.websiteUrl),
+          escapeCsv(toolPageUrl),
+          escapeCsv(t.tagline || t.description || ''),
+          escapeCsv(featuresText),
+          escapeCsv(dealText),
+          escapeCsv('Pending Review'),
+          escapeCsv('YouTube / TikTok / LinkedIn'),
+          escapeCsv(''),
+        ].join(',');
+      });
+
+      const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
+
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', 'attachment; filename="toolverai_tools_catalog.csv"');
+      res.setHeader('Cache-Control', 'public, max-age=180');
+      res.send(csvContent);
+    } catch (err: any) {
+      console.error('Failed to export tools CSV:', err);
+      res.status(500).send('Failed to generate CSV');
+    }
+  });
+
   // Seed MongoDB
   app.post('/api/tools/seed', async (req, res) => {
     try {
