@@ -40,6 +40,7 @@ const CATEGORIES = [
   'Audio AI',
   'Copywriting',
   'Data & Analytics',
+  'Agents',
 ];
 
 export const DirectoryView: React.FC<DirectoryViewProps> = ({
@@ -379,11 +380,8 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
           <div className="flex items-center gap-3">
             <div className="w-2.5 h-2.5 rounded-full bg-slate-900" />
             <h2 className="font-heading text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-              Curated AI Database
+              AI Top
             </h2>
-            <span className="text-xs text-slate-400 font-mono">
-              ({filteredTools.length} tools indexed)
-            </span>
           </div>
 
           <div className="flex items-center gap-3 self-end sm:self-auto flex-wrap">
