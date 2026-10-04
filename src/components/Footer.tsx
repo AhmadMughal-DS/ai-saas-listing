@@ -1,5 +1,5 @@
 import React from 'react';
-import { Flame, Tag, Terminal, GitCompare, Lock, Twitter, Linkedin, Youtube, Globe, BookOpen, Sparkles, BarChart3 } from 'lucide-react';
+import { Flame, Tag, Terminal, GitCompare, Lock, Twitter, Linkedin, Youtube, Globe, BookOpen, Sparkles, BarChart3, Instagram, Facebook, Mail } from 'lucide-react';
 import { ActiveTab } from '../types';
 import { Logo } from './Logo';
 
@@ -13,9 +13,27 @@ const viteEnv = (import.meta as any).env || {};
 
 const SOCIAL_LINKS = [
   {
+    href: 'https://www.instagram.com/toolverai/',
+    label: 'Follow ToolverAI on Instagram',
+    icon: Instagram,
+    show: true,
+  },
+  {
+    href: 'https://www.facebook.com/profile.php?id=61594866789975',
+    label: 'ToolverAI on Facebook',
+    icon: Facebook,
+    show: true,
+  },
+  {
     href: viteEnv.VITE_SOCIAL_TWITTER || 'https://x.com/toolverai',
     label: 'Follow ToolverAI on X (Twitter)',
     icon: Twitter,
+    show: true,
+  },
+  {
+    href: 'mailto:marketing@toolverai.com',
+    label: 'Email us at marketing@toolverai.com',
+    icon: Mail,
     show: true,
   },
   {
@@ -50,6 +68,14 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenSuggestTool })
             <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs text-center sm:text-left leading-relaxed">
               The leading AI tools directory — discover, compare, and track 1000+ AI tools by real monthly traffic, pricing, and verified deals.
             </p>
+            <a
+              href="mailto:marketing@toolverai.com"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 text-xs font-semibold transition-colors cursor-pointer"
+              title="Contact ToolverAI via email"
+            >
+              <Mail className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" aria-hidden="true" />
+              <span>marketing@toolverai.com</span>
+            </a>
           </div>
 
           {/* Social Icons */}
@@ -190,6 +216,16 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenSuggestTool })
                     className="text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                   >
                     About ToolverAI
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="mailto:marketing@toolverai.com"
+                    className="text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1.5"
+                    title="Send an email to ToolverAI"
+                  >
+                    <Mail className="w-3.5 h-3.5 text-indigo-500" aria-hidden="true" />
+                    Contact Support
                   </a>
                 </li>
               </ul>
