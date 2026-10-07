@@ -6,25 +6,27 @@ import { Globe, Copy, Check, Eye, X, Code, Share2, Sparkles, Search, CheckCircle
 interface SEOManagerProps {
   activeTab: ActiveTab;
   selectedTool: AITool | null;
+  categorySlug?: string | null;
   showFloatingInspectorButton?: boolean;
 }
 
 export const SEOManager: React.FC<SEOManagerProps> = ({
   activeTab,
   selectedTool,
+  categorySlug,
   showFloatingInspectorButton = true,
 }) => {
-  const [currentSEO, setCurrentSEO] = useState<SEOData>(() => generateSEOData(activeTab, selectedTool));
+  const [currentSEO, setCurrentSEO] = useState<SEOData>(() => generateSEOData(activeTab, selectedTool, categorySlug));
   const [isInspectorOpen, setIsInspectorOpen] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [activeTabPreview, setActiveTabPreview] = useState<'google' | 'social' | 'schema'>('google');
 
-  // Reactively apply SEO updates to <head> whenever activeTab or selectedTool changes
+  // Reactively apply SEO updates to <head> whenever activeTab, selectedTool or categorySlug changes
   useEffect(() => {
-    const seo = generateSEOData(activeTab, selectedTool);
+    const seo = generateSEOData(activeTab, selectedTool, categorySlug);
     setCurrentSEO(seo);
     applySEOMetaTags(seo);
-  }, [activeTab, selectedTool]);
+  }, [activeTab, selectedTool, categorySlug]);
 
   const handleCopy = (text: string, key: string) => {
     navigator.clipboard.writeText(text);

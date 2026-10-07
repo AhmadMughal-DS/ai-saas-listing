@@ -23,16 +23,39 @@ import { JoinNewsletter } from './components/JoinNewsletter';
 import { Bot, Sparkles } from 'lucide-react';
 import { trackPageView, trackEvent, trackToolView, trackCategoryView } from './lib/analytics';
 
-// Helper to extract tool identifier from path or hash (e.g. /tool/cursor-ai or #tool-cursor)
+// Map of historic/legacy slugs to canonical slugs for backward compatibility
+const LEGACY_SLUG_MAP: Record<string, string> = {
+  'cursor-ai': 'cursor',
+  'perplexity-ai': 'perplexity',
+  'deepseek-r1': 'deepseek',
+  'jasper-ai': 'jasper',
+  'julius-ai': 'julius',
+  'devin-ai': 'devin',
+};
+
+// Helper to extract tool identifier from path or hash (e.g. /tool/cursor or #tool-cursor)
 const getToolIdentifierFromUrl = (): string | null => {
   if (typeof window === 'undefined') return null;
   const path = window.location.pathname;
   const match = path.match(/\/tool\/([^/?#]+)/i);
-  if (match && match[1]) return decodeURIComponent(match[1]);
-  const hash = window.location.hash;
-  const hashMatch = hash.match(/#\/?tool[-/]([^/?#]+)/i);
-  if (hashMatch && hashMatch[1]) return decodeURIComponent(hashMatch[1]);
-  return null;
+  let raw: string | null = null;
+  if (match && match[1]) raw = decodeURIComponent(match[1]);
+  if (!raw) {
+    const hash = window.location.hash;
+    const hashMatch = hash.match(/#\/?tool[-/]([^/?#]+)/i);
+    if (hashMatch && hashMatch[1]) raw = decodeURIComponent(hashMatch[1]);
+  }
+  if (!raw) return null;
+  const normalized = raw.toLowerCase();
+  return LEGACY_SLUG_MAP[normalized] || normalized;
+};
+
+// Helper to parse URL path into category slug (e.g. /categories/coding)
+const getCategorySlugFromUrl = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  const path = window.location.pathname.toLowerCase();
+  const match = path.match(/\/categories\/([^/?#]+)/i);
+  return match && match[1] ? decodeURIComponent(match[1]) : null;
 };
 
 // Helper to parse URL path/hash into ActiveTab
@@ -74,6 +97,7 @@ export const App: React.FC = () => {
   });
 
   const [activeTab, setActiveTab] = useState<ActiveTab>(getInitialTabFromUrl);
+  const [categorySlug, setCategorySlug] = useState<string | null>(getCategorySlugFromUrl);
   const [selectedTool, setSelectedTool] = useState<AITool | null>(null);
   const [videoPreviewTool, setVideoPreviewTool] = useState<AITool | null>(null);
   const [isMatcherOpen, setIsMatcherOpen] = useState<boolean>(false);
@@ -108,6 +132,7 @@ export const App: React.FC = () => {
     const handleLocationChange = () => {
       const tab = getInitialTabFromUrl();
       setActiveTab(tab);
+      setCategorySlug(getCategorySlugFromUrl());
     };
 
     window.addEventListener('popstate', handleLocationChange);
@@ -235,6 +260,9 @@ export const App: React.FC = () => {
     if (tab !== 'tool-detail') {
       setSelectedTool(null);
     }
+    if (tab !== 'categories') {
+      setCategorySlug(null);
+    }
     setActiveTab(tab);
     try {
       // Map tabs to clean SEO-friendly URL paths
@@ -349,7 +377,7 @@ export const App: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col bg-[var(--color-bg-base,#F8FAFC)] text-[var(--color-text-main,#0F172A)] dark:bg-[#090D16] dark:text-slate-100 relative overflow-x-hidden selection:bg-indigo-600 selection:text-white font-sans transition-colors duration-200">
       {/* Dynamic SEO Meta Tag Manager */}
-      <SEOManager activeTab={activeTab} selectedTool={selectedTool} />
+      <SEOManager activeTab={activeTab} selectedTool={selectedTool} categorySlug={categorySlug} />
 
       {/* Dynamic Cyber Background */}
       <CyberBackground />
@@ -418,10 +446,28 @@ export const App: React.FC = () => {
         {activeTab === 'categories' && (
           <CategoriesView
             tools={tools}
-            onSelectCategory={(categoryName) => {
-              trackCategoryView({ category_name: categoryName });
-              handleTabChange('directory');
+            currentCategorySlug={categorySlug}
+            onSelectCategory={(slug) => {
+              setCategorySlug(slug);
+              trackCategoryView({ category_name: slug });
+              const targetPath = `/categories/${slug}`;
+              if (window.location.pathname !== targetPath) {
+                window.history.pushState({ tab: 'categories', categorySlug: slug }, '', targetPath);
+              }
+              trackPageView(targetPath);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
+            onSelectTool={handleSelectTool}
+            onBackToAllCategories={() => {
+              setCategorySlug(null);
+              const targetPath = '/categories';
+              if (window.location.pathname !== targetPath) {
+                window.history.pushState({ tab: 'categories' }, '', targetPath);
+              }
+              trackPageView(targetPath);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onBackToDirectory={() => handleTabChange('directory')}
           />
         )}
 

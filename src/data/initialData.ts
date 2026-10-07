@@ -4,7 +4,7 @@ export const INITIAL_TOOLS: AITool[] = [
   {
     id: 'tool-cursor',
     name: 'Cursor AI',
-    slug: 'cursor-ai',
+    slug: 'cursor',
     tagline: 'The AI-first Code Editor built for software engineers to build software faster.',
     description: 'Cursor is an intelligent fork of VS Code powered by frontier models (Claude 3.7 Sonnet, GPT-4o). It offers full codebase indexing, multi-file code editing, natural language terminal commands, and deep semantic symbol search.',
     url: 'https://cursor.com',
@@ -682,7 +682,7 @@ export const INITIAL_TOOLS: AITool[] = [
   {
     id: 'tool-perplexity',
     name: 'Perplexity AI',
-    slug: 'perplexity-ai',
+    slug: 'perplexity',
     tagline: 'Where knowledge begins. Conversational answer engine with direct citations.',
     description: 'Perplexity replaces traditional search engines with an AI research companion. It searches the live web, synthesizes facts with inline citations, and performs autonomous multi-step deep research queries.',
     url: 'https://perplexity.ai',
@@ -1015,7 +1015,7 @@ export const INITIAL_TOOLS: AITool[] = [
   {
     id: 'tool-deepseek',
     name: 'DeepSeek-R1',
-    slug: 'deepseek-r1',
+    slug: 'deepseek',
     tagline: 'Open-weight reasoning and coding model matching closed frontier benchmarks.',
     description: 'DeepSeek-R1 is a breakthrough open-weights reasoning model that matches OpenAI o1 performance in mathematics, competitive programming, and long-horizon logic through pure reinforcement learning.',
     url: 'https://deepseek.com',
@@ -1117,7 +1117,7 @@ export const INITIAL_TOOLS: AITool[] = [
   {
     id: 'tool-jasper',
     name: 'Jasper AI',
-    slug: 'jasper-ai',
+    slug: 'jasper',
     tagline: 'Enterprise generative AI platform for high-converting marketing copy and brand voice.',
     description: 'Jasper is the leading AI copilot for marketing and editorial teams. It writes on-brand blog posts, marketing campaigns, ad copy, and social media content across 30+ languages with built-in style guide enforcement and SEO optimization.',
     url: 'https://jasper.ai',
@@ -1206,7 +1206,7 @@ export const INITIAL_TOOLS: AITool[] = [
   {
     id: 'tool-julius',
     name: 'Julius AI',
-    slug: 'julius-ai',
+    slug: 'julius',
     tagline: 'The AI Data Analyst that cleans spreadsheets, runs models, and visualizes trends.',
     description: 'Julius is an intelligent data workspace that connects to CSVs, Excel workbooks, Google Sheets, and SQL databases. Ask questions in plain English to automatically execute Python calculations, build predictive models, and produce presentation-grade graphs.',
     url: 'https://julius.ai',
@@ -1295,7 +1295,7 @@ export const INITIAL_TOOLS: AITool[] = [
   {
     id: 'tool-devin',
     name: 'Devin AI',
-    slug: 'devin-ai',
+    slug: 'devin',
     tagline: 'The world’s first autonomous AI software engineer that executes real coding tasks.',
     description: 'Devin by Cognition Labs is an autonomous software development agent equipped with a secure shell, code editor, and dedicated web browser. Devin can plan complex multi-step engineering projects, debug third-party APIs, and submit full pull requests independently.',
     url: 'https://cognition.ai',

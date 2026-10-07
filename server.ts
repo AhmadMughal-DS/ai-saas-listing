@@ -353,6 +353,36 @@ async function startServer() {
 
   app.use(express.json({ limit: '10mb' }));
 
+  // ── SEO: Canonical Domain & Protocol Enforcement (www -> non-www, HTTP -> HTTPS) ──
+  app.use((req, res, next) => {
+    const hostHeader = (req.headers['x-forwarded-host'] as string) || req.headers.host || '';
+    const protoHeader = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'https';
+    const host = hostHeader.split(':')[0].toLowerCase();
+
+    // 1. If host begins with www., 301 permanently redirect to canonical non-www domain
+    if (host.startsWith('www.')) {
+      const canonicalHost = host.replace(/^www\./, '');
+      const targetUrl = `https://${canonicalHost}${req.originalUrl}`;
+      return res.redirect(301, targetUrl);
+    }
+
+    // 2. If behind reverse proxy and protocol is HTTP for production domain, 301 redirect to HTTPS
+    if (process.env.NODE_ENV === 'production' && protoHeader === 'http' && host === 'toolverai.com') {
+      const targetUrl = `https://toolverai.com${req.originalUrl}`;
+      return res.redirect(301, targetUrl);
+    }
+
+    // 3. Trailing slash normalizer (strip trailing slash from paths other than '/')
+    // e.g. /rankings/ -> /rankings (preserves query string)
+    if (req.path.length > 1 && req.path.endsWith('/')) {
+      const query = req.url.slice(req.path.length);
+      const safePath = req.path.slice(0, -1);
+      return res.redirect(301, safePath + query);
+    }
+
+    next();
+  });
+
   // Try initializing MongoDB & Firebase Admin on boot
   getMongoDb().catch(() => {});
   try {
@@ -367,9 +397,14 @@ async function startServer() {
       return clean.startsWith('http') ? clean : `https://${clean}`;
     }
 
+    const hostHeader = (req.headers['x-forwarded-host'] as string) || req.headers.host || '';
+    const host = hostHeader.split(':')[0].toLowerCase();
+    if (host.includes('toolverai.com')) {
+      return 'https://toolverai.com';
+    }
+
     const proto = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'https';
-    const host = (req.headers['x-forwarded-host'] as string) || req.headers.host || 'toolverai.com';
-    return `${proto}://${host}`.replace(/\/+$/, '');
+    return `${proto}://${host || 'toolverai.com'}`.replace(/\/+$/, '');
   }
 
   // Helper: fetch all tools from MongoDB Atlas or fallback to memory cache / initial dataset
@@ -1503,11 +1538,111 @@ Only return valid JSON.`;
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
+
+    // ── Legacy Tool Slug 301 Permanent Redirect Map ─────────────────────
+    const LEGACY_SLUG_REDIRECTS: Record<string, string> = {
+      'cursor-ai': 'cursor',
+      'perplexity-ai': 'perplexity',
+      'deepseek-r1': 'deepseek',
+      'jasper-ai': 'jasper',
+      'julius-ai': 'julius',
+      'devin-ai': 'devin',
+    };
+
+    interface SsrMetaOptions {
+      title: string;
+      description: string;
+      canonical: string;
+      robots?: string;
+      ogType?: 'website' | 'product' | 'article';
+      ogImage?: string;
+      jsonLd?: (string | Record<string, any>)[];
+      bodyHtml?: string;
+    }
+
+    /**
+     * Strips all preexisting/default title, canonical, description, robots, og, twitter, and verification tags
+     * from the HTML template to guarantee exactly ONE canonical tag and zero duplicate metadata.
+     */
+    function cleanHtmlTemplateHead(html: string): string {
+      return html
+        .replace(/<title>[^<]*<\/title>\s*/gi, '')
+        .replace(/<meta\s+name=["']description["'][^>]*\/?>\s*/gi, '')
+        .replace(/<meta\s+name=["']robots["'][^>]*\/?>\s*/gi, '')
+        .replace(/<link\s+rel=["']canonical["'][^>]*\/?>\s*/gi, '')
+        .replace(/<meta\s+name=["']google-site-verification["'][^>]*\/?>\s*/gi, '')
+        .replace(/<meta\s+name=["']msvalidate\.01["'][^>]*\/?>\s*/gi, '')
+        .replace(/<meta\s+property=["']og:[^"']+["'][^>]*\/?>\s*/gi, '')
+        .replace(/<meta\s+name=["']twitter:[^"']+["'][^>]*\/?>\s*/gi, '');
+    }
+
+    /**
+     * Injects exactly one canonical tag, one title, one description, and consistent OpenGraph/Twitter meta tags.
+     * Optionally injects semantic pre-rendered HTML into #root for crawlers.
+     */
+    function renderSsrPage(htmlTemplate: string, options: SsrMetaOptions): string {
+      const cleanedHtml = cleanHtmlTemplateHead(htmlTemplate);
+
+      const title = options.title.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const desc = options.description.replace(/"/g, '&quot;');
+      const canonical = options.canonical;
+      const robots = options.robots || 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
+      const ogType = options.ogType || 'website';
+      const ogImage = options.ogImage || 'https://toolverai.com/og-banner.png';
+
+      const tags: string[] = [
+        `<title>${title}</title>`,
+        `<meta name="description" content="${desc}" />`,
+        `<meta name="robots" content="${robots}" />`,
+        `<link rel="canonical" href="${canonical}" />`,
+        `<meta property="og:site_name" content="ToolverAI" />`,
+        `<meta property="og:type" content="${ogType}" />`,
+        `<meta property="og:url" content="${canonical}" />`,
+        `<meta property="og:title" content="${title}" />`,
+        `<meta property="og:description" content="${desc}" />`,
+        `<meta property="og:image" content="${ogImage}" />`,
+        `<meta property="og:image:width" content="1200" />`,
+        `<meta property="og:image:height" content="630" />`,
+        `<meta property="og:image:alt" content="${title}" />`,
+        `<meta property="og:locale" content="en_US" />`,
+        `<meta name="twitter:card" content="summary_large_image" />`,
+        `<meta name="twitter:site" content="@toolverai" />`,
+        `<meta name="twitter:creator" content="@toolverai" />`,
+        `<meta name="twitter:title" content="${title}" />`,
+        `<meta name="twitter:description" content="${desc}" />`,
+        `<meta name="twitter:image" content="${ogImage}" />`,
+      ];
+
+      // Render Google verification tag only if a real configured value exists (never output unresolved placeholders)
+      const gVer = process.env.VITE_GOOGLE_SITE_VERIFICATION || process.env.GOOGLE_SITE_VERIFICATION;
+      if (gVer && !gVer.startsWith('%') && gVer.trim().length > 0) {
+        tags.push(`<meta name="google-site-verification" content="${gVer.trim()}" />`);
+      }
+
+      // JSON-LD Structured Data
+      if (options.jsonLd && options.jsonLd.length > 0) {
+        for (const schema of options.jsonLd) {
+          const jsonStr = typeof schema === 'string' ? schema : JSON.stringify(schema);
+          tags.push(`<script type="application/ld+json">${jsonStr}</script>`);
+        }
+      }
+
+      const injectedBlock = tags.map((t) => `    ${t}`).join('\n');
+      let result = cleanedHtml.replace(/<head>/i, `<head>\n${injectedBlock}`);
+
+      if (options.bodyHtml) {
+        result = result.replace(/<div id=["']root["']>\s*<\/div>/i, `<div id="root">\n${options.bodyHtml}\n</div>`);
+      }
+
+      return result;
+    }
+
+    // Serve static assets without serving default index.html on root (ensures root receives SSR canonical)
     app.use(express.static(distPath, {
+      index: false,
       maxAge: '30d',
       etag: true,
       setHeaders: (res, filePath) => {
-        // Do not cache index.html — always fresh
         if (filePath.endsWith('index.html')) {
           res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
           res.setHeader('Pragma', 'no-cache');
@@ -1515,43 +1650,171 @@ Only return valid JSON.`;
       },
     }));
 
-    // ── SSR Meta Injection for tool/category pages ────────────────────────
-    // Google crawls JS SPAs but with delay. We inject critical SEO meta tags
-    // server-side into the HTML for tool and category pages so Googlebot
-    // sees them immediately without waiting for React to hydrate.
+    // ── SSR Categories Definition ──────────────────────────────────────
+    const SSR_CATEGORIES = [
+      { name: 'Coding', slug: 'coding', desc: 'AI code completion, full repository refactoring, bug scanning, and test suite generation.' },
+      { name: 'Productivity', slug: 'productivity', desc: 'Meeting notes summarization, automated email triage, calendar scheduling, and workflow AI.' },
+      { name: 'Image AI', slug: 'image-ai', desc: 'Neural image upscaling, generative diffusion models, logo synthesis, and texture generation.' },
+      { name: 'Video AI', slug: 'video-ai', desc: 'Text-to-video generation, cinematic b-roll synthesis, automated video editing, and avatar creators.' },
+      { name: 'Audio AI', slug: 'audio-ai', desc: 'Voice cloning, AI stems separation, podcast audio cleanup, and multi-lingual voice translation.' },
+      { name: 'Copywriting', slug: 'copywriting', desc: 'AI assistants for ad copy, long-form articles, technical whitepapers, and sales funnels.' },
+      { name: 'Data & Analytics', slug: 'data-analytics', desc: 'Natural language SQL queries, predictive regression forecasts, and automated chart builders.' },
+      { name: 'Agents', slug: 'agents', desc: 'Autonomous multi-agent swarms, browser automation bots, and self-improving reasoning loops.' },
+    ];
+
+    // ── SSR: Homepage (/) ───────────────────────────────────────────────
+    app.get('/', async (req, res) => {
+      try {
+        const htmlTemplate = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
+        const baseUrl = resolveBaseUrl(req);
+        const title = 'Best AI Tools & AI Tools Directory | ToolverAI';
+        const desc = 'Explore the best AI tools in 2026. Discover, compare, and track top AI tools across coding, productivity, image, and video generation in our verified AI tools directory.';
+        const canonical = `${baseUrl}/`;
+        const tools = await getToolsFromDbOrFallback();
+
+        const homeJsonLd = [
+          {
+            '@context': 'https://schema.org',
+            '@type': 'Organization',
+            '@id': `${baseUrl}/#organization`,
+            name: 'ToolverAI',
+            url: baseUrl,
+            logo: {
+              '@type': 'ImageObject',
+              url: `${baseUrl}/og-banner.png`,
+              width: 1200,
+              height: 630,
+            },
+            description: 'ToolverAI is the leading AI tools discovery platform with rankings, comparisons, verified deals, and reviews.',
+            sameAs: ['https://x.com/toolverai'],
+          },
+          {
+            '@context': 'https://schema.org',
+            '@type': 'WebSite',
+            '@id': `${baseUrl}/#website`,
+            url: baseUrl,
+            name: 'ToolverAI',
+            description: 'Discover, compare and track the best AI tools. Real traffic data, verified deals, and expert reviews.',
+            publisher: { '@id': `${baseUrl}/#organization` },
+            potentialAction: {
+              '@type': 'SearchAction',
+              target: {
+                '@type': 'EntryPoint',
+                urlTemplate: `${baseUrl}/?search={search_term_string}`,
+              },
+              'query-input': 'required name=search_term_string',
+            },
+          },
+        ];
+
+        const topTools = tools.slice(0, 12);
+        const homeBodyHtml = `
+<header>
+  <nav aria-label="Main Navigation">
+    <a href="/">Home</a>
+    <a href="/rankings">Rankings</a>
+    <a href="/deals">Deals</a>
+    <a href="/compare">Compare</a>
+    <a href="/prompts">Prompts</a>
+    <a href="/categories">Categories</a>
+    <a href="/blog">Blog</a>
+  </nav>
+</header>
+<main>
+  <section>
+    <h1>Discover, Compare &amp; Find the Best AI Tools</h1>
+    <p>ToolverAI is the premier AI tools directory and software discovery platform. Explore over 1000+ verified artificial intelligence applications, compare pricing and real monthly traffic rankings, discover exclusive deals, and supercharge your engineering, creative, and business workflows.</p>
+    <nav aria-label="Explore Core Features">
+      <a href="/rankings">Traffic Rankings</a>
+      <a href="/deals">Exclusive AI Deals</a>
+      <a href="/compare">Side-by-Side Comparison</a>
+      <a href="/prompts">Prompt Library</a>
+      <a href="/categories">Browse Categories</a>
+    </nav>
+  </section>
+  <section>
+    <h2>Browse AI Tools by Category</h2>
+    <p>Discover specialized AI software organized across primary disciplines:</p>
+    <ul>
+      ${SSR_CATEGORIES.map((c) => `<li><a href="/categories/${c.slug}"><strong>${c.name}</strong></a>: ${c.desc}</li>`).join('\n      ')}
+    </ul>
+  </section>
+  <section>
+    <h2>Trending &amp; Popular AI Tools in 2026</h2>
+    <p>The top artificial intelligence tools ranked by verified monthly web visits and community engagement:</p>
+    <ul>
+      ${topTools.map((t) => `<li><a href="/tool/${t.slug || t.id}"><strong>${t.name}</strong></a> (${t.category}) — ${t.tagline || t.description?.slice(0, 80)} [${t.monthlyVisitsFormatted || 'N/A'} visits/mo | ${t.pricingType || 'Freemium'}]</li>`).join('\n      ')}
+    </ul>
+  </section>
+</main>`;
+
+        const finalHtml = renderSsrPage(htmlTemplate, {
+          title,
+          description: desc,
+          canonical,
+          ogType: 'website',
+          ogImage: `${baseUrl}/og-banner.png`,
+          jsonLd: homeJsonLd,
+          bodyHtml: homeBodyHtml,
+        });
+
+        res.header('Content-Type', 'text/html; charset=utf-8');
+        res.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+        return res.status(200).send(finalHtml);
+      } catch (err: any) {
+        console.error('SSR error for /:', err);
+        res.sendFile(path.join(distPath, 'index.html'));
+      }
+    });
+
+    // ── SSR: Tool Detail Pages (/tool/:slug) ────────────────────────────
     app.get('/tool/:slug', async (req, res) => {
       try {
         const { slug } = req.params;
+        const normalizedSlug = slug.toLowerCase();
+
+        // 1. Permanent redirect for legacy slug aliases (e.g. cursor-ai -> cursor)
+        if (LEGACY_SLUG_REDIRECTS[normalizedSlug]) {
+          const canonicalTarget = LEGACY_SLUG_REDIRECTS[normalizedSlug];
+          return res.redirect(301, `/tool/${canonicalTarget}`);
+        }
+
+        // 2. Permanent redirect for case sensitivity (e.g. /tool/Cursor -> /tool/cursor)
+        if (slug !== normalizedSlug) {
+          return res.redirect(301, `/tool/${normalizedSlug}`);
+        }
+
         const tools = await getToolsFromDbOrFallback();
         const tool = tools.find(
           (t: any) =>
-            t.slug?.toLowerCase() === slug.toLowerCase() ||
-            t.id?.toLowerCase() === slug.toLowerCase()
+            t.slug?.toLowerCase() === normalizedSlug ||
+            t.id?.toLowerCase() === normalizedSlug
         );
 
         const htmlTemplate = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
         const baseUrl = resolveBaseUrl(req);
 
         if (!tool) {
-          // Tool not found — serve 404 with noindex
-          const notFoundHtml = htmlTemplate
-            .replace('<title>', '<meta name="robots" content="noindex, nofollow" />\n    <title>')
-            .replace(
-              /<title>[^<]*<\/title>/,
-              '<title>Tool Not Found — ToolverAI</title>'
-            );
+          // Tool not found — serve 404 with noindex and self-referencing canonical
+          const notFoundHtml = renderSsrPage(htmlTemplate, {
+            title: 'Tool Not Found — ToolverAI',
+            description: 'The requested AI tool could not be found in the ToolverAI directory.',
+            canonical: `${baseUrl}/tool/${normalizedSlug}`,
+            robots: 'noindex, nofollow',
+          });
+          res.setHeader('X-Robots-Tag', 'noindex, nofollow');
           return res.status(404).send(notFoundHtml);
         }
 
         const cleanName = (tool.name || '').trim();
-        const title = `${cleanName} Review: Features, Pricing & Alternatives (2026) | ToolverAI`;
+        const title = `${cleanName} Review 2026: Features, Pricing & Alternatives | ToolverAI`;
         const desc = `${cleanName} (${tool.pricingType || 'Freemium'}): ${(tool.tagline || tool.description || '').slice(0, 130)}. Compare pricing, features, monthly traffic (${tool.monthlyVisitsFormatted || 'N/A'}) and top alternatives on ToolverAI.`.slice(0, 160);
         const canonical = `${baseUrl}/tool/${tool.slug || tool.id}`;
         const ogImage = tool.logoUrl && !tool.logoUrl.includes('unsplash') ? tool.logoUrl : `${baseUrl}/og-banner.png`;
 
         // JSON-LD for SoftwareApplication
         const hasRealReviews = (tool.reviewCount || 0) >= 1;
-        const schemaJsonLd = JSON.stringify({
+        const schemaJsonLd = {
           '@context': 'https://schema.org',
           '@type': 'SoftwareApplication',
           name: cleanName,
@@ -1582,73 +1845,127 @@ Only return valid JSON.`;
             name: 'ToolverAI',
             url: baseUrl,
           },
-        });
+        };
 
-        const breadcrumbJsonLd = JSON.stringify({
+        const categorySlug = (tool.category || 'tools').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        const sameCategoryTools = tools
+          .filter((t: any) => (t.slug !== tool.slug && t.id !== tool.id) && t.category?.toLowerCase() === tool.category?.toLowerCase())
+          .slice(0, 6);
+
+        const breadcrumbJsonLd = {
           '@context': 'https://schema.org',
           '@type': 'BreadcrumbList',
           itemListElement: [
             { '@type': 'ListItem', position: 1, name: 'Home', item: `${baseUrl}/` },
             { '@type': 'ListItem', position: 2, name: 'AI Tools', item: `${baseUrl}/` },
-            { '@type': 'ListItem', position: 3, name: tool.category || 'Tools', item: `${baseUrl}/categories/${encodeURIComponent((tool.category || 'tools').toLowerCase().replace(/[^a-z0-9]+/g, '-'))}` },
+            { '@type': 'ListItem', position: 3, name: tool.category || 'Tools', item: `${baseUrl}/categories/${categorySlug}` },
             { '@type': 'ListItem', position: 4, name: cleanName, item: canonical },
           ],
+        };
+
+        const toolBodyHtml = `
+<header>
+  <nav aria-label="Breadcrumb">
+    <ol>
+      <li><a href="/">Home</a></li>
+      <li><a href="/">AI Tools</a></li>
+      <li><a href="/categories/${categorySlug}">${tool.category || 'Tools'}</a></li>
+      <li aria-current="page">${cleanName}</li>
+    </ol>
+  </nav>
+</header>
+<main>
+  <article>
+    <h1>${cleanName} Review 2026: Features, Pricing &amp; Alternatives</h1>
+    <p>${tool.tagline || tool.description || ''}</p>
+    <section>
+      <h2>Overview &amp; Key Specifications</h2>
+      <ul>
+        <li><strong>Category:</strong> <a href="/categories/${categorySlug}">${tool.category}</a></li>
+        <li><strong>Pricing Model:</strong> ${tool.pricingType || 'Freemium'}</li>
+        <li><strong>Monthly Web Visits:</strong> ${tool.monthlyVisitsFormatted || 'N/A'}</li>
+        <li><strong>Verified Rating:</strong> ${tool.rating || 4.5} / 5 (${tool.reviewCount || 1} reviews)</li>
+        <li><strong>Official Website:</strong> <a href="${tool.url}" rel="nofollow noopener noreferrer" target="_blank">${cleanName}</a></li>
+      </ul>
+    </section>
+    ${tool.keyFeatures?.length ? `
+    <section>
+      <h2>Key Features</h2>
+      <ul>
+        ${tool.keyFeatures.map((f: string) => `<li>${f}</li>`).join('\n        ')}
+      </ul>
+    </section>` : ''}
+    <section>
+      <h2>Top Alternatives to ${cleanName}</h2>
+      <p>Explore the best alternative AI software in ${tool.category}:</p>
+      <ul>
+        ${sameCategoryTools.map((alt: any) => `<li><a href="/tool/${alt.slug || alt.id}"><strong>${alt.name}</strong></a> — ${alt.tagline || alt.description?.slice(0, 70)} (${alt.pricingType})</li>`).join('\n        ')}
+      </ul>
+    </section>
+    <section>
+      <h2>Related AI Software Comparisons</h2>
+      <p>Compare ${cleanName} with industry alternatives or check current promotional pricing:</p>
+      <p>
+        <a href="/compare">Compare ${cleanName} Side-by-Side</a> |
+        <a href="/deals">Browse Verified AI Discounts &amp; Deals</a> |
+        <a href="/categories/${categorySlug}">All ${tool.category} Tools</a>
+      </p>
+    </section>
+  </article>
+</main>`;
+
+        const finalHtml = renderSsrPage(htmlTemplate, {
+          title,
+          description: desc,
+          canonical,
+          robots: 'index, follow, max-image-preview:large, max-snippet:-1',
+          ogType: 'product',
+          ogImage,
+          jsonLd: [schemaJsonLd, breadcrumbJsonLd],
+          bodyHtml: toolBodyHtml,
         });
-
-        const injectedMeta = [
-          `<title>${title.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</title>`,
-          `<meta name="description" content="${desc.replace(/"/g,'&quot;')}" />`,
-          `<link rel="canonical" href="${canonical}" />`,
-          `<meta name="robots" content="index, follow, max-image-preview:large" />`,
-          `<meta property="og:title" content="${title.replace(/"/g,'&quot;')}" />`,
-          `<meta property="og:description" content="${desc.replace(/"/g,'&quot;')}" />`,
-          `<meta property="og:type" content="product" />`,
-          `<meta property="og:url" content="${canonical}" />`,
-          `<meta property="og:image" content="${ogImage}" />`,
-          `<meta name="twitter:title" content="${title.replace(/"/g,'&quot;')}" />`,
-          `<meta name="twitter:description" content="${desc.replace(/"/g,'&quot;')}" />`,
-          `<meta name="twitter:image" content="${ogImage}" />`,
-          `<script type="application/ld+json">${schemaJsonLd}</script>`,
-          `<script type="application/ld+json">${breadcrumbJsonLd}</script>`,
-        ].join('\n    ');
-
-        // Replace the placeholder title with injected SEO meta
-        const finalHtml = htmlTemplate
-          .replace(
-            /<title>ToolverAI[^<]*<\/title>/,
-            injectedMeta
-          );
 
         res.header('Content-Type', 'text/html; charset=utf-8');
         res.header('Cache-Control', 'public, max-age=300, s-maxage=1800');
         return res.status(200).send(finalHtml);
       } catch (err: any) {
-        console.error('SSR meta injection error for /tool/:slug:', err);
-        // Fallback to standard index.html
+        console.error('SSR error for /tool/:slug:', err);
         res.sendFile(path.join(distPath, 'index.html'));
       }
     });
 
-    // ── SSR for Category pages ─────────────────────────────────────────
+    // ── SSR: Category Pages (/categories/:category) ─────────────────────
     app.get('/categories/:category', async (req, res) => {
       try {
         const { category } = req.params;
+        const normalizedCategory = category.toLowerCase();
+
+        if (category !== normalizedCategory) {
+          return res.redirect(301, `/categories/${normalizedCategory}`);
+        }
+
         const baseUrl = resolveBaseUrl(req);
         const htmlTemplate = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
         const tools = await getToolsFromDbOrFallback();
 
-        const categoryName = decodeURIComponent(category)
-          .replace(/-/g, ' ')
-          .replace(/\b\w/g, (l: string) => l.toUpperCase());
+        const matchedMeta = SSR_CATEGORIES.find((c) => c.slug === normalizedCategory);
+        const categoryName = matchedMeta
+          ? matchedMeta.name
+          : decodeURIComponent(category)
+              .replace(/-/g, ' ')
+              .replace(/\b\w/g, (l: string) => l.toUpperCase());
+
         const categoryTools = tools.filter(
-          (t: any) => t.category?.toLowerCase().replace(/[^a-z0-9]+/g, '-') === category.toLowerCase()
+          (t: any) => t.category?.toLowerCase().replace(/[^a-z0-9]+/g, '-') === normalizedCategory
         );
 
-        const canonical = `${baseUrl}/categories/${category}`;
-        const title = `Best ${categoryName} Tools — Ranked by Traffic & Reviews | ToolverAI`;
-        const desc = `Discover the best ${categoryName} tools in 2026. Compare ${categoryTools.length}+ verified AI tools ranked by monthly traffic, pricing, and user reviews on ToolverAI.`;
+        const canonical = `${baseUrl}/categories/${normalizedCategory}`;
+        const title = `Best ${categoryName} Tools in 2026 | ToolverAI`;
+        const desc = `Discover the best ${categoryName} tools in 2026. Compare ${categoryTools.length}+ verified AI tools ranked by monthly traffic, pricing, and authentic user reviews on ToolverAI.`;
 
-        const breadcrumbJsonLd = JSON.stringify({
+        const relatedCategories = SSR_CATEGORIES.filter((c) => c.slug !== normalizedCategory);
+
+        const breadcrumbJsonLd = {
           '@context': 'https://schema.org',
           '@type': 'BreadcrumbList',
           itemListElement: [
@@ -1656,32 +1973,56 @@ Only return valid JSON.`;
             { '@type': 'ListItem', position: 2, name: 'Categories', item: `${baseUrl}/categories` },
             { '@type': 'ListItem', position: 3, name: categoryName, item: canonical },
           ],
-        });
+        };
 
-        const collectionJsonLd = JSON.stringify({
+        const collectionJsonLd = {
           '@context': 'https://schema.org',
           '@type': 'CollectionPage',
-          name: `Best ${categoryName} Tools`,
+          name: `Best ${categoryName} Tools in 2026`,
           description: desc,
           url: canonical,
           publisher: { '@type': 'Organization', name: 'ToolverAI', url: baseUrl },
+        };
+
+        const categoryBodyHtml = `
+<header>
+  <nav aria-label="Breadcrumb">
+    <ol>
+      <li><a href="/">Home</a></li>
+      <li><a href="/categories">Categories</a></li>
+      <li aria-current="page">${categoryName}</li>
+    </ol>
+  </nav>
+</header>
+<main>
+  <section>
+    <h1>Best ${categoryName} Tools in 2026</h1>
+    <p>Discover the top ${categoryTools.length} verified ${categoryName} tools in 2026. Compare software features, pricing tiers, and monthly traffic analytics to find the ideal AI solution for your workflow.</p>
+  </section>
+  <section>
+    <h2>Top Ranked ${categoryName} Tools</h2>
+    <ul>
+      ${categoryTools.map((t: any) => `<li><a href="/tool/${t.slug || t.id}"><strong>${t.name}</strong></a> — ${t.tagline || t.description?.slice(0, 90)} [Traffic: ${t.monthlyVisitsFormatted || 'N/A'}/mo | Pricing: ${t.pricingType || 'Freemium'} | Rating: ${t.rating || 4.5}★]</li>`).join('\n      ')}
+    </ul>
+  </section>
+  <section>
+    <h2>Explore Related AI Categories</h2>
+    <p>Browse other popular software categories on ToolverAI:</p>
+    <ul>
+      ${relatedCategories.map((rc) => `<li><a href="/categories/${rc.slug}"><strong>${rc.name} Tools</strong></a>: ${rc.desc}</li>`).join('\n      ')}
+    </ul>
+  </section>
+</main>`;
+
+        const finalHtml = renderSsrPage(htmlTemplate, {
+          title,
+          description: desc,
+          canonical,
+          ogType: 'website',
+          ogImage: `${baseUrl}/og-banner.png`,
+          jsonLd: [breadcrumbJsonLd, collectionJsonLd],
+          bodyHtml: categoryBodyHtml,
         });
-
-        const injectedMeta = [
-          `<title>${title.replace(/</g,'&lt;')}</title>`,
-          `<meta name="description" content="${desc.replace(/"/g,'&quot;')}" />`,
-          `<link rel="canonical" href="${canonical}" />`,
-          `<meta property="og:title" content="${title.replace(/"/g,'&quot;')}" />`,
-          `<meta property="og:description" content="${desc.replace(/"/g,'&quot;')}" />`,
-          `<meta property="og:url" content="${canonical}" />`,
-          `<script type="application/ld+json">${breadcrumbJsonLd}</script>`,
-          `<script type="application/ld+json">${collectionJsonLd}</script>`,
-        ].join('\n    ');
-
-        const finalHtml = htmlTemplate.replace(
-          /<title>ToolverAI[^<]*<\/title>/,
-          injectedMeta
-        );
 
         res.header('Content-Type', 'text/html; charset=utf-8');
         res.header('Cache-Control', 'public, max-age=300, s-maxage=3600');
@@ -1693,8 +2034,6 @@ Only return valid JSON.`;
     });
 
     // ── Static Trust & Legal Pages ─────────────────────────────────────
-    // Serve pre-built HTML pages for About, Privacy, Terms, and Affiliate Disclosure
-    // These are served as static HTML files (not SPA) so they are immediately crawlable
     const staticPageMap: Record<string, string> = {
       '/about': 'about.html',
       '/privacy-policy': 'privacy-policy.html',
@@ -1710,12 +2049,11 @@ Only return valid JSON.`;
           res.header('Cache-Control', 'public, max-age=86400, s-maxage=604800');
           return res.status(200).sendFile(filePath);
         }
-        // Fallback to SPA if file doesn't exist
         res.sendFile(path.join(distPath, 'index.html'));
       });
     });
 
-    // ── SSR for submit-tool page ────────────────────────────────────────
+    // ── SSR: Submit Tool (/submit-tool) ─────────────────────────────────
     app.get('/submit-tool', (req, res) => {
       try {
         const htmlTemplate = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
@@ -1723,21 +2061,31 @@ Only return valid JSON.`;
         const title = 'Submit an AI Tool — Get Listed on ToolverAI';
         const desc = 'Submit your AI tool to the ToolverAI directory. Get reviewed, verified, and listed alongside 1000+ AI tools ranked by real monthly traffic.';
         const canonical = `${baseUrl}/submit-tool`;
-        const injectedMeta = [
-          `<title>${title}</title>`,
-          `<meta name="description" content="${desc.replace(/"/g, '&quot;')}" />`,
-          `<link rel="canonical" href="${canonical}" />`,
-          `<meta name="robots" content="index, follow" />`,
-          `<meta property="og:title" content="${title.replace(/"/g, '&quot;')}" />`,
-          `<meta property="og:description" content="${desc.replace(/"/g, '&quot;')}" />`,
-          `<meta property="og:type" content="website" />`,
-          `<meta property="og:url" content="${canonical}" />`,
-          `<meta property="og:image" content="${baseUrl}/og-banner.png" />`,
-          `<meta name="twitter:card" content="summary_large_image" />`,
-          `<meta name="twitter:title" content="${title.replace(/"/g, '&quot;')}" />`,
-          `<meta name="twitter:description" content="${desc.replace(/"/g, '&quot;')}" />`,
-        ].join('\n    ');
-        const finalHtml = htmlTemplate.replace(/\<title\>ToolverAI[^\<]*\<\/title\>/, injectedMeta);
+
+        const submitBodyHtml = `
+<header>
+  <nav aria-label="Breadcrumb">
+    <ol>
+      <li><a href="/">Home</a></li>
+      <li aria-current="page">Submit Tool</li>
+    </ol>
+  </nav>
+</header>
+<main>
+  <h1>Submit an AI Tool — Get Listed on ToolverAI</h1>
+  <p>${desc}</p>
+  <p><a href="/">Return to Directory</a> | <a href="/categories">Browse Categories</a></p>
+</main>`;
+
+        const finalHtml = renderSsrPage(htmlTemplate, {
+          title,
+          description: desc,
+          canonical,
+          ogType: 'website',
+          ogImage: `${baseUrl}/og-banner.png`,
+          bodyHtml: submitBodyHtml,
+        });
+
         res.header('Content-Type', 'text/html; charset=utf-8');
         res.header('Cache-Control', 'public, max-age=3600, s-maxage=86400');
         return res.status(200).send(finalHtml);
@@ -1746,56 +2094,114 @@ Only return valid JSON.`;
       }
     });
 
-    // ── SSR for major section pages ─────────────────────────────────────
-    const majorPageSeo: Record<string, { title: string; desc: string }> = {
+    // ── SSR: Major Section Hub Pages ────────────────────────────────────
+    const majorPageSeo: Record<string, { title: string; desc: string; h1: string; type?: 'website' | 'article' }> = {
       '/rankings': {
         title: 'Top AI Tools by Monthly Traffic — Verified Rankings 2026 | ToolverAI',
         desc: 'Explore verified monthly traffic statistics, growth velocity, and user volume leaderboards across Coding, LLMs, Image, and Audio AI platforms. Updated weekly on ToolverAI.',
+        h1: 'Top AI Tools by Monthly Traffic — Verified Rankings 2026',
       },
       '/compare': {
         title: 'Compare AI Tools Side-by-Side — Features, Pricing & Traffic | ToolverAI',
         desc: 'Compare top AI tools head-to-head on pricing, monthly traffic, API availability, supported platforms, and user ratings. Free comparison tool at ToolverAI.',
+        h1: 'Compare AI Tools Side-by-Side',
       },
       '/deals': {
         title: 'Best AI Tool Deals & Promo Codes — Verified Discounts 2026 | ToolverAI',
         desc: 'Save on leading AI software with exclusive verified coupon codes, lifetime deals, and extended free trials. All deals manually verified and updated daily.',
+        h1: 'Best AI Tool Deals & Promo Codes — Verified Discounts 2026',
       },
       '/prompts': {
         title: 'AI Prompt Engineering Library — Templates for ChatGPT, Claude & More | ToolverAI',
         desc: 'Master ChatGPT, Claude, Midjourney, and Cursor AI with battle-tested prompts for coding, SEO, marketing, and workflow automation. Free prompt engineering library.',
+        h1: 'AI Prompt Engineering Library',
       },
       '/categories': {
         title: 'AI Tools by Category — Coding, Writing, Image, Video & More | ToolverAI',
         desc: 'Browse 1000+ AI tools organized by category. Find the best Coding AI, Writing AI, Image Generation, Video AI, Marketing AI tools — all ranked and verified on ToolverAI.',
+        h1: 'Browse AI Tools by Category',
       },
       '/blog': {
         title: 'AI Tools Blog — News, Reviews & Tutorials | ToolverAI',
         desc: 'Read expert AI tool analysis, LLM benchmark comparisons, step-by-step tutorials, and the latest AI software news at ToolverAI.',
+        h1: 'ToolverAI Blog',
+        type: 'article',
       },
     };
 
     Object.entries(majorPageSeo).forEach(([routePath, seo]) => {
-      app.get(routePath, (req, res) => {
+      app.get(routePath, async (req, res) => {
         try {
           const htmlTemplate = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
           const baseUrl = resolveBaseUrl(req);
           const canonical = `${baseUrl}${routePath}`;
-          const injectedMeta = [
-            `<title>${seo.title.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</title>`,
-            `<meta name="description" content="${seo.desc.replace(/"/g, '&quot;')}" />`,
-            `<link rel="canonical" href="${canonical}" />`,
-            `<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />`,
-            `<meta property="og:title" content="${seo.title.replace(/"/g, '&quot;')}" />`,
-            `<meta property="og:description" content="${seo.desc.replace(/"/g, '&quot;')}" />`,
-            `<meta property="og:type" content="website" />`,
-            `<meta property="og:url" content="${canonical}" />`,
-            `<meta property="og:image" content="${baseUrl}/og-banner.png" />`,
-            `<meta name="twitter:card" content="summary_large_image" />`,
-            `<meta name="twitter:site" content="@toolverai" />`,
-            `<meta name="twitter:title" content="${seo.title.replace(/"/g, '&quot;')}" />`,
-            `<meta name="twitter:description" content="${seo.desc.replace(/"/g, '&quot;')}" />`,
-          ].join('\n    ');
-          const finalHtml = htmlTemplate.replace(/\<title\>ToolverAI[^\<]*\<\/title\>/, injectedMeta);
+          const tools = await getToolsFromDbOrFallback();
+
+          const breadcrumbJsonLd = {
+            '@context': 'https://schema.org',
+            '@type': 'BreadcrumbList',
+            itemListElement: [
+              { '@type': 'ListItem', position: 1, name: 'Home', item: `${baseUrl}/` },
+              { '@type': 'ListItem', position: 2, name: seo.title.split('—')[0].trim(), item: canonical },
+            ],
+          };
+
+          let extraContent = '';
+          if (routePath === '/categories') {
+            extraContent = `
+    <section>
+      <h2>All AI Tool Categories</h2>
+      <ul>
+        ${SSR_CATEGORIES.map((c) => `<li><a href="/categories/${c.slug}"><strong>${c.name}</strong></a>: ${c.desc}</li>`).join('\n        ')}
+      </ul>
+    </section>`;
+          } else if (routePath === '/rankings') {
+            extraContent = `
+    <section>
+      <h2>Traffic Leaderboard</h2>
+      <ul>
+        ${tools.slice(0, 15).map((t: any) => `<li><a href="/tool/${t.slug || t.id}"><strong>${t.name}</strong></a> — ${t.monthlyVisitsFormatted || 'N/A'} monthly visits (${t.category})</li>`).join('\n        ')}
+      </ul>
+    </section>`;
+          } else if (routePath === '/deals') {
+            const dealTools = tools.filter((t: any) => t.deal);
+            extraContent = `
+    <section>
+      <h2>Verified Deals &amp; Discounts</h2>
+      <ul>
+        ${dealTools.map((t: any) => `<li><a href="/tool/${t.slug || t.id}"><strong>${t.name}</strong></a>: ${t.deal?.discount} — ${t.deal?.description}</li>`).join('\n        ')}
+      </ul>
+    </section>`;
+          }
+
+          const hubBodyHtml = `
+<header>
+  <nav aria-label="Breadcrumb">
+    <ol>
+      <li><a href="/">Home</a></li>
+      <li aria-current="page">${seo.h1}</li>
+    </ol>
+  </nav>
+</header>
+<main>
+  <h1>${seo.h1}</h1>
+  <p>${seo.desc}</p>
+  ${extraContent}
+  <nav aria-label="Quick Navigation">
+    <p><a href="/">Home</a> | <a href="/categories">All Categories</a> | <a href="/rankings">Rankings</a> | <a href="/deals">Deals</a></p>
+  </nav>
+</main>`;
+
+          const finalHtml = renderSsrPage(htmlTemplate, {
+            title: seo.title,
+            description: seo.desc,
+            canonical,
+            ogType: seo.type || 'website',
+            ogImage: `${baseUrl}/og-banner.png`,
+            jsonLd: [breadcrumbJsonLd],
+            bodyHtml: hubBodyHtml,
+          });
+
           res.header('Content-Type', 'text/html; charset=utf-8');
           res.header('Cache-Control', 'public, max-age=300, s-maxage=3600');
           return res.status(200).send(finalHtml);
@@ -1806,9 +2212,29 @@ Only return valid JSON.`;
       });
     });
 
-    // ── Catch-all: serve SPA with proper cache control ─────────────────
+    // ── SSR: Admin Console (/admin) ─────────────────────────────────────
+    app.get(['/admin', '/admin/*'], (req, res) => {
+      try {
+        const htmlTemplate = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
+        const baseUrl = resolveBaseUrl(req);
+        res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+        const finalHtml = renderSsrPage(htmlTemplate, {
+          title: 'Admin Console | ToolverAI',
+          description: 'Administrative control panel for ToolverAI directory.',
+          canonical: `${baseUrl}/admin`,
+          robots: 'noindex, nofollow',
+          bodyHtml: '<main><h1>Admin Console</h1><p>Please log in to manage ToolverAI directory.</p></main>',
+        });
+        res.header('Content-Type', 'text/html; charset=utf-8');
+        res.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+        return res.status(200).send(finalHtml);
+      } catch (err: any) {
+        res.sendFile(path.join(distPath, 'index.html'));
+      }
+    });
+
+    // ── Catch-all: 404 handling with noindex and valid SPA fallback ─────
     app.get('*', (req, res) => {
-      // Return 404 status for unrecognized paths while still serving SPA
       const knownRoutes = [
         '/', '/rankings', '/compare', '/deals', '/prompts', '/categories',
         '/blog', '/submit-tool', '/about', '/privacy-policy', '/terms', '/affiliate-disclosure',
@@ -1816,13 +2242,29 @@ Only return valid JSON.`;
       const isKnown = knownRoutes.includes(req.path)
         || req.path.startsWith('/tool/')
         || req.path.startsWith('/categories/')
-        || req.path.startsWith('/blog/');
-      const status = isKnown ? 200 : 404;
-      // For true 404s, add noindex header
-      if (status === 404) {
-        res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+        || req.path.startsWith('/blog/')
+        || req.path.startsWith('/admin');
+
+      if (!isKnown) {
+        try {
+          const htmlTemplate = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
+          const baseUrl = resolveBaseUrl(req);
+          res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+          const notFoundHtml = renderSsrPage(htmlTemplate, {
+            title: 'Page Not Found — ToolverAI',
+            description: 'The requested page could not be found on ToolverAI.',
+            canonical: `${baseUrl}${req.path}`,
+            robots: 'noindex, nofollow',
+          });
+          res.header('Content-Type', 'text/html; charset=utf-8');
+          return res.status(404).send(notFoundHtml);
+        } catch {
+          res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+          return res.status(404).sendFile(path.join(distPath, 'index.html'));
+        }
       }
-      res.status(status).sendFile(path.join(distPath, 'index.html'));
+
+      res.status(200).sendFile(path.join(distPath, 'index.html'));
     });
   }
 

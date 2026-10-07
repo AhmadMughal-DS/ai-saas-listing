@@ -20,17 +20,17 @@ const DEFAULT_IMAGE =
   'https://toolverai.com/og-banner.png';
 
 /** Helper: slugify a category name to URL-safe path */
-function slugifyCategory(cat: string): string {
+export function slugifyCategory(cat: string): string {
   return cat.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 }
 
-export function generateSEOData(activeTab: ActiveTab, tool: AITool | null): SEOData {
+export function generateSEOData(activeTab: ActiveTab, tool: AITool | null, categorySlugParam?: string | null): SEOData {
   // ── Tool Detail Page ──────────────────────────────────────────────────
   if (activeTab === 'tool-detail' && tool) {
     const cleanName = tool.name.trim();
     const visitsStr = tool.monthlyVisitsFormatted ? `${tool.monthlyVisitsFormatted} visits/mo` : '';
     const pricingStr = tool.pricingType || 'Freemium';
-    const title = `${cleanName} Review: Features, Pricing & Alternatives (2026) | ToolverAI`;
+    const title = `${cleanName} Review 2026: Features, Pricing & Alternatives | ToolverAI`;
     const baseDesc = tool.tagline || tool.description.slice(0, 120);
     const description = `${cleanName} (${pricingStr}): ${baseDesc}. ${visitsStr ? `Traffic: ${visitsStr}.` : ''} Compare pricing, features, and top alternatives on ToolverAI.`.slice(0, 160);
 
@@ -260,7 +260,58 @@ export function generateSEOData(activeTab: ActiveTab, tool: AITool | null): SEOD
         ],
       };
 
-    case 'categories':
+    case 'categories': {
+      // Determine if viewing a specific category (e.g. /categories/coding)
+      let catSlug = categorySlugParam;
+      if (!catSlug && typeof window !== 'undefined') {
+        const match = window.location.pathname.match(/\/categories\/([^/?#]+)/i);
+        if (match && match[1]) catSlug = decodeURIComponent(match[1]).toLowerCase();
+      }
+
+      if (catSlug && catSlug !== 'all') {
+        const catName = catSlug
+          .split('-')
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(' ');
+        const catCanonical = `${BASE_URL}/categories/${catSlug}`;
+        const catTitle = `Best ${catName} Tools in 2026 | ToolverAI`;
+        const catDesc = `Discover the best ${catName} tools in 2026. Compare top verified AI tools ranked by monthly traffic, pricing, and authentic user reviews on ToolverAI.`;
+
+        return {
+          title: catTitle,
+          description: catDesc,
+          canonicalUrl: catCanonical,
+          ogType: 'website',
+          ogImage: DEFAULT_IMAGE,
+          keywords: [
+            `best ${catName} AI tools 2026`,
+            `${catName} AI software`,
+            `top ${catName} tools`,
+            'AI tools directory',
+          ],
+          jsonLd: [
+            {
+              '@context': 'https://schema.org',
+              '@type': 'CollectionPage',
+              '@id': `${catCanonical}#page`,
+              name: catTitle,
+              description: catDesc,
+              url: catCanonical,
+              publisher: { '@type': 'Organization', name: 'ToolverAI', url: BASE_URL },
+            },
+            {
+              '@context': 'https://schema.org',
+              '@type': 'BreadcrumbList',
+              itemListElement: [
+                { '@type': 'ListItem', position: 1, name: 'Home', item: `${BASE_URL}/` },
+                { '@type': 'ListItem', position: 2, name: 'Categories', item: `${BASE_URL}/categories` },
+                { '@type': 'ListItem', position: 3, name: catName, item: catCanonical },
+              ],
+            },
+          ],
+        };
+      }
+
       return {
         title: 'AI Tools by Category — Coding, Writing, Image, Video & More | ToolverAI',
         description: 'Browse 1000+ AI tools organized by category. Find the best Coding AI, Writing AI, Image Generation, Video AI, Marketing AI, and more. All tools ranked and verified.',
@@ -295,6 +346,7 @@ export function generateSEOData(activeTab: ActiveTab, tool: AITool | null): SEOD
           },
         ],
       };
+    }
 
     case 'blog':
       return {
@@ -357,20 +409,19 @@ export function generateSEOData(activeTab: ActiveTab, tool: AITool | null): SEOD
     case 'directory':
     default:
       return {
-        title: 'ToolverAI — Discover, Compare & Track the Best AI Tools (2026)',
-        description: 'ToolverAI is the leading AI tools directory. Discover 1000+ AI tools, compare features & pricing, track monthly traffic rankings, find verified deals, and explore AI prompts.',
+        title: 'Best AI Tools & AI Tools Directory | ToolverAI',
+        description: 'Explore the best AI tools in 2026. Discover, compare, and track top AI tools across coding, productivity, image, and video generation in our verified AI tools directory.',
         canonicalUrl: `${BASE_URL}/`,
         ogType: 'website',
         ogImage: DEFAULT_IMAGE,
         keywords: [
-          'AI tools directory 2026',
+          'AI tools',
+          'AI tools directory',
           'best AI tools',
-          'compare AI tools',
-          'AI monthly traffic rankings',
-          'AI tool deals',
-          'free AI tools',
-          'AI prompt library',
           'discover AI tools',
+          'compare AI tools',
+          'AI tool rankings',
+          'AI tools directory 2026',
         ],
         jsonLd: [
           {
@@ -420,15 +471,21 @@ export function applySEOMetaTags(data: SEOData) {
   // 1. Title
   document.title = data.title;
 
-  // Helper to set or create meta/link tags
+  // Helper to set or update meta tags, eliminating any duplicates
   const setMeta = (attrName: 'name' | 'property', key: string, content: string) => {
-    let el = document.querySelector<HTMLMetaElement>(`meta[${attrName}="${key}"]`);
-    if (!el) {
-      el = document.createElement('meta');
+    const elements = document.querySelectorAll<HTMLMetaElement>(`meta[${attrName}="${key}"]`);
+    if (elements.length > 0) {
+      elements[0].setAttribute('content', content);
+      // Prune any duplicate meta tags
+      for (let i = 1; i < elements.length; i++) {
+        elements[i].remove();
+      }
+    } else {
+      const el = document.createElement('meta');
       el.setAttribute(attrName, key);
+      el.setAttribute('content', content);
       document.head.appendChild(el);
     }
-    el.setAttribute('content', content);
   };
 
   // 2. Standard SEO
@@ -449,21 +506,27 @@ export function applySEOMetaTags(data: SEOData) {
   setMeta('property', 'og:site_name', 'ToolverAI');
   setMeta('property', 'og:locale', 'en_US');
 
-  // 4. Twitter/X Card
+  // 4. Twitter / X Card
   setMeta('name', 'twitter:card', 'summary_large_image');
   setMeta('name', 'twitter:site', '@toolverai');
   setMeta('name', 'twitter:title', data.title);
   setMeta('name', 'twitter:description', data.description);
   setMeta('name', 'twitter:image', data.ogImage);
 
-  // 5. Canonical URL
-  let canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
-  if (!canonical) {
-    canonical = document.createElement('link');
+  // 5. Canonical URL — strictly exactly 1 self-referencing canonical tag
+  const canonicalLinks = document.querySelectorAll<HTMLLinkElement>('link[rel="canonical"]');
+  if (canonicalLinks.length > 0) {
+    canonicalLinks[0].setAttribute('href', data.canonicalUrl);
+    // Remove any accidental duplicate canonical tags
+    for (let i = 1; i < canonicalLinks.length; i++) {
+      canonicalLinks[i].remove();
+    }
+  } else {
+    const canonical = document.createElement('link');
     canonical.setAttribute('rel', 'canonical');
+    canonical.setAttribute('href', data.canonicalUrl);
     document.head.appendChild(canonical);
   }
-  canonical.setAttribute('href', data.canonicalUrl);
 
   // 6. JSON-LD Structured Data
   // Remove existing dynamic JSON-LD scripts

@@ -356,7 +356,16 @@ export const CompareView: React.FC<CompareViewProps> = ({
                 </div>
 
                 <h2 className="font-heading text-2xl font-extrabold text-slate-900 mb-1">
-                  {tool.name}
+                  <a
+                    href={`/tool/${tool.slug || tool.id}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onSelectTool(tool);
+                    }}
+                    className="hover:text-indigo-600 transition-colors"
+                  >
+                    {tool.name}
+                  </a>
                 </h2>
                 <p className="text-xs text-slate-500 line-clamp-2 mb-4 leading-relaxed">
                   {tool.tagline}
@@ -382,12 +391,16 @@ export const CompareView: React.FC<CompareViewProps> = ({
               </div>
 
               <div className="flex items-center gap-3 pt-4 border-t border-slate-200/60">
-                <button
-                  onClick={() => onSelectTool(tool)}
-                  className="flex-1 py-2.5 rounded-xl btn-purple text-xs font-semibold cursor-pointer shadow-xs"
+                <a
+                  href={`/tool/${tool.slug || tool.id}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onSelectTool(tool);
+                  }}
+                  className="flex-1 py-2.5 rounded-xl btn-purple text-xs font-semibold cursor-pointer shadow-xs text-center block"
                 >
                   View Full Specs
-                </button>
+                </a>
                 <a
                   href={tool.url}
                   target="_blank"

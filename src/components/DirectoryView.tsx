@@ -128,15 +128,59 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
             </div>
 
             <h1 className="font-heading text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-slate-900 leading-[1.1] mb-6 drop-shadow-xs">
-              The World’s Leading{' '}
+              Discover, Compare & Find the{' '}
               <span className="text-indigo-600">
-                AI Directory & Rankings
+                Best AI Tools
               </span>
             </h1>
 
             <p className="text-base sm:text-lg text-slate-600 max-w-2xl font-normal leading-relaxed">
-              Search, benchmark, and compare monthly traffic, exclusive discount promo codes, and production prompts for frontier AI tools.
+              ToolverAI is the leading AI tools directory. Search, discover, compare, and track monthly traffic rankings, exclusive discount promo codes, and verified workflows for top AI tools in 2026.
             </p>
+
+            {/* Quick Section Hub Links */}
+            <div className="flex items-center justify-center flex-wrap gap-2.5 mt-6 text-xs font-semibold">
+              <a
+                href="/rankings"
+                onClick={(e) => { e.preventDefault(); onNavigate('rankings'); }}
+                className="px-3.5 py-1.5 rounded-full bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 border border-slate-200 transition-colors flex items-center gap-1.5"
+              >
+                <TrendingUp className="w-3.5 h-3.5 text-indigo-600" />
+                <span>AI Traffic Rankings</span>
+              </a>
+              <a
+                href="/deals"
+                onClick={(e) => { e.preventDefault(); onNavigate('deals'); }}
+                className="px-3.5 py-1.5 rounded-full bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 transition-colors flex items-center gap-1.5"
+              >
+                <Tag className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Verified AI Deals</span>
+              </a>
+              <a
+                href="/compare"
+                onClick={(e) => { e.preventDefault(); onNavigate('compare'); }}
+                className="px-3.5 py-1.5 rounded-full bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 border border-slate-200 transition-colors flex items-center gap-1.5"
+              >
+                <GitCompare className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Compare AI Tools</span>
+              </a>
+              <a
+                href="/prompts"
+                onClick={(e) => { e.preventDefault(); onNavigate('prompts'); }}
+                className="px-3.5 py-1.5 rounded-full bg-slate-100 hover:bg-purple-50 text-slate-700 hover:text-purple-700 border border-slate-200 transition-colors flex items-center gap-1.5"
+              >
+                <Code2 className="w-3.5 h-3.5 text-purple-600" />
+                <span>Prompt Library</span>
+              </a>
+              <a
+                href="/categories"
+                onClick={(e) => { e.preventDefault(); onNavigate('categories'); }}
+                className="px-3.5 py-1.5 rounded-full bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 border border-slate-200 transition-colors flex items-center gap-1.5"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Browse Categories</span>
+              </a>
+            </div>
           </div>
         </div>
 
@@ -297,80 +341,113 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {featuredPartners.map((partner) => (
-            <div
-              key={partner.id}
-              onClick={() => onSelectTool(partner)}
-              className="bg-white border border-slate-200 rounded-3xl p-6 relative group cursor-pointer card-3d overflow-hidden shadow-xs hover:border-indigo-200"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3.5">
-                  <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-200 p-2 flex items-center justify-center">
-                    <img
-                      src={partner.logoUrl}
-                      alt={partner.name}
-                      className="w-full h-full object-contain rounded-lg"
-                    />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <h3 className="font-heading text-xl font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
-                        {partner.name}
-                      </h3>
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-50 text-amber-800 border border-amber-200">
-                        <Sparkles className="w-2.5 h-2.5 fill-amber-500 text-amber-600" />
-                        <span>Featured</span>
-                      </span>
-                      {partner.isVerified && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                          <span>Verified</span>
-                        </span>
-                      )}
+          {featuredPartners.map((partner) => {
+            const partnerSlug = partner.slug || partner.id;
+            return (
+              <div
+                key={partner.id}
+                className="bg-white border border-slate-200 rounded-3xl p-6 relative group card-3d overflow-hidden shadow-xs hover:border-indigo-200 transition-all flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3.5">
+                      <a
+                        href={`/tool/${partnerSlug}`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          onSelectTool(partner);
+                        }}
+                        className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-200 p-2 flex items-center justify-center block shrink-0"
+                      >
+                        <img
+                          src={partner.logoUrl}
+                          alt={partner.name}
+                          className="w-full h-full object-contain rounded-lg"
+                        />
+                      </a>
+                      <div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h3 className="font-heading text-xl font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                            <a
+                              href={`/tool/${partnerSlug}`}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                onSelectTool(partner);
+                              }}
+                            >
+                              {partner.name}
+                            </a>
+                          </h3>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-50 text-amber-800 border border-amber-200">
+                            <Sparkles className="w-2.5 h-2.5 fill-amber-500 text-amber-600" />
+                            <span>Featured</span>
+                          </span>
+                          {partner.isVerified && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                              <span>Verified</span>
+                            </span>
+                          )}
+                        </div>
+                        <a
+                          href={`/categories/${partner.category.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            onNavigate('categories');
+                          }}
+                          className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 block mt-0.5"
+                        >
+                          {partner.category}
+                        </a>
+                      </div>
                     </div>
-                    <span className="text-xs font-semibold text-indigo-600">
-                      {partner.category}
-                    </span>
+
+                    <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold">
+                      <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                      <span>{partner.rating.toFixed(1)}</span>
+                    </div>
+                  </div>
+
+                  <p className="text-sm text-slate-500 line-clamp-2 mb-4 font-normal leading-relaxed">
+                    {partner.tagline}
+                  </p>
+
+                  {/* Traffic & Deal Snapshot */}
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 mb-4">
+                    <div className="flex items-center gap-1.5">
+                      <Flame className="w-3.5 h-3.5 text-orange-500" />
+                      <span className="text-xs font-extrabold text-slate-900">
+                        {partner.monthlyVisitsFormatted || '25M+'}
+                      </span>
+                      <span className="text-[10px] text-slate-400">visits/mo</span>
+                    </div>
+                    {partner.deal && (
+                      <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
+                        {partner.deal.discount}
+                      </span>
+                    )}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold">
-                  <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-                  <span>{partner.rating.toFixed(1)}</span>
+                <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100">
+                    {partner.pricingType}
+                  </span>
+                  <a
+                    href={`/tool/${partnerSlug}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onSelectTool(partner);
+                    }}
+                    className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 group-hover:translate-x-1 transition-transform"
+                  >
+                    <span>Explore Intelligence</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </a>
                 </div>
               </div>
-
-              <p className="text-sm text-slate-500 line-clamp-2 mb-4 font-normal leading-relaxed">
-                {partner.tagline}
-              </p>
-
-              {/* Traffic & Deal Snapshot */}
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 mb-4">
-                <div className="flex items-center gap-1.5">
-                  <Flame className="w-3.5 h-3.5 text-orange-500" />
-                  <span className="text-xs font-extrabold text-slate-900">
-                    {partner.monthlyVisitsFormatted || '25M+'}
-                  </span>
-                  <span className="text-[10px] text-slate-400">visits/mo</span>
-                </div>
-                {partner.deal && (
-                  <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
-                    {partner.deal.discount}
-                  </span>
-                )}
-              </div>
-
-              <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-                <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100">
-                  {partner.pricingType}
-                </span>
-                <button className="text-xs font-semibold text-indigo-600 group-hover:translate-x-1 transition-transform flex items-center gap-1 cursor-pointer">
-                  <span>Explore Intelligence</span>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
@@ -380,7 +457,7 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
           <div className="flex items-center gap-3">
             <div className="w-2.5 h-2.5 rounded-full bg-slate-900" />
             <h2 className="font-heading text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-              AI Top
+              AI Tools Directory & Rankings
             </h2>
           </div>
 
@@ -470,7 +547,10 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredTools.slice(0, visibleCount).map((tool) => (
+          {filteredTools.slice(0, visibleCount).map((tool) => {
+            const toolSlug = tool.slug || tool.id;
+            const categorySlug = tool.category.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+            return (
             <div
               key={tool.id}
               className={`bg-white rounded-3xl overflow-hidden card-3d flex flex-col justify-between group shadow-xs transition-all ${
@@ -481,9 +561,13 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
             >
               <div>
                 {/* Tool Brand Banner (Logo Display) */}
-                <div 
-                  className="relative aspect-[16/9] w-full bg-gradient-to-br from-slate-50 via-indigo-50/40 to-slate-100 dark:from-slate-800/80 dark:via-slate-800/50 dark:to-slate-900 flex items-center justify-center overflow-hidden group/thumb cursor-pointer border-b border-slate-100 dark:border-slate-800"
-                  onClick={() => onSelectTool(tool)}
+                <a 
+                  href={`/tool/${toolSlug}`}
+                  className="relative aspect-[16/9] w-full bg-gradient-to-br from-slate-50 via-indigo-50/40 to-slate-100 dark:from-slate-800/80 dark:via-slate-800/50 dark:to-slate-900 flex items-center justify-center overflow-hidden group/thumb cursor-pointer border-b border-slate-100 dark:border-slate-800 block"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onSelectTool(tool);
+                  }}
                 >
                   {/* Subtle pattern background */}
                   <div className="absolute inset-0 opacity-[0.04] dark:opacity-[0.08] bg-[radial-gradient(#6366f1_1px,transparent_1px)] [background-size:14px_14px] pointer-events-none" />
@@ -534,18 +618,23 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
                       {tool.pricingType}
                     </span>
                   </div>
-                </div>
+                </a>
 
                 {/* Card Body */}
                 <div className="p-6">
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <h3
-                          onClick={() => onSelectTool(tool)}
-                          className="font-heading text-xl font-bold text-slate-900 group-hover:text-indigo-600 transition-colors cursor-pointer"
-                        >
-                          {tool.name}
+                        <h3 className="font-heading text-xl font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                          <a
+                            href={`/tool/${toolSlug}`}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              onSelectTool(tool);
+                            }}
+                          >
+                            {tool.name}
+                          </a>
                         </h3>
 
                         {tool.isVerified && (
@@ -568,9 +657,16 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
                           </span>
                         )}
                       </div>
-                      <span className="text-xs text-indigo-600 font-semibold block mt-0.5">
+                      <a
+                        href={`/categories/${categorySlug}`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          onNavigate('categories');
+                        }}
+                        className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold block mt-0.5"
+                      >
                         {tool.category}
-                      </span>
+                      </a>
                     </div>
 
                     <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 border border-amber-100 text-amber-700 text-xs font-bold">
@@ -616,12 +712,16 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
 
               {/* Card Footer Actions */}
               <div className="p-6 pt-0 flex items-center justify-between gap-3">
-                <button
-                  onClick={() => onSelectTool(tool)}
-                  className="flex-1 py-2.5 px-4 rounded-xl btn-purple text-xs font-semibold text-center cursor-pointer shadow-xs"
+                <a
+                  href={`/tool/${toolSlug}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onSelectTool(tool);
+                  }}
+                  className="flex-1 py-2.5 px-4 rounded-xl btn-purple text-xs font-semibold text-center cursor-pointer shadow-xs block"
                 >
                   View Full Specs
-                </button>
+                </a>
                 <button
                   onClick={() => onNavigate('compare')}
                   className="p-2.5 rounded-xl bg-slate-50 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 border border-slate-200 transition-all cursor-pointer"
@@ -640,7 +740,8 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
                 </a>
               </div>
             </div>
-          ))}
+          );
+        })}
         </div>
         )}
 
@@ -655,6 +756,68 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
             </button>
           </div>
         )}
+      </section>
+
+      {/* Browse AI Tools by Category Section */}
+      <section className="max-w-[1440px] mx-auto px-4 sm:px-8 mt-20 pt-16 border-t border-slate-200">
+        <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-200">
+          <div>
+            <div className="w-2.5 h-2.5 rounded-full bg-indigo-600 inline-block mr-2" />
+            <h2 className="font-heading text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight inline">
+              Browse AI Tools by Category
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-500 mt-1">
+              Explore 120+ verified tools across 8 curated categories with live traffic and comparison data.
+            </p>
+          </div>
+          <a
+            href="/categories"
+            onClick={(e) => {
+              e.preventDefault();
+              onNavigate('categories');
+            }}
+            className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 hidden sm:inline flex items-center gap-1"
+          >
+            <span>All Categories</span>
+            <ChevronRight className="w-4 h-4" />
+          </a>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {[
+            { name: 'Coding', slug: 'coding', count: 15 },
+            { name: 'Productivity', slug: 'productivity', count: 15 },
+            { name: 'Image AI', slug: 'image-ai', count: 15 },
+            { name: 'Video AI', slug: 'video-ai', count: 15 },
+            { name: 'Audio AI', slug: 'audio-ai', count: 15 },
+            { name: 'Copywriting', slug: 'copywriting', count: 15 },
+            { name: 'Data & Analytics', slug: 'data-analytics', count: 15 },
+            { name: 'Agents', slug: 'agents', count: 15 },
+          ].map((cat) => (
+            <a
+              key={cat.slug}
+              href={`/categories/${cat.slug}`}
+              onClick={(e) => {
+                e.preventDefault();
+                onNavigate('categories');
+              }}
+              className="bg-white border border-slate-200 hover:border-indigo-300 rounded-2xl p-4 transition-all shadow-xs hover:shadow-sm block group"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-heading text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                  {cat.name}
+                </h3>
+                <span className="text-[10px] font-semibold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
+                  {cat.count} tools
+                </span>
+              </div>
+              <div className="text-[11px] text-indigo-600 font-medium flex items-center gap-1">
+                <span>Explore tools</span>
+                <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+              </div>
+            </a>
+          ))}
+        </div>
       </section>
     </div>
   );

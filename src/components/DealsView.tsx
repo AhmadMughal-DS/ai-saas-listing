@@ -165,16 +165,39 @@ export const DealsView: React.FC<DealsViewProps> = ({
                 {/* Header: Logo, Verified Badge, Expiry */}
                 <div className="flex items-start justify-between gap-4 mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-200 p-2 flex items-center justify-center shrink-0">
+                    <a
+                      href={`/tool/${deal.toolName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}`}
+                      onClick={(e) => {
+                        const slug = deal.toolName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+                        const matched = tools.find((t) => t.name.toLowerCase() === deal.toolName.toLowerCase() || t.slug === slug);
+                        if (matched) {
+                          e.preventDefault();
+                          onSelectTool(matched);
+                        }
+                      }}
+                      className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-200 p-2 flex items-center justify-center shrink-0 block"
+                    >
                       <img
                         src={deal.toolLogo}
                         alt={deal.toolName}
                         className="w-full h-full object-contain rounded-xl"
                       />
-                    </div>
+                    </a>
                     <div>
                       <h3 className="font-heading font-extrabold text-slate-900 text-lg group-hover:text-emerald-700 transition-colors">
-                        {deal.toolName}
+                        <a
+                          href={`/tool/${deal.toolName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}`}
+                          onClick={(e) => {
+                            const slug = deal.toolName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+                            const matched = tools.find((t) => t.name.toLowerCase() === deal.toolName.toLowerCase() || t.slug === slug);
+                            if (matched) {
+                              e.preventDefault();
+                              onSelectTool(matched);
+                            }
+                          }}
+                        >
+                          {deal.toolName}
+                        </a>
                       </h3>
                       <div className="flex items-center gap-1.5 mt-0.5">
                         <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">

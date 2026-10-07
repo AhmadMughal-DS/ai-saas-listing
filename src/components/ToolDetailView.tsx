@@ -22,7 +22,8 @@ import {
   Laptop,
   ThumbsUp,
   Building2,
-  Briefcase
+  Briefcase,
+  ChevronRight
 } from 'lucide-react';
 
 interface ToolDetailViewProps {
@@ -52,8 +53,14 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [helpfulVotes, setHelpfulVotes] = useState<Record<string, { count: number; voted: boolean }>>({});
-
-  const relatedTools = allTools.filter((t) => t.id !== tool.id).slice(0, 3);
+  // Filter alternatives by same category first
+  const sameCategoryTools = allTools.filter(
+    (t) => t.id !== tool.id && t.category?.toLowerCase() === tool.category?.toLowerCase()
+  );
+  const otherTools = allTools.filter(
+    (t) => t.id !== tool.id && t.category?.toLowerCase() !== tool.category?.toLowerCase()
+  );
+  const relatedTools = (sameCategoryTools.length >= 3 ? sameCategoryTools : [...sameCategoryTools, ...otherTools]).slice(0, 3);
 
   const handleToggleHelpful = (revId: string, initialCount: number = 0) => {
     setHelpfulVotes(prev => {
@@ -124,14 +131,50 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
 
       {/* SEO Breadcrumb Navigation */}
       <nav aria-label="Breadcrumb" className="mb-4">
-        <ol className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 flex-wrap">
-          <li><button onClick={onBack} className="hover:text-indigo-600 transition-colors cursor-pointer">Home</button></li>
-          <li aria-hidden="true"><span>/</span></li>
-          <li><button onClick={onBack} className="hover:text-indigo-600 transition-colors cursor-pointer">AI Tools</button></li>
-          <li aria-hidden="true"><span>/</span></li>
-          <li><span className="text-slate-500">{tool.category}</span></li>
-          <li aria-hidden="true"><span>/</span></li>
-          <li className="text-slate-700 dark:text-slate-300 font-medium truncate max-w-[150px] sm:max-w-xs">{tool.name}</li>
+        <ol className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
+          <li>
+            <a
+              href="/"
+              onClick={(e) => {
+                e.preventDefault();
+                onBack();
+              }}
+              className="hover:text-indigo-600 transition-colors"
+            >
+              Home
+            </a>
+          </li>
+          <li aria-hidden="true" className="text-slate-300">/</li>
+          <li>
+            <a
+              href="/"
+              onClick={(e) => {
+                e.preventDefault();
+                onBack();
+              }}
+              className="hover:text-indigo-600 transition-colors"
+            >
+              AI Tools
+            </a>
+          </li>
+          <li aria-hidden="true" className="text-slate-300">/</li>
+          <li>
+            <a
+              href={`/categories/${categorySlug}`}
+              onClick={(e) => {
+                e.preventDefault();
+                window.history.pushState({}, '', `/categories/${categorySlug}`);
+                window.dispatchEvent(new PopStateEvent('popstate'));
+              }}
+              className="hover:text-indigo-600 transition-colors"
+            >
+              {tool.category}
+            </a>
+          </li>
+          <li aria-hidden="true" className="text-slate-300">/</li>
+          <li className="text-slate-800 dark:text-slate-200 font-semibold truncate max-w-[150px] sm:max-w-xs" aria-current="page">
+            {tool.name}
+          </li>
         </ol>
       </nav>
 
@@ -163,11 +206,19 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
             <div>
               <div className="flex items-center flex-wrap gap-2.5 mb-1.5">
                 <h1 className="font-heading text-3xl sm:text-4xl font-extrabold text-slate-900">
-                  {tool.name}
+                  {tool.name} Review 2026: Features, Pricing & Alternatives
                 </h1>
-                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                <a
+                  href={`/categories/${categorySlug}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    window.history.pushState({}, '', `/categories/${categorySlug}`);
+                    window.dispatchEvent(new PopStateEvent('popstate'));
+                  }}
+                  className="px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100 hover:bg-indigo-100 transition-colors"
+                >
                   {tool.category}
-                </span>
+                </a>
                 {tool.isFeatured && (
                   <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1 shadow-xs">
                     <Sparkles className="w-3.5 h-3.5 text-amber-600 fill-amber-500" />
@@ -710,34 +761,72 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
             </h3>
 
             <div className="space-y-3">
-              {relatedTools.map((rel) => (
-                <div
-                  key={rel.id}
-                  onClick={() => onSelectTool(rel)}
-                  className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 hover:border-indigo-200 hover:bg-slate-100/60 transition-all cursor-pointer group flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={rel.logoUrl}
-                      alt={rel.name}
-                      className="w-10 h-10 rounded-xl object-contain bg-white border border-slate-200 p-1"
-                    />
-                    <div>
-                      <h4 className="font-heading font-bold text-slate-900 text-sm group-hover:text-indigo-600 transition-colors">
-                        {rel.name}
-                      </h4>
-                      <span className="text-[11px] text-slate-400">
-                        {rel.monthlyVisitsFormatted || '15M visits'}
-                      </span>
+              {relatedTools.map((rel) => {
+                const relSlug = rel.slug || rel.id;
+                return (
+                  <a
+                    key={rel.id}
+                    href={`/tool/${relSlug}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onSelectTool(rel);
+                    }}
+                    className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 hover:border-indigo-200 hover:bg-slate-100/60 transition-all cursor-pointer group flex items-center justify-between block"
+                  >
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={rel.logoUrl}
+                        alt={rel.name}
+                        className="w-10 h-10 rounded-xl object-contain bg-white border border-slate-200 p-1"
+                      />
+                      <div>
+                        <h4 className="font-heading font-bold text-slate-900 text-sm group-hover:text-indigo-600 transition-colors">
+                          {rel.name}
+                        </h4>
+                        <span className="text-[11px] text-slate-400">
+                          {rel.monthlyVisitsFormatted || '15M visits'}
+                        </span>
+                      </div>
                     </div>
-                  </div>
 
-                  <span className="text-xs font-bold text-indigo-600 group-hover:translate-x-0.5 transition-transform">
-                    Compare →
-                  </span>
-                </div>
-              ))}
+                    <span className="text-xs font-bold text-indigo-600 group-hover:translate-x-0.5 transition-transform">
+                      Compare →
+                    </span>
+                  </a>
+                );
+              })}
             </div>
+          </div>
+
+          {/* Quick Hub Navigation Links for SEO */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-3">
+            <h3 className="font-heading text-sm font-bold text-slate-900">
+              Related Research
+            </h3>
+            <a
+              href="/compare"
+              onClick={(e) => {
+                e.preventDefault();
+                window.history.pushState({}, '', '/compare');
+                window.dispatchEvent(new PopStateEvent('popstate'));
+              }}
+              className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100 transition-colors"
+            >
+              <span>Compare {tool.name} Side-by-Side</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </a>
+            <a
+              href="/deals"
+              onClick={(e) => {
+                e.preventDefault();
+                window.history.pushState({}, '', '/deals');
+                window.dispatchEvent(new PopStateEvent('popstate'));
+              }}
+              className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 flex items-center justify-between p-2.5 rounded-xl bg-emerald-50/50 border border-emerald-100 transition-colors"
+            >
+              <span>Verified Deals & Promo Codes</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </a>
           </div>
         </div>
       </div>

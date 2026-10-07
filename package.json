@@ -13,7 +13,8 @@
     "indexnow": "tsx scripts/indexnow.ts",
     "db:seed": "tsx scripts/seed-db.ts",
     "sync:tools-sheet": "python scripts/sync_website_data_to_sheet.py",
-    "generate:video-scripts": "python scripts/content-generator/sync_to_sheet.py"
+    "generate:video-scripts": "python scripts/content-generator/sync_to_sheet.py",
+    "validate:seo": "tsx scripts/validate-seo.ts"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.14",

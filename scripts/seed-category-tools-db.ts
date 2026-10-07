@@ -1958,7 +1958,8 @@ async function run() {
       },
     ],
     createdAt: new Date().toISOString(),
-  }));
+    };
+  });
 
   // Clean old database records and insert all 120 tools
   await col.deleteMany({});

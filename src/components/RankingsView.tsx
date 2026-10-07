@@ -79,7 +79,7 @@ export const RankingsView: React.FC<RankingsViewProps> = ({
           <span>Real-Time Traffic & Market Intelligence</span>
         </div>
         <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight mb-4">
-          AI Traffic Rankings & Leaderboards
+          Top AI Tools by Monthly Traffic — Verified Rankings 2026
         </h1>
         <p className="text-base sm:text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">
           Discover the world's most popular, fastest-growing, and highly engaged artificial intelligence tools ranked by monthly visits and telemetry data.
@@ -261,18 +261,32 @@ export const RankingsView: React.FC<RankingsViewProps> = ({
                     {/* Tool Info */}
                     <td className="py-4 px-4 sm:px-6">
                       <div className="flex items-center gap-3">
-                        <div className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-200 p-2 flex items-center justify-center shrink-0 group-hover:border-indigo-300 transition-all">
+                        <a
+                          href={`/tool/${tool.slug || tool.id}`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            onSelectTool(tool);
+                          }}
+                          className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-200 p-2 flex items-center justify-center shrink-0 group-hover:border-indigo-300 transition-all block"
+                        >
                           <img
                             src={tool.logoUrl}
                             alt={tool.name}
                             className="w-full h-full object-contain rounded-lg"
                           />
-                        </div>
+                        </a>
                         <div>
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-heading font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                            <a
+                              href={`/tool/${tool.slug || tool.id}`}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                onSelectTool(tool);
+                              }}
+                              className="font-heading font-bold text-slate-900 hover:text-indigo-600 transition-colors"
+                            >
                               {tool.name}
-                            </span>
+                            </a>
                             {tool.isVerified && (
                               <span
                                 title="Verified AI Tool: Tested & benchmarked"
@@ -312,9 +326,16 @@ export const RankingsView: React.FC<RankingsViewProps> = ({
                     {/* Category & Pricing */}
                     <td className="py-4 px-4 sm:px-6">
                       <div className="space-y-1">
-                        <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
+                        <a
+                          href={`/categories/${tool.category.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            onNavigate('categories');
+                          }}
+                          className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 transition-colors"
+                        >
                           {tool.category}
-                        </span>
+                        </a>
                         <div className="text-[11px] text-slate-500 font-medium">
                           {tool.pricingType}
                         </div>

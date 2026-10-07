@@ -32,7 +32,7 @@ export const BlogView: React.FC = () => {
         </div>
 
         <h1 className="font-heading text-4xl sm:text-6xl font-extrabold text-slate-900 tracking-tight mb-4">
-          The AI Flux{' '}
+          ToolverAI{' '}
           <span className="text-indigo-600">
             Blog
           </span>
