@@ -17,20 +17,24 @@ import {
   Tag,
   ShieldCheck,
   Trophy,
-  Bot
+  Bot,
+  ChevronRight,
+  ArrowLeft
 } from 'lucide-react';
+import { ELIGIBLE_COMPARISONS, normalizeComparisonSlugs, getRelatedComparisonsForPair } from '../utils/programmaticSeo';
 
 interface CompareViewProps {
   tools: AITool[];
   onSelectTool: (tool: AITool) => void;
   onNavigate: (tab: ActiveTab) => void;
+  comparisonPair?: { slug1: string; slug2: string } | null;
 }
 
 const PRESET_COMPARISONS = [
-  { name: 'Cursor AI vs CodeBrain', tool1: 'tool-cursor', tool2: 'tool-codebrain' },
-  { name: 'Midjourney v6 vs Lumina AI', tool1: 'tool-midjourney', tool2: 'tool-lumina-ai' },
-  { name: 'Perplexity AI vs ChatGPT 4o', tool1: 'tool-perplexity', tool2: 'tool-chatgpt' },
-  { name: 'ElevenLabs vs SonicSculpt', tool1: 'tool-elevenlabs', tool2: 'tool-sonicsculpt' },
+  { name: 'Cursor vs Copilot', tool1: 'cursor', tool2: 'github-copilot' },
+  { name: 'Claude vs DeepSeek', tool1: 'claude', tool2: 'deepseek' },
+  { name: 'ChatGPT vs Perplexity', tool1: 'chatgpt', tool2: 'perplexity' },
+  { name: 'Midjourney vs SD 3.5', tool1: 'midjourney', tool2: 'stable-diffusion-3' },
 ];
 
 interface VerdictData {
@@ -48,16 +52,33 @@ export const CompareView: React.FC<CompareViewProps> = ({
   tools,
   onSelectTool,
   onNavigate,
+  comparisonPair,
 }) => {
-  // Find initial tool IDs from tools list
-  const defaultTool1 = tools.find((t) => t.slug === 'cursor-ai' || t.id.includes('cursor')) || tools[0];
-  const defaultTool2 = tools.find((t) => t.slug === 'codebrain' || t.id.includes('code')) || tools[1] || tools[0];
+  // Find initial tool IDs from tools list or comparisonPair
+  const defaultTool1 = comparisonPair
+    ? tools.find((t) => t.slug === comparisonPair.slug1 || t.id === comparisonPair.slug1) || tools[0]
+    : tools.find((t) => t.slug === 'cursor-ai' || t.slug === 'cursor' || t.id.includes('cursor')) || tools[0];
+  const defaultTool2 = comparisonPair
+    ? tools.find((t) => t.slug === comparisonPair.slug2 || t.id === comparisonPair.slug2) || tools[1] || tools[0]
+    : tools.find((t) => t.slug === 'github-copilot' || t.id.includes('copilot')) || tools[1] || tools[0];
   const defaultTool3 = tools.find((t) => t.slug === 'chatgpt' || t.slug === 'lumina-ai') || tools[2] || null;
 
   const [tool1Id, setTool1Id] = useState<string>(defaultTool1?.id || '');
   const [tool2Id, setTool2Id] = useState<string>(defaultTool2?.id || '');
   const [tool3Id, setTool3Id] = useState<string>(defaultTool3 ? defaultTool3.id : '');
   const [showThirdTool, setShowThirdTool] = useState<boolean>(false);
+
+  // Sync state if comparisonPair changes
+  React.useEffect(() => {
+    if (comparisonPair) {
+      const f1 = tools.find((t) => t.slug === comparisonPair.slug1 || t.id === comparisonPair.slug1);
+      const f2 = tools.find((t) => t.slug === comparisonPair.slug2 || t.id === comparisonPair.slug2);
+      if (f1) setTool1Id(f1.id);
+      if (f2) setTool2Id(f2.id);
+      setShowThirdTool(false);
+      setVerdict(null);
+    }
+  }, [comparisonPair, tools]);
 
   const [isGeneratingVerdict, setIsGeneratingVerdict] = useState(false);
   const [verdict, setVerdict] = useState<VerdictData | null>(null);
@@ -129,33 +150,93 @@ export const CompareView: React.FC<CompareViewProps> = ({
     }
   };
 
+  const isPairMode = Boolean(comparisonPair && tool1 && tool2);
+  const relatedComparisons = isPairMode
+    ? getRelatedComparisonsForPair(tool1.slug || tool1.id, tool2.slug || tool2.id, 6)
+    : ELIGIBLE_COMPARISONS;
+
   return (
     <div className="w-full pt-28 pb-24 px-4 sm:px-8 max-w-[1440px] mx-auto">
-      {/* Header */}
+      {/* Semantic Breadcrumbs */}
+      <nav aria-label="Breadcrumb" className="mb-8">
+        <ol className="flex items-center flex-wrap gap-2 text-xs font-semibold text-slate-500">
+          <li>
+            <a
+              href="/"
+              onClick={(e) => {
+                e.preventDefault();
+                window.history.pushState({}, '', '/');
+                window.dispatchEvent(new PopStateEvent('popstate'));
+              }}
+              className="hover:text-indigo-600 transition-colors"
+            >
+              Home
+            </a>
+          </li>
+          <li aria-hidden="true" className="text-slate-300">/</li>
+          {isPairMode ? (
+            <>
+              <li>
+                <a
+                  href="/compare"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    window.history.pushState({}, '', '/compare');
+                    window.dispatchEvent(new PopStateEvent('popstate'));
+                  }}
+                  className="hover:text-indigo-600 transition-colors"
+                >
+                  Compare AI Tools
+                </a>
+              </li>
+              <li aria-hidden="true" className="text-slate-300">/</li>
+              <li aria-current="page" className="text-slate-900 font-bold truncate max-w-[200px] sm:max-w-none">
+                {tool1.name} vs {tool2.name}
+              </li>
+            </>
+          ) : (
+            <li aria-current="page" className="text-slate-900 font-bold">
+              Compare AI Tools
+            </li>
+          )}
+        </ol>
+      </nav>
+
+      {/* Header — Single Logical H1 */}
       <div className="text-center max-w-4xl mx-auto mb-10">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-semibold uppercase tracking-wide mb-4 shadow-xs">
           <GitCompare className="w-4 h-4 text-indigo-600" />
-          <span>Side-by-Side Comparison & AI Verdict Engine</span>
+          <span>{isPairMode ? 'Head-to-Head Comparison & Benchmark' : 'Side-by-Side Comparison & AI Verdict Engine'}</span>
         </div>
         <h1 className="font-heading text-4xl sm:text-5xl font-extrabold text-slate-900 tracking-tight mb-4">
-          Compare AI Tools Side-by-Side
+          {isPairMode ? `${tool1.name} vs ${tool2.name} (2026): Features, Pricing & Comparison` : 'Compare AI Tools Side-by-Side'}
         </h1>
-        <p className="text-base sm:text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">
-          Evaluate monthly web traffic, pricing models, key features, platform availability, and verified pros/cons to choose the ultimate AI solution.
+        <p className="text-base sm:text-lg text-slate-500 max-w-3xl mx-auto leading-relaxed">
+          {isPairMode
+            ? `Compare ${tool1.name} (${tool1.pricingType}) vs ${tool2.name} (${tool2.pricingType}) in ${tool1.category}. Evaluate monthly web traffic (${tool1.monthlyVisitsFormatted || 'N/A'} vs ${tool2.monthlyVisitsFormatted || 'N/A'}), pricing plans, platforms, and user pros/cons to choose the right solution.`
+            : 'Evaluate monthly web traffic, pricing models, key features, platform availability, and verified pros/cons to choose the ultimate AI solution.'}
         </p>
 
         {/* Popular Presets */}
         <div className="flex items-center justify-center flex-wrap gap-2 mt-6">
           <span className="text-xs font-semibold text-slate-400 mr-1">Popular Comparisons:</span>
-          {PRESET_COMPARISONS.map((preset, i) => (
-            <button
-              key={i}
-              onClick={() => handleApplyPreset(preset.tool1, preset.tool2)}
-              className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-700 hover:border-indigo-300 hover:text-indigo-600 shadow-xs transition-all cursor-pointer"
-            >
-              {preset.name}
-            </button>
-          ))}
+          {PRESET_COMPARISONS.map((preset, i) => {
+            const { canonicalSlug } = normalizeComparisonSlugs(preset.tool1, preset.tool2);
+            return (
+              <a
+                key={i}
+                href={`/compare/${canonicalSlug}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleApplyPreset(preset.tool1, preset.tool2);
+                  window.history.pushState({}, '', `/compare/${canonicalSlug}`);
+                }}
+                className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-700 hover:border-indigo-300 hover:text-indigo-600 shadow-xs transition-all cursor-pointer"
+              >
+                {preset.name}
+              </a>
+            );
+          })}
         </div>
       </div>
 
@@ -572,7 +653,123 @@ export const CompareView: React.FC<CompareViewProps> = ({
             ))}
           </div>
         </div>
+
+        {/* Section: In-Depth Reviews & Alternatives Navigation */}
+        <div className="p-6 sm:p-8 bg-slate-50/50 border-t border-slate-200">
+          <h3 className="font-heading text-lg font-bold text-slate-900 mb-4">
+            In-Depth Reviews & Alternative Recommendations
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-2">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">{tool1.name} Navigation</h4>
+              <div className="flex flex-col gap-1.5">
+                <a
+                  href={`/tool/${tool1.slug || tool1.id}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onSelectTool(tool1);
+                  }}
+                  className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center justify-between p-2 rounded-xl bg-slate-50 hover:bg-indigo-50/50 transition-colors"
+                >
+                  <span>Read Full {tool1.name} Review & Pricing Specs</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </a>
+                <a
+                  href={`/alternatives/${tool1.slug || tool1.id}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    window.history.pushState({}, '', `/alternatives/${tool1.slug || tool1.id}`);
+                    window.dispatchEvent(new PopStateEvent('popstate'));
+                  }}
+                  className="text-xs font-bold text-slate-700 hover:text-indigo-600 flex items-center justify-between p-2 rounded-xl bg-slate-50 hover:bg-indigo-50/50 transition-colors"
+                >
+                  <span>Explore Top {tool1.name} Alternatives</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-2">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">{tool2.name} Navigation</h4>
+              <div className="flex flex-col gap-1.5">
+                <a
+                  href={`/tool/${tool2.slug || tool2.id}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onSelectTool(tool2);
+                  }}
+                  className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center justify-between p-2 rounded-xl bg-slate-50 hover:bg-indigo-50/50 transition-colors"
+                >
+                  <span>Read Full {tool2.name} Review & Pricing Specs</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </a>
+                <a
+                  href={`/alternatives/${tool2.slug || tool2.id}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    window.history.pushState({}, '', `/alternatives/${tool2.slug || tool2.id}`);
+                    window.dispatchEvent(new PopStateEvent('popstate'));
+                  }}
+                  className="text-xs font-bold text-slate-700 hover:text-indigo-600 flex items-center justify-between p-2 rounded-xl bg-slate-50 hover:bg-indigo-50/50 transition-colors"
+                >
+                  <span>Explore Top {tool2.name} Alternatives</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
+
+      {/* Section: Related or Featured Comparisons */}
+      {relatedComparisons.length > 0 && (
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs mt-10">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="font-heading text-xl sm:text-2xl font-bold text-slate-900">
+                {isPairMode ? 'Related Head-to-Head Comparisons' : 'Featured AI Tool Comparisons'}
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                Explore analytical breakdowns between leading software platforms.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
+            {relatedComparisons.map((c) => {
+              const tA = tools.find((t) => (t.slug || t.id) === c.slug1);
+              const tB = tools.find((t) => (t.slug || t.id) === c.slug2);
+              const nameA = tA ? tA.name : c.slug1;
+              const nameB = tB ? tB.name : c.slug2;
+
+              return (
+                <a
+                  key={c.canonicalSlug}
+                  href={`/compare/${c.canonicalSlug}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    window.history.pushState({}, '', `/compare/${c.canonicalSlug}`);
+                    window.dispatchEvent(new PopStateEvent('popstate'));
+                  }}
+                  className="p-4 rounded-2xl bg-slate-50 hover:bg-indigo-50/40 border border-slate-200 hover:border-indigo-300 transition-all flex items-center justify-between group"
+                >
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white border border-slate-200 text-slate-600">
+                        {c.category}
+                      </span>
+                    </div>
+                    <span className="text-xs font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                      {nameA} vs {nameB}
+                    </span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

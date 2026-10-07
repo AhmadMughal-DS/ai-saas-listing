@@ -25,6 +25,7 @@ import {
   Briefcase,
   ChevronRight
 } from 'lucide-react';
+import { getRelatedComparisonsForTool } from '../utils/programmaticSeo';
 
 interface ToolDetailViewProps {
   tool: AITool;
@@ -61,6 +62,7 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
     (t) => t.id !== tool.id && t.category?.toLowerCase() !== tool.category?.toLowerCase()
   );
   const relatedTools = (sameCategoryTools.length >= 3 ? sameCategoryTools : [...sameCategoryTools, ...otherTools]).slice(0, 3);
+  const toolRelatedComparisons = getRelatedComparisonsForTool(tool.slug || '');
 
   const handleToggleHelpful = (revId: string, initialCount: number = 0) => {
     setHelpfulVotes(prev => {
@@ -755,10 +757,24 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
 
           {/* Direct Alternatives */}
           <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs">
-            <h3 className="font-heading text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
-              <GitCompare className="w-4 h-4 text-indigo-600" />
-              <span>Direct Alternatives</span>
-            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-heading text-base font-bold text-slate-900 flex items-center gap-2">
+                <GitCompare className="w-4 h-4 text-indigo-600" />
+                <span>Direct Alternatives</span>
+              </h3>
+              <a
+                href={`/alternatives/${tool.slug || tool.id}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  const targetPath = `/alternatives/${tool.slug || tool.id}`;
+                  window.history.pushState({}, '', targetPath);
+                  window.dispatchEvent(new PopStateEvent('popstate'));
+                }}
+                className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
+              >
+                View All →
+              </a>
+            </div>
 
             <div className="space-y-3">
               {relatedTools.map((rel) => {
@@ -801,8 +817,44 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
           {/* Quick Hub Navigation Links for SEO */}
           <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-3">
             <h3 className="font-heading text-sm font-bold text-slate-900">
-              Related Research
+              Related Research & Comparisons
             </h3>
+            <a
+              href={`/alternatives/${tool.slug || tool.id}`}
+              onClick={(e) => {
+                e.preventDefault();
+                const targetPath = `/alternatives/${tool.slug || tool.id}`;
+                window.history.pushState({}, '', targetPath);
+                window.dispatchEvent(new PopStateEvent('popstate'));
+              }}
+              className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center justify-between p-2.5 rounded-xl bg-indigo-50/50 border border-indigo-100 transition-colors"
+            >
+              <span>Explore Top {tool.name} Alternatives</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </a>
+
+            {/* Direct comparisons containing this tool */}
+            {toolRelatedComparisons.map((comp) => {
+              const otherSlug = comp.slug1 === tool.slug ? comp.slug2 : comp.slug1;
+              const otherTool = allTools.find((t) => t.slug === otherSlug);
+              const otherName = otherTool?.name || otherSlug.replace(/-/g, ' ');
+              return (
+                <a
+                  key={comp.canonicalSlug}
+                  href={`/compare/${comp.canonicalSlug}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    window.history.pushState({}, '', `/compare/${comp.canonicalSlug}`);
+                    window.dispatchEvent(new PopStateEvent('popstate'));
+                  }}
+                  className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100 transition-colors"
+                >
+                  <span>Compare {tool.name} vs {otherName}</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </a>
+              );
+            })}
+
             <a
               href="/compare"
               onClick={(e) => {
@@ -812,7 +864,7 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
               }}
               className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100 transition-colors"
             >
-              <span>Compare {tool.name} Side-by-Side</span>
+              <span>Compare All AI Tools Side-by-Side</span>
               <ChevronRight className="w-3.5 h-3.5" />
             </a>
             <a

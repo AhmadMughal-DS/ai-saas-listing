@@ -14,6 +14,16 @@ import {
   getCorePublicUrls,
   INDEXNOW_DEFAULT_KEY,
 } from './src/server/indexnow';
+import {
+  ELIGIBLE_COMPARISONS,
+  ELIGIBLE_ALTERNATIVES,
+  normalizeComparisonSlugs,
+  parseComparisonPath,
+  isEligibleComparison,
+  isEligibleAlternative,
+  getToolAlternatives,
+  getRelatedComparisonsForPair,
+} from './src/utils/programmaticSeo';
 
 dotenv.config();
 
@@ -1898,14 +1908,19 @@ Only return valid JSON.`;
     <section>
       <h2>Top Alternatives to ${cleanName}</h2>
       <p>Explore the best alternative AI software in ${tool.category}:</p>
+      <p><a href="/alternatives/${tool.slug || tool.id}"><strong>Explore Dedicated ${cleanName} Alternatives Guide &rarr;</strong></a></p>
       <ul>
-        ${sameCategoryTools.map((alt: any) => `<li><a href="/tool/${alt.slug || alt.id}"><strong>${alt.name}</strong></a> — ${alt.tagline || alt.description?.slice(0, 70)} (${alt.pricingType})</li>`).join('\n        ')}
+        ${sameCategoryTools.map((alt: any) => {
+          const { canonicalSlug } = normalizeComparisonSlugs(tool.slug || tool.id, alt.slug || alt.id);
+          return `<li><a href="/tool/${alt.slug || alt.id}"><strong>${alt.name}</strong></a> — ${alt.tagline || alt.description?.slice(0, 70)} (${alt.pricingType}) [<a href="/compare/${canonicalSlug}">Compare ${cleanName} vs ${alt.name}</a>]</li>`;
+        }).join('\n        ')}
       </ul>
     </section>
     <section>
       <h2>Related AI Software Comparisons</h2>
       <p>Compare ${cleanName} with industry alternatives or check current promotional pricing:</p>
       <p>
+        <a href="/alternatives/${tool.slug || tool.id}">Top ${cleanName} Alternatives</a> |
         <a href="/compare">Compare ${cleanName} Side-by-Side</a> |
         <a href="/deals">Browse Verified AI Discounts &amp; Deals</a> |
         <a href="/categories/${categorySlug}">All ${tool.category} Tools</a>
@@ -2172,6 +2187,32 @@ Only return valid JSON.`;
         ${dealTools.map((t: any) => `<li><a href="/tool/${t.slug || t.id}"><strong>${t.name}</strong></a>: ${t.deal?.discount} — ${t.deal?.description}</li>`).join('\n        ')}
       </ul>
     </section>`;
+          } else if (routePath === '/compare') {
+            extraContent = `
+    <section>
+      <h2>Featured AI Comparisons</h2>
+      <p>Compare top artificial intelligence software side-by-side with verified traffic rankings, platform compatibility, and features:</p>
+      <ul>
+        ${ELIGIBLE_COMPARISONS.map((c) => {
+          const t1 = tools.find((t: any) => t.slug === c.slug1);
+          const t2 = tools.find((t: any) => t.slug === c.slug2);
+          const n1 = t1?.name || c.slug1;
+          const n2 = t2?.name || c.slug2;
+          return `<li><a href="/compare/${c.canonicalSlug}"><strong>${n1} vs ${n2}</strong></a> (${c.category}) — ${c.focusArea}</li>`;
+        }).join('\n        ')}
+      </ul>
+    </section>
+    <section>
+      <h2>Curated Tool Alternatives</h2>
+      <p>Explore dedicated alternatives guides for high-volume tools:</p>
+      <ul>
+        ${ELIGIBLE_ALTERNATIVES.map((a) => {
+          const t = tools.find((tl: any) => tl.slug === a.toolSlug);
+          const name = t?.name || a.toolSlug;
+          return `<li><a href="/alternatives/${a.toolSlug}"><strong>Best ${name} Alternatives</strong></a> (${a.category}) — ${a.reason}</li>`;
+        }).join('\n        ')}
+      </ul>
+    </section>`;
           }
 
           const hubBodyHtml = `
@@ -2212,6 +2253,397 @@ Only return valid JSON.`;
       });
     });
 
+    // ── SSR: Curated Alternatives Hub (/alternatives) ──────────────────
+    app.get('/alternatives', async (req, res) => {
+      try {
+        const htmlTemplate = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
+        const baseUrl = resolveBaseUrl(req);
+        const tools = await getToolsFromDbOrFallback();
+        const canonical = `${baseUrl}/alternatives`;
+        const title = 'Best AI Tool Alternatives & Competitors 2026 | ToolverAI';
+        const desc = 'Discover the best alternatives to leading AI tools including ChatGPT, Cursor, Copilot, Claude, Midjourney, and more. Compare features, pricing, and traffic on ToolverAI.';
+
+        const breadcrumbJsonLd = {
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: `${baseUrl}/` },
+            { '@type': 'ListItem', position: 2, name: 'AI Tool Alternatives', item: canonical },
+          ],
+        };
+
+        const hubBodyHtml = `
+<header>
+  <nav aria-label="Breadcrumb">
+    <ol>
+      <li><a href="/">Home</a></li>
+      <li aria-current="page">AI Tool Alternatives</li>
+    </ol>
+  </nav>
+</header>
+<main>
+  <h1>Best AI Tool Alternatives</h1>
+  <p>${desc}</p>
+  <section>
+    <h2>Curated Alternatives Guides</h2>
+    <ul>
+      ${ELIGIBLE_ALTERNATIVES.map((a) => {
+        const t = tools.find((tl: any) => tl.slug === a.toolSlug);
+        const name = t?.name || a.toolSlug;
+        return `<li><a href="/alternatives/${a.toolSlug}"><strong>Best ${name} Alternatives</strong></a> (${a.category}) — ${a.reason}</li>`;
+      }).join('\n      ')}
+    </ul>
+  </section>
+  <nav aria-label="Quick Navigation">
+    <p><a href="/">Home</a> | <a href="/compare">Compare Tools Side-by-Side</a> | <a href="/categories">All Categories</a> | <a href="/rankings">Rankings</a></p>
+  </nav>
+</main>`;
+
+        const finalHtml = renderSsrPage(htmlTemplate, {
+          title,
+          description: desc,
+          canonical,
+          ogType: 'website',
+          ogImage: `${baseUrl}/og-banner.png`,
+          jsonLd: [breadcrumbJsonLd],
+          bodyHtml: hubBodyHtml,
+        });
+
+        res.header('Content-Type', 'text/html; charset=utf-8');
+        res.header('Cache-Control', 'public, max-age=300, s-maxage=3600');
+        return res.status(200).send(finalHtml);
+      } catch (err: any) {
+        console.error('SSR error for /alternatives:', err);
+        res.sendFile(path.join(distPath, 'index.html'));
+      }
+    });
+
+    // ── SSR: Comparison Pages (/compare/:comparison) ───────────────────
+    app.get('/compare/:comparison', async (req, res) => {
+      try {
+        const { comparison } = req.params;
+        const parsed = parseComparisonPath(comparison);
+
+        const baseUrl = resolveBaseUrl(req);
+        const htmlTemplate = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
+
+        // 1. If format is invalid (not two slugs separated by -vs-) -> 404
+        if (!parsed) {
+          const notFoundHtml = renderSsrPage(htmlTemplate, {
+            title: 'Comparison Not Found — ToolverAI',
+            description: 'The requested AI tool comparison could not be found.',
+            canonical: `${baseUrl}/compare/${comparison.toLowerCase()}`,
+            robots: 'noindex, nofollow',
+          });
+          res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+          return res.status(404).send(notFoundHtml);
+        }
+
+        const { slug1, slug2, canonicalSlug, isCanonicalOrder } = parsed;
+
+        // 2. Quality Gate: strictly index only eligible comparisons to prevent thin mass-generation
+        const isEligible = isEligibleComparison(slug1, slug2);
+        const tools = await getToolsFromDbOrFallback();
+        const tool1 = tools.find((t: any) => t.slug?.toLowerCase() === slug1 || t.id?.toLowerCase() === slug1);
+        const tool2 = tools.find((t: any) => t.slug?.toLowerCase() === slug2 || t.id?.toLowerCase() === slug2);
+
+        if (!isEligible || !tool1 || !tool2) {
+          // Ineligible or missing tools -> 404 with noindex and self-canonical
+          const notFoundHtml = renderSsrPage(htmlTemplate, {
+            title: 'Comparison Not Found — ToolverAI',
+            description: 'This comparison is currently unavailable or does not contain sufficient verified data.',
+            canonical: `${baseUrl}/compare/${comparison.toLowerCase()}`,
+            robots: 'noindex, nofollow',
+          });
+          res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+          return res.status(404).send(notFoundHtml);
+        }
+
+        // 3. For eligible pairs, enforce canonical alphabetical order:
+        // 301 Permanent Redirect for reversed order (e.g. /compare/github-copilot-vs-cursor -> /compare/cursor-vs-github-copilot)
+        // or casing mismatch
+        if (!isCanonicalOrder || comparison !== canonicalSlug) {
+          return res.redirect(301, `/compare/${canonicalSlug}`);
+        }
+
+        const name1 = tool1.name.trim();
+        const name2 = tool2.name.trim();
+        const category = tool1.category || tool2.category || 'AI Tools';
+        const canonical = `${baseUrl}/compare/${canonicalSlug}`;
+
+        const title = `${name1} vs ${name2} (2026): Features, Pricing & Comparison | ToolverAI`;
+        const desc = `Detailed side-by-side comparison of ${name1} vs ${name2}. Compare monthly traffic (${tool1.monthlyVisitsFormatted || 'N/A'} vs ${tool2.monthlyVisitsFormatted || 'N/A'}), pricing tiers, features, and key differences.`.slice(0, 160);
+
+        const breadcrumbJsonLd = {
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: `${baseUrl}/` },
+            { '@type': 'ListItem', position: 2, name: 'Compare', item: `${baseUrl}/compare` },
+            { '@type': 'ListItem', position: 3, name: `${name1} vs ${name2}`, item: canonical },
+          ],
+        };
+
+        const relatedComps = getRelatedComparisonsForPair(slug1, slug2, 4);
+
+        const compareBodyHtml = `
+<header>
+  <nav aria-label="Breadcrumb">
+    <ol>
+      <li><a href="/">Home</a></li>
+      <li><a href="/compare">Compare</a></li>
+      <li aria-current="page">${name1} vs ${name2}</li>
+    </ol>
+  </nav>
+</header>
+<main>
+  <article>
+    <h1>${name1} vs ${name2} (2026): Features, Pricing &amp; Comparison</h1>
+    <p>Comprehensive side-by-side evaluation of ${name1} and ${name2} across pricing, verified web traffic volume, supported platforms, core features, and architectural strengths.</p>
+
+    <section>
+      <h2>Quick Specification Comparison</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Specification</th>
+            <th>${name1}</th>
+            <th>${name2}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Category</td>
+            <td>${tool1.category}</td>
+            <td>${tool2.category}</td>
+          </tr>
+          <tr>
+            <td>Pricing Model</td>
+            <td>${tool1.pricingType || 'Freemium'}</td>
+            <td>${tool2.pricingType || 'Freemium'}</td>
+          </tr>
+          <tr>
+            <td>Monthly Traffic</td>
+            <td>${tool1.monthlyVisitsFormatted || 'N/A'}</td>
+            <td>${tool2.monthlyVisitsFormatted || 'N/A'}</td>
+          </tr>
+          <tr>
+            <td>User Rating</td>
+            <td>${tool1.rating || 4.5} / 5 (${tool1.reviewCount || 1} reviews)</td>
+            <td>${tool2.rating || 4.5} / 5 (${tool2.reviewCount || 1} reviews)</td>
+          </tr>
+          <tr>
+            <td>Supported Platforms</td>
+            <td>${(tool1.platforms || ['Web']).join(', ')}</td>
+            <td>${(tool2.platforms || ['Web']).join(', ')}</td>
+          </tr>
+          <tr>
+            <td>In-Depth Review</td>
+            <td><a href="/tool/${tool1.slug || tool1.id}">Read ${name1} Review</a></td>
+            <td><a href="/tool/${tool2.slug || tool2.id}">Read ${name2} Review</a></td>
+          </tr>
+          <tr>
+            <td>Alternatives</td>
+            <td><a href="/alternatives/${tool1.slug || tool1.id}">Best ${name1} Alternatives</a></td>
+            <td><a href="/alternatives/${tool2.slug || tool2.id}">Best ${name2} Alternatives</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>About ${name1}</h2>
+      <p>${tool1.tagline || ''}</p>
+      <p>${tool1.description || ''}</p>
+      ${tool1.keyFeatures?.length ? `
+      <ul>
+        ${tool1.keyFeatures.map((f: string) => `<li>${f}</li>`).join('\n        ')}
+      </ul>` : ''}
+    </section>
+
+    <section>
+      <h2>About ${name2}</h2>
+      <p>${tool2.tagline || ''}</p>
+      <p>${tool2.description || ''}</p>
+      ${tool2.keyFeatures?.length ? `
+      <ul>
+        ${tool2.keyFeatures.map((f: string) => `<li>${f}</li>`).join('\n        ')}
+      </ul>` : ''}
+    </section>
+
+    <section>
+      <h2>Related AI Comparisons</h2>
+      <ul>
+        ${relatedComps.map((rc) => {
+          const r1 = tools.find((t: any) => t.slug === rc.slug1);
+          const r2 = tools.find((t: any) => t.slug === rc.slug2);
+          const rn1 = r1?.name || rc.slug1;
+          const rn2 = r2?.name || rc.slug2;
+          return `<li><a href="/compare/${rc.canonicalSlug}"><strong>${rn1} vs ${rn2}</strong></a> (${rc.category}) — ${rc.focusArea}</li>`;
+        }).join('\n        ')}
+      </ul>
+      <p><a href="/compare">View all side-by-side AI tool comparisons</a> | <a href="/categories">Browse categories</a></p>
+    </section>
+  </article>
+</main>`;
+
+        const finalHtml = renderSsrPage(htmlTemplate, {
+          title,
+          description: desc,
+          canonical,
+          robots: 'index, follow, max-image-preview:large, max-snippet:-1',
+          ogType: 'website',
+          ogImage: `${baseUrl}/og-banner.png`,
+          jsonLd: [breadcrumbJsonLd],
+          bodyHtml: compareBodyHtml,
+        });
+
+        res.header('Content-Type', 'text/html; charset=utf-8');
+        res.header('Cache-Control', 'public, max-age=300, s-maxage=3600');
+        return res.status(200).send(finalHtml);
+      } catch (err: any) {
+        console.error('SSR error for /compare/:comparison:', err);
+        res.sendFile(path.join(distPath, 'index.html'));
+      }
+    });
+
+    // ── SSR: Alternatives Pages (/alternatives/:slug) ──────────────────
+    app.get('/alternatives/:slug', async (req, res) => {
+      try {
+        const { slug } = req.params;
+        const normalizedSlug = slug.toLowerCase();
+
+        // 1. Permanent redirect for case sensitivity (e.g. /alternatives/Cursor -> /alternatives/cursor)
+        if (slug !== normalizedSlug) {
+          return res.redirect(301, `/alternatives/${normalizedSlug}`);
+        }
+
+        // 2. Redirect legacy aliases if applicable
+        if (LEGACY_SLUG_REDIRECTS[normalizedSlug]) {
+          return res.redirect(301, `/alternatives/${LEGACY_SLUG_REDIRECTS[normalizedSlug]}`);
+        }
+
+        const baseUrl = resolveBaseUrl(req);
+        const htmlTemplate = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
+
+        // Quality gate: is this tool eligible?
+        const isEligible = isEligibleAlternative(normalizedSlug);
+        const tools = await getToolsFromDbOrFallback();
+        const sourceTool = tools.find((t: any) => t.slug?.toLowerCase() === normalizedSlug || t.id?.toLowerCase() === normalizedSlug);
+
+        if (!isEligible || !sourceTool) {
+          // Ineligible or missing tool -> 404 with noindex and self-canonical
+          const notFoundHtml = renderSsrPage(htmlTemplate, {
+            title: 'Alternatives Not Found — ToolverAI',
+            description: 'Alternatives for the requested AI tool could not be found or have not been curated yet.',
+            canonical: `${baseUrl}/alternatives/${normalizedSlug}`,
+            robots: 'noindex, nofollow',
+          });
+          res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+          return res.status(404).send(notFoundHtml);
+        }
+
+        const cleanName = sourceTool.name.trim();
+        const category = sourceTool.category || 'AI Tools';
+        const categorySlug = category.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        const canonical = `${baseUrl}/alternatives/${sourceTool.slug || sourceTool.id}`;
+
+        const alternatives = getToolAlternatives(sourceTool, tools, 6);
+        const altCount = alternatives.length;
+
+        const title = `Best ${cleanName} Alternatives in 2026 (Free & Paid) | ToolverAI`;
+        const desc = `Looking for the best alternatives to ${cleanName}? Compare top ${altCount} ${category} tools ranked by real traffic, pricing models, features, and user ratings.`.slice(0, 160);
+
+        const breadcrumbJsonLd = {
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: `${baseUrl}/` },
+            { '@type': 'ListItem', position: 2, name: 'AI Tools', item: `${baseUrl}/` },
+            { '@type': 'ListItem', position: 3, name: category, item: `${baseUrl}/categories/${categorySlug}` },
+            { '@type': 'ListItem', position: 4, name: `${cleanName} Alternatives`, item: canonical },
+          ],
+        };
+
+        const collectionJsonLd = {
+          '@context': 'https://schema.org',
+          '@type': 'CollectionPage',
+          name: `Best ${cleanName} Alternatives in 2026`,
+          description: desc,
+          url: canonical,
+          publisher: { '@type': 'Organization', name: 'ToolverAI', url: baseUrl },
+        };
+
+        const altMeta = ELIGIBLE_ALTERNATIVES.find((a) => a.toolSlug === normalizedSlug);
+        const altReason = altMeta?.reason || `Users seeking alternative pricing models, open-weights deployment, or specialized workflows in ${category}.`;
+
+        const altBodyHtml = `
+<header>
+  <nav aria-label="Breadcrumb">
+    <ol>
+      <li><a href="/">Home</a></li>
+      <li><a href="/">AI Tools</a></li>
+      <li><a href="/categories/${categorySlug}">${category}</a></li>
+      <li aria-current="page">${cleanName} Alternatives</li>
+    </ol>
+  </nav>
+</header>
+<main>
+  <article>
+    <h1>Best ${cleanName} Alternatives in 2026</h1>
+    <p>Discover the top ${altCount} verified competitors and alternatives to ${cleanName} in 2026. Compare feature capabilities, subscription pricing, and monthly user traffic to find the ideal match for your stack.</p>
+
+    <section>
+      <h2>Why Consider Alternatives to ${cleanName}?</h2>
+      <p>${altReason}</p>
+      <p>Source Benchmark: <a href="/tool/${sourceTool.slug || sourceTool.id}"><strong>${cleanName}</strong></a> — ${sourceTool.pricingType || 'Freemium'} | ${sourceTool.monthlyVisitsFormatted || 'N/A'} visits/mo | ${sourceTool.rating || 4.5}★ (${sourceTool.reviewCount || 1} reviews).</p>
+    </section>
+
+    <section>
+      <h2>Top Ranked ${cleanName} Alternatives</h2>
+      <ul>
+        ${alternatives.map((alt: any) => {
+          const { canonicalSlug } = normalizeComparisonSlugs(sourceTool.slug || sourceTool.id, alt.slug || alt.id);
+          return `<li>
+            <a href="/tool/${alt.slug || alt.id}"><strong>${alt.name}</strong></a> (${alt.pricingType || 'Freemium'} | ${alt.monthlyVisitsFormatted || 'N/A'} visits/mo | ${alt.rating || 4.5}★) — ${alt.tagline || alt.description?.slice(0, 80)}
+            [<a href="/compare/${canonicalSlug}">Compare ${cleanName} vs ${alt.name}</a>]
+          </li>`;
+        }).join('\n        ')}
+      </ul>
+    </section>
+
+    <section>
+      <h2>Related Categories &amp; Comparisons</h2>
+      <p>
+        <a href="/categories/${categorySlug}">All ${category} Tools</a> |
+        <a href="/compare">Compare Tools Side-by-Side</a> |
+        <a href="/deals">Verified Deals</a> |
+        <a href="/">Home Directory</a>
+      </p>
+    </section>
+  </article>
+</main>`;
+
+        const finalHtml = renderSsrPage(htmlTemplate, {
+          title,
+          description: desc,
+          canonical,
+          robots: 'index, follow, max-image-preview:large, max-snippet:-1',
+          ogType: 'website',
+          ogImage: `${baseUrl}/og-banner.png`,
+          jsonLd: [breadcrumbJsonLd, collectionJsonLd],
+          bodyHtml: altBodyHtml,
+        });
+
+        res.header('Content-Type', 'text/html; charset=utf-8');
+        res.header('Cache-Control', 'public, max-age=300, s-maxage=3600');
+        return res.status(200).send(finalHtml);
+      } catch (err: any) {
+        console.error('SSR error for /alternatives/:slug:', err);
+        res.sendFile(path.join(distPath, 'index.html'));
+      }
+    });
+
     // ── SSR: Admin Console (/admin) ─────────────────────────────────────
     app.get(['/admin', '/admin/*'], (req, res) => {
       try {
@@ -2238,10 +2670,13 @@ Only return valid JSON.`;
       const knownRoutes = [
         '/', '/rankings', '/compare', '/deals', '/prompts', '/categories',
         '/blog', '/submit-tool', '/about', '/privacy-policy', '/terms', '/affiliate-disclosure',
+        '/alternatives',
       ];
       const isKnown = knownRoutes.includes(req.path)
         || req.path.startsWith('/tool/')
         || req.path.startsWith('/categories/')
+        || req.path.startsWith('/compare/')
+        || req.path.startsWith('/alternatives/')
         || req.path.startsWith('/blog/')
         || req.path.startsWith('/admin');
 

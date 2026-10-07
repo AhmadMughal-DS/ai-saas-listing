@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { AITool, ActiveTab, ToolReview, UserAccount } from './types';
 import { CyberBackground } from './components/CyberBackground';
 import { Navbar } from './components/Navbar';
@@ -19,6 +19,8 @@ import { AuthModal } from './components/AuthModal';
 import { UserAccountModal } from './components/UserAccountModal';
 import { SuggestToolModal } from './components/SuggestToolModal';
 import { SEOManager } from './components/SEOManager';
+import { AlternativesView } from './components/AlternativesView';
+import { parseComparisonPath, normalizeComparisonSlugs } from './utils/programmaticSeo';
 import { JoinNewsletter } from './components/JoinNewsletter';
 import { Bot, Sparkles } from 'lucide-react';
 import { trackPageView, trackEvent, trackToolView, trackCategoryView } from './lib/analytics';
@@ -58,12 +60,36 @@ const getCategorySlugFromUrl = (): string | null => {
   return match && match[1] ? decodeURIComponent(match[1]) : null;
 };
 
+// Helper to parse URL path into comparison pair (e.g. /compare/cursor-vs-github-copilot)
+const getComparisonPairFromUrl = (): { slug1: string; slug2: string } | null => {
+  if (typeof window === 'undefined') return null;
+  const path = window.location.pathname.toLowerCase();
+  const match = path.match(/\/compare\/([^/?#]+)/i);
+  if (!match || !match[1] || !match[1].includes('-vs-')) return null;
+  const parsed = parseComparisonPath(match[1]);
+  if (!parsed) return null;
+  // If reversed URL visited on client, replace with canonical URL
+  if (!parsed.isCanonicalOrder) {
+    window.history.replaceState({}, '', `/compare/${parsed.canonicalSlug}`);
+  }
+  return { slug1: parsed.slug1, slug2: parsed.slug2 };
+};
+
+// Helper to parse URL path into alternatives tool slug (e.g. /alternatives/cursor)
+const getAlternativesSlugFromUrl = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  const path = window.location.pathname.toLowerCase();
+  const match = path.match(/\/alternatives\/([^/?#]+)/i);
+  return match && match[1] ? decodeURIComponent(match[1]) : null;
+};
+
 // Helper to parse URL path/hash into ActiveTab
 const getInitialTabFromUrl = (): ActiveTab => {
   if (typeof window === 'undefined') return 'directory';
   const path = window.location.pathname.toLowerCase();
   const hash = window.location.hash.toLowerCase();
 
+  if (path.startsWith('/alternatives/')) return 'alternatives';
   if (path.startsWith('/tool/') || hash.includes('tool-') || hash.includes('tool/')) return 'tool-detail';
   if (path === '/admin' || path.startsWith('/admin/') || hash.includes('admin')) return 'admin';
   if (path === '/rankings' || hash.includes('rankings')) return 'rankings';
@@ -98,6 +124,8 @@ export const App: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<ActiveTab>(getInitialTabFromUrl);
   const [categorySlug, setCategorySlug] = useState<string | null>(getCategorySlugFromUrl);
+  const [comparisonPair, setComparisonPair] = useState<{ slug1: string; slug2: string } | null>(getComparisonPairFromUrl);
+  const [alternativesSlug, setAlternativesSlug] = useState<string | null>(getAlternativesSlugFromUrl);
   const [selectedTool, setSelectedTool] = useState<AITool | null>(null);
   const [videoPreviewTool, setVideoPreviewTool] = useState<AITool | null>(null);
   const [isMatcherOpen, setIsMatcherOpen] = useState<boolean>(false);
@@ -117,6 +145,21 @@ export const App: React.FC = () => {
   const [isAccountOpen, setIsAccountOpen] = useState<boolean>(false);
   const [isSuggestOpen, setIsSuggestOpen] = useState<boolean>(false);
 
+  // Resolve comparison tools from comparisonPair
+  const comparisonTools = useMemo<[AITool, AITool] | null>(() => {
+    if (!comparisonPair || tools.length === 0) return null;
+    const t1 = tools.find((t) => t.slug === comparisonPair.slug1);
+    const t2 = tools.find((t) => t.slug === comparisonPair.slug2);
+    if (t1 && t2) return [t1, t2];
+    return null;
+  }, [comparisonPair, tools]);
+
+  // Resolve alternatives tool from alternativesSlug
+  const alternativesTool = useMemo<AITool | null>(() => {
+    if (!alternativesSlug || tools.length === 0) return null;
+    return tools.find((t) => t.slug === alternativesSlug) || null;
+  }, [alternativesSlug, tools]);
+
   // Clear any residual tools from localStorage to ensure 100% pure MongoDB usage
   useEffect(() => {
     try {
@@ -133,6 +176,8 @@ export const App: React.FC = () => {
       const tab = getInitialTabFromUrl();
       setActiveTab(tab);
       setCategorySlug(getCategorySlugFromUrl());
+      setComparisonPair(getComparisonPairFromUrl());
+      setAlternativesSlug(getAlternativesSlugFromUrl());
     };
 
     window.addEventListener('popstate', handleLocationChange);
@@ -263,6 +308,12 @@ export const App: React.FC = () => {
     if (tab !== 'categories') {
       setCategorySlug(null);
     }
+    if (tab !== 'compare') {
+      setComparisonPair(null);
+    }
+    if (tab !== 'alternatives') {
+      setAlternativesSlug(null);
+    }
     setActiveTab(tab);
     try {
       // Map tabs to clean SEO-friendly URL paths
@@ -270,6 +321,7 @@ export const App: React.FC = () => {
         directory: '/',
         rankings: '/rankings',
         compare: '/compare',
+        alternatives: '/alternatives',
         deals: '/deals',
         prompts: '/prompts',
         categories: '/categories',
@@ -377,7 +429,12 @@ export const App: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col bg-[var(--color-bg-base,#F8FAFC)] text-[var(--color-text-main,#0F172A)] dark:bg-[#090D16] dark:text-slate-100 relative overflow-x-hidden selection:bg-indigo-600 selection:text-white font-sans transition-colors duration-200">
       {/* Dynamic SEO Meta Tag Manager */}
-      <SEOManager activeTab={activeTab} selectedTool={selectedTool} categorySlug={categorySlug} />
+      <SEOManager
+        activeTab={activeTab}
+        selectedTool={activeTab === 'alternatives' ? alternativesTool : selectedTool}
+        categorySlug={categorySlug}
+        comparisonTools={comparisonTools}
+      />
 
       {/* Dynamic Cyber Background */}
       <CyberBackground />
@@ -426,6 +483,16 @@ export const App: React.FC = () => {
         {activeTab === 'compare' && (
           <CompareView
             tools={tools}
+            comparisonPair={comparisonPair}
+            onSelectTool={handleSelectTool}
+            onNavigate={handleTabChange}
+          />
+        )}
+
+        {activeTab === 'alternatives' && (
+          <AlternativesView
+            tool={alternativesTool}
+            allTools={tools}
             onSelectTool={handleSelectTool}
             onNavigate={handleTabChange}
           />

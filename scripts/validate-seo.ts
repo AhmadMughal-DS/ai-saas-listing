@@ -73,7 +73,7 @@ function fetchUrl(
       }
     );
     req.on('error', reject);
-    req.setTimeout(10000, () => {
+    req.setTimeout(25000, () => {
       req.destroy();
       reject(new Error(`Timeout fetching ${urlPath}`));
     });
@@ -84,7 +84,11 @@ async function waitForServer(retries = 30): Promise<boolean> {
   for (let i = 0; i < retries; i++) {
     try {
       const res = await fetchUrl('/api/health');
-      if (res.status === 200) return true;
+      if (res.status === 200) {
+        // Give MongoDB connection a moment to initialize
+        await new Promise((r) => setTimeout(r, 1000));
+        return true;
+      }
     } catch {
       // wait 200ms
       await new Promise((r) => setTimeout(r, 200));
@@ -263,6 +267,65 @@ async function runValidation() {
       expectedRobots: 'noindex, nofollow',
       isRedirect: false,
     },
+    // Programmatic Comparison Route Tests
+    {
+      route: '/compare/cursor-vs-github-copilot',
+      expectedStatus: 200,
+      expectedCanonical: 'https://toolverai.com/compare/cursor-vs-github-copilot',
+      expectedRobots: 'index, follow',
+      isRedirect: false,
+    },
+    {
+      route: '/compare/chatgpt-vs-perplexity',
+      expectedStatus: 200,
+      expectedCanonical: 'https://toolverai.com/compare/chatgpt-vs-perplexity',
+      expectedRobots: 'index, follow',
+      isRedirect: false,
+    },
+    // Programmatic Alternatives Route Tests
+    {
+      route: '/alternatives',
+      expectedStatus: 200,
+      expectedCanonical: 'https://toolverai.com/alternatives',
+      expectedRobots: 'index, follow',
+      isRedirect: false,
+    },
+    {
+      route: '/alternatives/cursor',
+      expectedStatus: 200,
+      expectedCanonical: 'https://toolverai.com/alternatives/cursor',
+      expectedRobots: 'index, follow',
+      isRedirect: false,
+    },
+    {
+      route: '/alternatives/chatgpt',
+      expectedStatus: 200,
+      expectedCanonical: 'https://toolverai.com/alternatives/chatgpt',
+      expectedRobots: 'index, follow',
+      isRedirect: false,
+    },
+    {
+      route: '/alternatives/midjourney',
+      expectedStatus: 200,
+      expectedCanonical: 'https://toolverai.com/alternatives/midjourney',
+      expectedRobots: 'index, follow',
+      isRedirect: false,
+    },
+    // Ineligible Programmatic Pairs (Quality Gate Protection -> 404 Noindex)
+    {
+      route: '/compare/nonexistent-vs-fake',
+      expectedStatus: 404,
+      expectedCanonical: 'https://toolverai.com/compare/nonexistent-vs-fake',
+      expectedRobots: 'noindex, nofollow',
+      isRedirect: false,
+    },
+    {
+      route: '/alternatives/fake-nonexistent-tool',
+      expectedStatus: 404,
+      expectedCanonical: 'https://toolverai.com/alternatives/fake-nonexistent-tool',
+      expectedRobots: 'noindex, nofollow',
+      isRedirect: false,
+    },
     // Redirect Tests
     {
       route: '/tool/cursor-ai',
@@ -280,6 +343,26 @@ async function runValidation() {
       route: '/rankings/',
       expectedStatus: 301,
       expectedRedirect: '/rankings',
+      isRedirect: true,
+    },
+    // Programmatic Comparison Reversed Ordering 301 Redirect
+    {
+      route: '/compare/github-copilot-vs-cursor',
+      expectedStatus: 301,
+      expectedRedirect: '/compare/cursor-vs-github-copilot',
+      isRedirect: true,
+    },
+    {
+      route: '/compare/perplexity-vs-chatgpt',
+      expectedStatus: 301,
+      expectedRedirect: '/compare/chatgpt-vs-perplexity',
+      isRedirect: true,
+    },
+    // Case sensitivity 301 Redirect for Alternatives
+    {
+      route: '/alternatives/Cursor',
+      expectedStatus: 301,
+      expectedRedirect: '/alternatives/cursor',
       isRedirect: true,
     },
   ];
@@ -366,7 +449,7 @@ async function runValidation() {
     const hasBreadcrumbsNav = /<nav[^>]*aria-label=["']breadcrumb["']/i.test(res.body) || /class=["'][^"']*breadcrumb/i.test(res.body);
     const hasBreadcrumbsLd = res.body.includes('"@type":"BreadcrumbList"') || res.body.includes('"@type": "BreadcrumbList"');
     const breadcrumbsFound = hasBreadcrumbsNav || hasBreadcrumbsLd;
-    if (isPublicContent && (tc.route.startsWith('/tool/') || tc.route.startsWith('/categories/') || ['/rankings', '/deals', '/compare', '/prompts'].includes(tc.route))) {
+    if (isPublicContent && (tc.route.startsWith('/tool/') || tc.route.startsWith('/categories/') || tc.route.startsWith('/compare') || tc.route.startsWith('/alternatives') || ['/rankings', '/deals', '/prompts'].includes(tc.route))) {
       if (!breadcrumbsFound) {
         errors.push(`Expected breadcrumbs on route ${tc.route}`);
       }
@@ -448,6 +531,22 @@ async function runValidation() {
   const toolSlugsInSitemap = sitemapLocMatches.map((m) => m.replace(/<\/?loc>/g, '').replace('https://toolverai.com/tool/', ''));
   if (toolSlugsInSitemap.length === 0) {
     sitemapErrors.push('Zero tool URLs found in sitemap');
+  }
+
+  // Extract comparison and alternatives URLs from sitemap
+  const comparisonMatches = sitemapRes.body.match(/<loc>https:\/\/toolverai\.com\/compare\/([^<]+)<\/loc>/g) || [];
+  const alternativesMatches = sitemapRes.body.match(/<loc>https:\/\/toolverai\.com\/alternatives\/([^<]+)<\/loc>/g) || [];
+
+  if (comparisonMatches.length === 0) {
+    sitemapErrors.push('Expected curated comparisons in sitemap, found 0');
+  }
+  if (alternativesMatches.length === 0) {
+    sitemapErrors.push('Expected curated alternatives in sitemap, found 0');
+  }
+
+  // Ensure no reversed comparisons in sitemap
+  if (sitemapRes.body.includes('github-copilot-vs-cursor') || sitemapRes.body.includes('perplexity-vs-chatgpt')) {
+    sitemapErrors.push('CRITICAL: Found reversed duplicate comparison URL in sitemap');
   }
 
   results.push({

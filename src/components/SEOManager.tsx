@@ -7,6 +7,7 @@ interface SEOManagerProps {
   activeTab: ActiveTab;
   selectedTool: AITool | null;
   categorySlug?: string | null;
+  comparisonTools?: [AITool, AITool] | null;
   showFloatingInspectorButton?: boolean;
 }
 
@@ -14,19 +15,20 @@ export const SEOManager: React.FC<SEOManagerProps> = ({
   activeTab,
   selectedTool,
   categorySlug,
+  comparisonTools,
   showFloatingInspectorButton = true,
 }) => {
-  const [currentSEO, setCurrentSEO] = useState<SEOData>(() => generateSEOData(activeTab, selectedTool, categorySlug));
+  const [currentSEO, setCurrentSEO] = useState<SEOData>(() => generateSEOData(activeTab, selectedTool, categorySlug, comparisonTools));
   const [isInspectorOpen, setIsInspectorOpen] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [activeTabPreview, setActiveTabPreview] = useState<'google' | 'social' | 'schema'>('google');
 
-  // Reactively apply SEO updates to <head> whenever activeTab, selectedTool or categorySlug changes
+  // Reactively apply SEO updates to <head> whenever activeTab, selectedTool, categorySlug or comparisonTools changes
   useEffect(() => {
-    const seo = generateSEOData(activeTab, selectedTool, categorySlug);
+    const seo = generateSEOData(activeTab, selectedTool, categorySlug, comparisonTools);
     setCurrentSEO(seo);
     applySEOMetaTags(seo);
-  }, [activeTab, selectedTool, categorySlug]);
+  }, [activeTab, selectedTool, categorySlug, comparisonTools]);
 
   const handleCopy = (text: string, key: string) => {
     navigator.clipboard.writeText(text);

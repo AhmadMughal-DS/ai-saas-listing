@@ -14,6 +14,8 @@ export interface SEOData {
 
 const BASE_URL = 'https://toolverai.com';
 
+import { normalizeComparisonSlugs } from './programmaticSeo';
+
 // Use env var if available (set in Vite build), else fallback to Unsplash
 const DEFAULT_IMAGE =
   (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_OG_DEFAULT_IMAGE) ||
@@ -24,7 +26,12 @@ export function slugifyCategory(cat: string): string {
   return cat.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 }
 
-export function generateSEOData(activeTab: ActiveTab, tool: AITool | null, categorySlugParam?: string | null): SEOData {
+export function generateSEOData(
+  activeTab: ActiveTab,
+  tool: AITool | null,
+  categorySlugParam?: string | null,
+  comparisonTools?: [AITool, AITool] | null
+): SEOData {
   // ── Tool Detail Page ──────────────────────────────────────────────────
   if (activeTab === 'tool-detail' && tool) {
     const cleanName = tool.name.trim();
@@ -154,7 +161,52 @@ export function generateSEOData(activeTab: ActiveTab, tool: AITool | null, categ
         ],
       };
 
-    case 'compare':
+    case 'compare': {
+      if (comparisonTools && comparisonTools.length === 2) {
+        const [raw1, raw2] = comparisonTools;
+        const { slug1, canonicalSlug } = normalizeComparisonSlugs(raw1.slug || raw1.id, raw2.slug || raw2.id);
+        const t1 = (raw1.slug || raw1.id) === slug1 ? raw1 : raw2;
+        const t2 = (raw1.slug || raw1.id) === slug1 ? raw2 : raw1;
+        const title = `${t1.name} vs ${t2.name} (2026): Features, Pricing & Comparison | ToolverAI`;
+        const description = `Compare ${t1.name} vs ${t2.name} in 2026. Side-by-side analysis of pricing (${t1.pricingType} vs ${t2.pricingType}), monthly traffic (${t1.monthlyVisitsFormatted || 'N/A'} vs ${t2.monthlyVisitsFormatted || 'N/A'}), features, pros/cons, and top alternatives on ToolverAI.`;
+        const canonicalUrl = `${BASE_URL}/compare/${canonicalSlug}`;
+
+        return {
+          title,
+          description,
+          canonicalUrl,
+          ogType: 'website',
+          ogImage: DEFAULT_IMAGE,
+          keywords: [
+            `${t1.name} vs ${t2.name}`,
+            `${t1.name} comparison`,
+            `${t2.name} comparison`,
+            `${t1.name} alternatives`,
+            `${t2.name} alternatives`,
+            'AI tools comparison 2026',
+          ],
+          jsonLd: [
+            {
+              '@context': 'https://schema.org',
+              '@type': 'WebPage',
+              '@id': `${canonicalUrl}#page`,
+              name: `${t1.name} vs ${t2.name} Comparison`,
+              description,
+              url: canonicalUrl,
+            },
+            {
+              '@context': 'https://schema.org',
+              '@type': 'BreadcrumbList',
+              itemListElement: [
+                { '@type': 'ListItem', position: 1, name: 'Home', item: `${BASE_URL}/` },
+                { '@type': 'ListItem', position: 2, name: 'Compare AI Tools', item: `${BASE_URL}/compare` },
+                { '@type': 'ListItem', position: 3, name: `${t1.name} vs ${t2.name}`, item: canonicalUrl },
+              ],
+            },
+          ],
+        };
+      }
+
       return {
         title: 'Compare AI Tools Side-by-Side — Features, Pricing & Traffic | ToolverAI',
         description: 'Compare top AI models and software head-to-head on pricing plans, monthly traffic, API availability, supported platforms, and user ratings. Free comparison tool.',
@@ -188,6 +240,62 @@ export function generateSEOData(activeTab: ActiveTab, tool: AITool | null, categ
           },
         ],
       };
+    }
+
+    case 'alternatives': {
+      if (tool) {
+        const cleanName = tool.name.trim();
+        const title = `Best ${cleanName} Alternatives in 2026 | ToolverAI`;
+        const description = `Looking for the best ${cleanName} alternatives in 2026? Compare top verified ${tool.category} AI tools by pricing, monthly traffic, features, and authentic user reviews on ToolverAI.`;
+        const canonicalUrl = `${BASE_URL}/alternatives/${tool.slug || tool.id}`;
+
+        return {
+          title,
+          description,
+          canonicalUrl,
+          ogType: 'website',
+          ogImage: tool.logoUrl && !tool.logoUrl.includes('unsplash') ? tool.logoUrl : DEFAULT_IMAGE,
+          keywords: [
+            `best ${cleanName} alternatives`,
+            `${cleanName} competitors`,
+            `tools like ${cleanName}`,
+            `best ${tool.category} AI tools`,
+            'AI software alternatives 2026',
+          ],
+          jsonLd: [
+            {
+              '@context': 'https://schema.org',
+              '@type': 'CollectionPage',
+              '@id': `${canonicalUrl}#page`,
+              name: title,
+              description,
+              url: canonicalUrl,
+              publisher: { '@type': 'Organization', name: 'ToolverAI', url: BASE_URL },
+            },
+            {
+              '@context': 'https://schema.org',
+              '@type': 'BreadcrumbList',
+              itemListElement: [
+                { '@type': 'ListItem', position: 1, name: 'Home', item: `${BASE_URL}/` },
+                { '@type': 'ListItem', position: 2, name: 'AI Tools', item: `${BASE_URL}/` },
+                { '@type': 'ListItem', position: 3, name: tool.category || 'Tools', item: `${BASE_URL}/categories/${slugifyCategory(tool.category || 'tools')}` },
+                { '@type': 'ListItem', position: 4, name: `Best ${cleanName} Alternatives`, item: canonicalUrl },
+              ],
+            },
+          ],
+        };
+      }
+
+      return {
+        title: 'Best AI Tool Alternatives & Competitor Directory | ToolverAI',
+        description: 'Discover top alternative AI software for ChatGPT, Cursor, Midjourney, and leading AI models. Verified feature matrices and pricing breakdowns on ToolverAI.',
+        canonicalUrl: `${BASE_URL}/compare`,
+        ogType: 'website',
+        ogImage: DEFAULT_IMAGE,
+        keywords: ['AI tool alternatives', 'ChatGPT alternatives', 'Cursor alternatives', 'Midjourney alternatives'],
+        jsonLd: [],
+      };
+    }
 
     case 'deals':
       return {

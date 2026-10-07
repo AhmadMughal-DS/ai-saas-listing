@@ -1,4 +1,5 @@
 import { INITIAL_BLOG_POSTS } from '../data/initialData';
+import { ELIGIBLE_COMPARISONS, ELIGIBLE_ALTERNATIVES } from '../utils/programmaticSeo';
 
 export interface SitemapUrlEntry {
   loc: string;
@@ -222,6 +223,27 @@ export function generateSitemapEntries(baseUrl: string, tools: any[] = []): Site
     }
 
     entries.push(entry);
+  });
+
+  // 5. Eligible Curated Side-by-Side Comparison Pages (/compare/{tool-a}-vs-{tool-b})
+  // Strictly includes only canonical alphabetical pairs (never reversed duplicates)
+  ELIGIBLE_COMPARISONS.forEach((comp) => {
+    entries.push({
+      loc: `${cleanBaseUrl}/compare/${encodeURIComponent(comp.canonicalSlug)}`,
+      lastmod: today,
+      changefreq: 'weekly',
+      priority: '0.8',
+    });
+  });
+
+  // 6. Eligible Curated Tool Alternatives Pages (/alternatives/{slug})
+  ELIGIBLE_ALTERNATIVES.forEach((alt) => {
+    entries.push({
+      loc: `${cleanBaseUrl}/alternatives/${encodeURIComponent(alt.toolSlug)}`,
+      lastmod: today,
+      changefreq: 'weekly',
+      priority: '0.8',
+    });
   });
 
   return entries;

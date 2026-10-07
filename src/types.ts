@@ -211,5 +211,6 @@ export type ActiveTab =
   | 'categories' 
   | 'blog' 
   | 'tool-detail'
+  | 'alternatives'
   | 'admin';
 
