@@ -200,6 +200,9 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
               <img
                 src={tool.logoUrl}
                 alt={tool.name}
+                width={72}
+                height={72}
+                decoding="async"
                 className="w-full h-full object-contain rounded-xl"
               />
             </div>
@@ -573,6 +576,10 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
                         <img
                           src={rev.authorAvatar}
                           alt={rev.authorName}
+                          width={40}
+                          height={40}
+                          loading="lazy"
+                          decoding="async"
                           className="w-10 h-10 rounded-full object-cover border border-slate-200 shrink-0"
                         />
                         <div>
@@ -793,6 +800,10 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
                       <img
                         src={rel.logoUrl}
                         alt={rel.name}
+                        width={40}
+                        height={40}
+                        loading="lazy"
+                        decoding="async"
                         className="w-10 h-10 rounded-xl object-contain bg-white border border-slate-200 p-1"
                       />
                       <div>

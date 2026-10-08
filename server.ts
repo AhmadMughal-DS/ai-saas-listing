@@ -1,6 +1,7 @@
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
+import zlib from 'zlib';
 import { createServer as createViteServer } from 'vite';
 import OpenAI from 'openai';
 import { MongoClient, Db } from 'mongodb';
@@ -364,6 +365,100 @@ async function startServer() {
 
   app.use(express.json({ limit: '10mb' }));
 
+  // ── High-Performance Native HTTP Compression Middleware (Brotli + Gzip) ──
+  app.use((req, res, next) => {
+    const acceptEncoding = (req.headers['accept-encoding'] as string) || '';
+    if (!acceptEncoding || req.method === 'HEAD') return next();
+
+    const originalWrite = res.write.bind(res);
+    const originalEnd = res.end.bind(res);
+    const chunks: Buffer[] = [];
+    let isIntercepting = true;
+
+    res.write = function (chunk: any, ...args: any[]): any {
+      if (!isIntercepting || !chunk) {
+        return originalWrite(chunk, ...args);
+      }
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      return true;
+    };
+
+    res.end = function (chunk?: any, ...args: any[]): any {
+      if (!isIntercepting) {
+        return originalEnd(chunk, ...args);
+      }
+      if (chunk) {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      }
+      isIntercepting = false;
+
+      const buffer = Buffer.concat(chunks);
+
+      // Skip small payloads (< 1KB) or non-2xx statuses
+      if (buffer.length < 1024 || res.statusCode < 200 || res.statusCode >= 300) {
+        res.setHeader('Content-Length', buffer.length);
+        return originalEnd(buffer);
+      }
+
+      const contentType = (res.getHeader('Content-Type') as string) || '';
+      // Only compress text, HTML, CSS, JavaScript, JSON, SVG, and XML
+      const compressible = /text\/(html|css|plain|xml)|application\/(javascript|json|xml|x-javascript)|image\/svg\+xml/i.test(contentType);
+      if (!compressible) {
+        res.setHeader('Content-Length', buffer.length);
+        return originalEnd(buffer);
+      }
+
+      res.setHeader('Vary', 'Accept-Encoding');
+
+      // Brotli compression (superior compression ratio)
+      if (acceptEncoding.includes('br')) {
+        zlib.brotliCompress(buffer, (err, compressed) => {
+          if (err || !compressed) {
+            res.setHeader('Content-Length', buffer.length);
+            return originalEnd(buffer);
+          }
+          res.setHeader('Content-Encoding', 'br');
+          res.setHeader('Content-Length', compressed.length);
+          originalEnd(compressed);
+        });
+        return;
+      }
+
+      // Gzip compression fallback
+      if (acceptEncoding.includes('gzip')) {
+        zlib.gzip(buffer, (err, compressed) => {
+          if (err || !compressed) {
+            res.setHeader('Content-Length', buffer.length);
+            return originalEnd(buffer);
+          }
+          res.setHeader('Content-Encoding', 'gzip');
+          res.setHeader('Content-Length', compressed.length);
+          originalEnd(compressed);
+        });
+        return;
+      }
+
+      // Deflate compression fallback
+      if (acceptEncoding.includes('deflate')) {
+        zlib.deflate(buffer, (err, compressed) => {
+          if (err || !compressed) {
+            res.setHeader('Content-Length', buffer.length);
+            return originalEnd(buffer);
+          }
+          res.setHeader('Content-Encoding', 'deflate');
+          res.setHeader('Content-Length', compressed.length);
+          originalEnd(compressed);
+        });
+        return;
+      }
+
+      res.setHeader('Content-Length', buffer.length);
+      return originalEnd(buffer);
+    };
+
+    next();
+  });
+
   // ── SEO: Canonical Domain & Protocol Enforcement (www -> non-www, HTTP -> HTTPS) ──
   app.use((req, res, next) => {
     const hostHeader = (req.headers['x-forwarded-host'] as string) || req.headers.host || '';
@@ -418,17 +513,31 @@ async function startServer() {
     return `${proto}://${host || 'toolverai.com'}`.replace(/\/+$/, '');
   }
 
+  // In-memory TTL cache for tools (eliminates MongoDB roundtrips during SSR)
+  let cachedDbTools: { data: any[]; expiresAt: number } | null = null;
+  const DB_TOOLS_CACHE_TTL_MS = 60_000; // 60 seconds TTL
+
+  function invalidateDbToolsCache() {
+    cachedDbTools = null;
+  }
+
   // Helper: fetch all tools from MongoDB Atlas or fallback to memory cache / initial dataset
   async function getToolsFromDbOrFallback(): Promise<any[]> {
+    if (cachedDbTools && Date.now() < cachedDbTools.expiresAt) {
+      return cachedDbTools.data;
+    }
+
     try {
       const db = await getMongoDb();
       if (db) {
         const tools = await db.collection('tools').find({}).toArray();
         if (tools && tools.length > 0) {
-          return tools.map((t) => {
+          const mapped = tools.map((t) => {
             const { _id, ...rest } = t;
             return { id: rest.id || _id?.toString(), ...rest };
           });
+          cachedDbTools = { data: mapped, expiresAt: Date.now() + DB_TOOLS_CACHE_TTL_MS };
+          return mapped;
         }
       }
     } catch (err) {
@@ -848,6 +957,7 @@ async function startServer() {
 
       // Update memory cache
       memoryToolsCache = [newTool, ...memoryToolsCache.filter((t) => t.id !== newTool.id)];
+      invalidateDbToolsCache();
 
       // Automatically notify IndexNow of new tool content (asynchronous fire-and-forget)
       const baseUrl = resolveBaseUrl(req);
@@ -878,6 +988,7 @@ async function startServer() {
       }
 
       memoryToolsCache = memoryToolsCache.map((t) => (t.id === id ? { ...t, ...updates } : t));
+      invalidateDbToolsCache();
       const updatedTool = memoryToolsCache.find((t) => t.id === id) || { id, ...updates };
 
       // Automatically notify IndexNow of updated tool content
@@ -905,6 +1016,7 @@ async function startServer() {
       }
 
       memoryToolsCache = memoryToolsCache.filter((t) => t.id !== id);
+      invalidateDbToolsCache();
 
       // Automatically notify IndexNow of removed tool content
       const baseUrl = resolveBaseUrl(req);
@@ -932,6 +1044,7 @@ async function startServer() {
       await collection.insertMany(INITIAL_TOOLS.map((t) => ({ ...t, _id: t.id as any })));
 
       memoryToolsCache = [...INITIAL_TOOLS];
+      invalidateDbToolsCache();
 
       res.json({
         success: true,
@@ -1280,6 +1393,7 @@ async function startServer() {
 
       // Update in-memory caches
       memoryToolsCache = [newTool, ...memoryToolsCache.filter((t) => t.id !== newTool.id)];
+      invalidateDbToolsCache();
       memorySubmissionsCache = memorySubmissionsCache.map((s) =>
         s.id === id
           ? {
@@ -1648,15 +1762,32 @@ Only return valid JSON.`;
       return result;
     }
 
+    let cachedIndexHtmlTemplate: string | null = null;
+    function getIndexHtmlTemplate(): string {
+      if (process.env.NODE_ENV === 'production' && cachedIndexHtmlTemplate) {
+        return cachedIndexHtmlTemplate;
+      }
+      const tpl = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
+      if (process.env.NODE_ENV === 'production') {
+        cachedIndexHtmlTemplate = tpl;
+      }
+      return tpl;
+    }
+
     // Serve static assets without serving default index.html on root (ensures root receives SSR canonical)
     app.use(express.static(distPath, {
       index: false,
-      maxAge: '30d',
+      maxAge: '1y',
       etag: true,
       setHeaders: (res, filePath) => {
         if (filePath.endsWith('index.html')) {
           res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
           res.setHeader('Pragma', 'no-cache');
+        } else if (filePath.includes(path.sep + 'assets' + path.sep) || filePath.includes('/assets/')) {
+          // Vite generated assets have hash in filename (immutable)
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        } else {
+          res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
         }
       },
     }));
@@ -1676,7 +1807,7 @@ Only return valid JSON.`;
     // ── SSR: Homepage (/) ───────────────────────────────────────────────
     app.get('/', async (req, res) => {
       try {
-        const htmlTemplate = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
+        const htmlTemplate = getIndexHtmlTemplate();
         const baseUrl = resolveBaseUrl(req);
         const title = 'Best AI Tools & AI Tools Directory | ToolverAI';
         const desc = 'Explore the best AI tools in 2026. Discover, compare, and track top AI tools across coding, productivity, image, and video generation in our curated AI tools directory.';
@@ -1770,7 +1901,7 @@ Only return valid JSON.`;
         });
 
         res.header('Content-Type', 'text/html; charset=utf-8');
-        res.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.header('Cache-Control', 'public, max-age=300, s-maxage=1800, stale-while-revalidate=86400');
         return res.status(200).send(finalHtml);
       } catch (err: any) {
         console.error('SSR error for /:', err);
@@ -1802,7 +1933,7 @@ Only return valid JSON.`;
             t.id?.toLowerCase() === normalizedSlug
         );
 
-        const htmlTemplate = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
+        const htmlTemplate = getIndexHtmlTemplate();
         const baseUrl = resolveBaseUrl(req);
 
         if (!tool) {
@@ -1961,7 +2092,7 @@ Only return valid JSON.`;
         }
 
         const baseUrl = resolveBaseUrl(req);
-        const htmlTemplate = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
+        const htmlTemplate = getIndexHtmlTemplate();
         const tools = await getToolsFromDbOrFallback();
 
         const matchedMeta = SSR_CATEGORIES.find((c) => c.slug === normalizedCategory);
@@ -2074,7 +2205,7 @@ Only return valid JSON.`;
     // ── SSR: Submit Tool (/submit-tool) ─────────────────────────────────
     app.get('/submit-tool', (req, res) => {
       try {
-        const htmlTemplate = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
+        const htmlTemplate = getIndexHtmlTemplate();
         const baseUrl = resolveBaseUrl(req);
         const title = 'Submit an AI Tool — Get Listed on ToolverAI';
         const desc = 'Submit your AI tool to the ToolverAI directory. Get reviewed and listed alongside 120+ AI tools ranked by estimated monthly traffic.';
@@ -2150,7 +2281,7 @@ Only return valid JSON.`;
     Object.entries(majorPageSeo).forEach(([routePath, seo]) => {
       app.get(routePath, async (req, res) => {
         try {
-          const htmlTemplate = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
+          const htmlTemplate = getIndexHtmlTemplate();
           const baseUrl = resolveBaseUrl(req);
           const canonical = `${baseUrl}${routePath}`;
           const tools = await getToolsFromDbOrFallback();
@@ -2269,7 +2400,7 @@ Only return valid JSON.`;
     // ── SSR: Curated Alternatives Hub (/alternatives) ──────────────────
     app.get('/alternatives', async (req, res) => {
       try {
-        const htmlTemplate = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
+        const htmlTemplate = getIndexHtmlTemplate();
         const baseUrl = resolveBaseUrl(req);
         const tools = await getToolsFromDbOrFallback();
         const canonical = `${baseUrl}/alternatives`;
@@ -2338,7 +2469,7 @@ Only return valid JSON.`;
         const parsed = parseComparisonPath(comparison);
 
         const baseUrl = resolveBaseUrl(req);
-        const htmlTemplate = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
+        const htmlTemplate = getIndexHtmlTemplate();
 
         // 1. If format is invalid (not two slugs separated by -vs-) -> 404
         if (!parsed) {
@@ -2537,7 +2668,7 @@ Only return valid JSON.`;
         }
 
         const baseUrl = resolveBaseUrl(req);
-        const htmlTemplate = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
+        const htmlTemplate = getIndexHtmlTemplate();
 
         // Quality gate: is this tool eligible?
         const isEligible = isEligibleAlternative(normalizedSlug);
@@ -2669,7 +2800,7 @@ Only return valid JSON.`;
         }
 
         const baseUrl = resolveBaseUrl(req);
-        const htmlTemplate = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
+        const htmlTemplate = getIndexHtmlTemplate();
 
         // Look up article
         const article = getArticleBySlug(normalizedSlug);
@@ -2825,7 +2956,7 @@ Only return valid JSON.`;
     // ── SSR: Admin Console (/admin) ─────────────────────────────────────
     app.get(['/admin', '/admin/*'], (req, res) => {
       try {
-        const htmlTemplate = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
+        const htmlTemplate = getIndexHtmlTemplate();
         const baseUrl = resolveBaseUrl(req);
         res.setHeader('X-Robots-Tag', 'noindex, nofollow');
         const finalHtml = renderSsrPage(htmlTemplate, {
@@ -2861,7 +2992,7 @@ Only return valid JSON.`;
 
       if (!isKnown) {
         try {
-          const htmlTemplate = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
+          const htmlTemplate = getIndexHtmlTemplate();
           const baseUrl = resolveBaseUrl(req);
           res.setHeader('X-Robots-Tag', 'noindex, nofollow');
           const notFoundHtml = renderSsrPage(htmlTemplate, {

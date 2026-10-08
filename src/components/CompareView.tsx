@@ -428,6 +428,9 @@ export const CompareView: React.FC<CompareViewProps> = ({
                     <img
                       src={tool.logoUrl}
                       alt={tool.name}
+                      width={48}
+                      height={48}
+                      decoding="async"
                       className="w-full h-full object-contain rounded-xl"
                     />
                   </div>

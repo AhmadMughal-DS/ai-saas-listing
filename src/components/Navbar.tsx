@@ -182,66 +182,74 @@ export const Navbar: React.FC<NavbarProps> = ({
         {onOpenSuggestTool && (
           <button
             onClick={onOpenSuggestTool}
-            className="px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap flex items-center gap-1 bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shrink-0"
+            aria-label="Suggest a tool"
+            className="min-h-[40px] px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shrink-0 cursor-pointer active:scale-95 transition-all"
           >
-            <PlusCircle className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
+            <PlusCircle className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
             <span>Suggest</span>
           </button>
         )}
         <button
           onClick={() => setActiveTab('directory')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap ${
-            activeTab === 'directory' ? 'bg-indigo-600 text-white font-bold' : 'text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800'
+          aria-label="View AI tools directory"
+          className={`min-h-[40px] px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap cursor-pointer active:scale-95 transition-all ${
+            activeTab === 'directory' ? 'bg-indigo-600 text-white font-bold shadow-xs' : 'text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800'
           }`}
         >
           Tools
         </button>
         <button
           onClick={() => setActiveTab('rankings')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1 ${
-            activeTab === 'rankings' ? 'bg-indigo-600 text-white font-bold' : 'text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800'
+          aria-label="View AI tools traffic rankings"
+          className={`min-h-[40px] px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all ${
+            activeTab === 'rankings' ? 'bg-indigo-600 text-white font-bold shadow-xs' : 'text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800'
           }`}
         >
-          <Flame className="w-3 h-3 text-orange-500" />
+          <Flame className="w-3.5 h-3.5 text-orange-500" />
           <span>Rankings</span>
         </button>
         <button
           onClick={() => setActiveTab('compare')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap ${
-            activeTab === 'compare' ? 'bg-indigo-600 text-white font-bold' : 'text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800'
+          aria-label="Compare AI tools"
+          className={`min-h-[40px] px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap cursor-pointer active:scale-95 transition-all ${
+            activeTab === 'compare' ? 'bg-indigo-600 text-white font-bold shadow-xs' : 'text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800'
           }`}
         >
           Compare
         </button>
         <button
           onClick={() => setActiveTab('deals')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1 ${
-            activeTab === 'deals' ? 'bg-indigo-600 text-white font-bold' : 'text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800'
+          aria-label="View AI software deals and discounts"
+          className={`min-h-[40px] px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all ${
+            activeTab === 'deals' ? 'bg-indigo-600 text-white font-bold shadow-xs' : 'text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800'
           }`}
         >
-          <Tag className="w-3 h-3 text-emerald-600" />
+          <Tag className="w-3.5 h-3.5 text-emerald-600" />
           <span>Deals</span>
         </button>
         <button
           onClick={() => setActiveTab('prompts')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap ${
-            activeTab === 'prompts' ? 'bg-indigo-600 text-white font-bold' : 'text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800'
+          aria-label="View AI prompt engineering templates"
+          className={`min-h-[40px] px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap cursor-pointer active:scale-95 transition-all ${
+            activeTab === 'prompts' ? 'bg-indigo-600 text-white font-bold shadow-xs' : 'text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800'
           }`}
         >
           Prompts
         </button>
         <button
           onClick={() => setActiveTab('categories')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap ${
-            activeTab === 'categories' ? 'bg-indigo-600 text-white font-bold' : 'text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800'
+          aria-label="Browse AI categories taxonomy"
+          className={`min-h-[40px] px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap cursor-pointer active:scale-95 transition-all ${
+            activeTab === 'categories' ? 'bg-indigo-600 text-white font-bold shadow-xs' : 'text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800'
           }`}
         >
           Categories
         </button>
         <button
           onClick={() => setActiveTab('blog')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap ${
-            activeTab === 'blog' ? 'bg-indigo-600 text-white font-bold' : 'text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800'
+          aria-label="Read AI news and technical guides"
+          className={`min-h-[40px] px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap cursor-pointer active:scale-95 transition-all ${
+            activeTab === 'blog' ? 'bg-indigo-600 text-white font-bold shadow-xs' : 'text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800'
           }`}
         >
           News

@@ -184,6 +184,9 @@ export const AlternativesView: React.FC<AlternativesViewProps> = ({
               <img
                 src={tool.logoUrl}
                 alt={`${tool.name} logo`}
+                width={48}
+                height={48}
+                decoding="async"
                 className="w-full h-full object-contain rounded-xl"
                 onError={(e) => {
                   (e.currentTarget as HTMLElement).style.display = 'none';
@@ -305,6 +308,10 @@ export const AlternativesView: React.FC<AlternativesViewProps> = ({
                       <img
                         src={alt.logoUrl}
                         alt={`${alt.name} logo`}
+                        width={36}
+                        height={36}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-contain rounded-lg"
                         onError={(e) => {
                           (e.currentTarget as HTMLElement).style.display = 'none';

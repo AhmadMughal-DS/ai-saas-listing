@@ -54,9 +54,12 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://www.googletagmanager.com" />
 
-    <!-- ── Fonts ─────────────────────────────────────────────── -->
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <!-- ── Fonts (Optimized Non-Blocking) ────────────────────── -->
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" media="print" onload="this.media='all'" />
+    <noscript>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" />
+    </noscript>
 
     <!-- ── Google Analytics 4 (GA4) ─────────────────────────── -->
     <!-- Loads only if VITE_GA4_MEASUREMENT_ID is set in .env   -->
@@ -97,7 +100,7 @@
             "width": 1200,
             "height": 630
           },
-          "description": "ToolverAI is the leading AI tools discovery platform, providing rankings, comparisons, verified deals, and reviews for AI software.",
+          "description": "ToolverAI is the leading AI tools discovery platform, providing rankings, comparisons, curated deals, and reviews for AI software.",
           "sameAs": [
             "https://x.com/toolverai"
           ]
@@ -107,7 +110,7 @@
           "@id": "https://toolverai.com/#website",
           "url": "https://toolverai.com",
           "name": "ToolverAI",
-          "description": "Discover, compare and track the best AI tools. Real traffic data, verified deals, and expert reviews.",
+          "description": "Discover, compare and track the best AI tools. Estimated traffic data, curated deals, and expert reviews.",
           "publisher": { "@id": "https://toolverai.com/#organization" },
           "potentialAction": {
             "@type": "SearchAction",

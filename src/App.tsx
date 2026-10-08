@@ -1,30 +1,43 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { AITool, ActiveTab, ToolReview, UserAccount, BlogPost } from './types';
 import { getArticleBySlug } from './data/blogData';
 import { CyberBackground } from './components/CyberBackground';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { DirectoryView } from './components/DirectoryView';
-import { ToolDetailView } from './components/ToolDetailView';
-import { RankingsView } from './components/RankingsView';
-import { CompareView } from './components/CompareView';
-import { DealsView } from './components/DealsView';
-import { PromptsView } from './components/PromptsView';
-import { CategoriesView } from './components/CategoriesView';
-import { BlogView } from './components/BlogView';
-import { AdminView } from './components/AdminView';
-import { VideoPreviewModal } from './components/VideoPreviewModal';
-import { AIMatcherModal } from './components/AIMatcherModal';
-import { BookmarksDrawer } from './components/BookmarksDrawer';
-import { AuthModal } from './components/AuthModal';
-import { UserAccountModal } from './components/UserAccountModal';
-import { SuggestToolModal } from './components/SuggestToolModal';
 import { SEOManager } from './components/SEOManager';
-import { AlternativesView } from './components/AlternativesView';
 import { parseComparisonPath, normalizeComparisonSlugs } from './utils/programmaticSeo';
 import { JoinNewsletter } from './components/JoinNewsletter';
 import { Bot, Sparkles } from 'lucide-react';
 import { trackPageView, trackEvent, trackToolView, trackCategoryView } from './lib/analytics';
+
+// Lazy-loaded Views (Code Splitting for Optimal Performance & Core Web Vitals)
+const ToolDetailView = React.lazy(() => import('./components/ToolDetailView').then(m => ({ default: m.ToolDetailView })));
+const RankingsView = React.lazy(() => import('./components/RankingsView').then(m => ({ default: m.RankingsView })));
+const CompareView = React.lazy(() => import('./components/CompareView').then(m => ({ default: m.CompareView })));
+const AlternativesView = React.lazy(() => import('./components/AlternativesView').then(m => ({ default: m.AlternativesView })));
+const DealsView = React.lazy(() => import('./components/DealsView').then(m => ({ default: m.DealsView })));
+const PromptsView = React.lazy(() => import('./components/PromptsView').then(m => ({ default: m.PromptsView })));
+const CategoriesView = React.lazy(() => import('./components/CategoriesView').then(m => ({ default: m.CategoriesView })));
+const BlogView = React.lazy(() => import('./components/BlogView').then(m => ({ default: m.BlogView })));
+const AdminView = React.lazy(() => import('./components/AdminView').then(m => ({ default: m.AdminView })));
+
+// Lazy-loaded Modals & Drawers (loaded strictly on-demand when activated)
+const VideoPreviewModal = React.lazy(() => import('./components/VideoPreviewModal').then(m => ({ default: m.VideoPreviewModal })));
+const AIMatcherModal = React.lazy(() => import('./components/AIMatcherModal').then(m => ({ default: m.AIMatcherModal })));
+const BookmarksDrawer = React.lazy(() => import('./components/BookmarksDrawer').then(m => ({ default: m.BookmarksDrawer })));
+const AuthModal = React.lazy(() => import('./components/AuthModal').then(m => ({ default: m.AuthModal })));
+const UserAccountModal = React.lazy(() => import('./components/UserAccountModal').then(m => ({ default: m.UserAccountModal })));
+const SuggestToolModal = React.lazy(() => import('./components/SuggestToolModal').then(m => ({ default: m.SuggestToolModal })));
+
+const RouteLoadingFallback: React.FC = () => (
+  <div className="w-full min-h-[60vh] flex items-center justify-center pt-28 pb-20">
+    <div className="flex flex-col items-center gap-3">
+      <div className="w-8 h-8 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin" />
+      <span className="text-xs font-semibold text-slate-500">Loading view...</span>
+    </div>
+  </div>
+);
 
 // Map of historic/legacy slugs to canonical slugs for backward compatibility
 const LEGACY_SLUG_MAP: Record<string, string> = {
@@ -494,196 +507,236 @@ export const App: React.FC = () => {
         )}
 
         {activeTab === 'rankings' && (
-          <RankingsView
-            tools={tools}
-            onSelectTool={handleSelectTool}
-            onNavigate={handleTabChange}
-          />
+          <Suspense fallback={<RouteLoadingFallback />}>
+            <RankingsView
+              tools={tools}
+              onSelectTool={handleSelectTool}
+              onNavigate={handleTabChange}
+            />
+          </Suspense>
         )}
 
         {activeTab === 'compare' && (
-          <CompareView
-            tools={tools}
-            comparisonPair={comparisonPair}
-            onSelectTool={handleSelectTool}
-            onNavigate={handleTabChange}
-          />
+          <Suspense fallback={<RouteLoadingFallback />}>
+            <CompareView
+              tools={tools}
+              comparisonPair={comparisonPair}
+              onSelectTool={handleSelectTool}
+              onNavigate={handleTabChange}
+            />
+          </Suspense>
         )}
 
         {activeTab === 'alternatives' && (
-          <AlternativesView
-            tool={alternativesTool}
-            allTools={tools}
-            onSelectTool={handleSelectTool}
-            onNavigate={handleTabChange}
-          />
+          <Suspense fallback={<RouteLoadingFallback />}>
+            <AlternativesView
+              tool={alternativesTool}
+              allTools={tools}
+              onSelectTool={handleSelectTool}
+              onNavigate={handleTabChange}
+            />
+          </Suspense>
         )}
 
         {activeTab === 'deals' && (
-          <DealsView
-            tools={tools}
-            onSelectTool={handleSelectTool}
-            onNavigate={handleTabChange}
-          />
+          <Suspense fallback={<RouteLoadingFallback />}>
+            <DealsView
+              tools={tools}
+              onSelectTool={handleSelectTool}
+              onNavigate={handleTabChange}
+            />
+          </Suspense>
         )}
 
         {activeTab === 'prompts' && (
-          <PromptsView onNavigate={handleTabChange} />
+          <Suspense fallback={<RouteLoadingFallback />}>
+            <PromptsView onNavigate={handleTabChange} />
+          </Suspense>
         )}
 
         {activeTab === 'categories' && (
-          <CategoriesView
-            tools={tools}
-            currentCategorySlug={categorySlug}
-            onSelectCategory={(slug) => {
-              setCategorySlug(slug);
-              trackCategoryView({ category_name: slug });
-              const targetPath = `/categories/${slug}`;
-              if (window.location.pathname !== targetPath) {
-                window.history.pushState({ tab: 'categories', categorySlug: slug }, '', targetPath);
-              }
-              trackPageView(targetPath);
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            onSelectTool={handleSelectTool}
-            onBackToAllCategories={() => {
-              setCategorySlug(null);
-              const targetPath = '/categories';
-              if (window.location.pathname !== targetPath) {
-                window.history.pushState({ tab: 'categories' }, '', targetPath);
-              }
-              trackPageView(targetPath);
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            onBackToDirectory={() => handleTabChange('directory')}
-          />
+          <Suspense fallback={<RouteLoadingFallback />}>
+            <CategoriesView
+              tools={tools}
+              currentCategorySlug={categorySlug}
+              onSelectCategory={(slug) => {
+                setCategorySlug(slug);
+                trackCategoryView({ category_name: slug });
+                const targetPath = `/categories/${slug}`;
+                if (window.location.pathname !== targetPath) {
+                  window.history.pushState({ tab: 'categories', categorySlug: slug }, '', targetPath);
+                }
+                trackPageView(targetPath);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              onSelectTool={handleSelectTool}
+              onBackToAllCategories={() => {
+                setCategorySlug(null);
+                const targetPath = '/categories';
+                if (window.location.pathname !== targetPath) {
+                  window.history.pushState({ tab: 'categories' }, '', targetPath);
+                }
+                trackPageView(targetPath);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              onBackToDirectory={() => handleTabChange('directory')}
+            />
+          </Suspense>
         )}
 
         {activeTab === 'blog' && (
-          <BlogView
-            articleSlug={articleSlug}
-            onSelectArticle={(slug) => {
-              setArticleSlug(slug);
-              setActiveTab('blog');
-              const targetPath = `/blog/${slug}`;
-              if (window.location.pathname !== targetPath) {
-                window.history.pushState({ tab: 'blog', articleSlug: slug }, '', targetPath);
-              }
-              trackPageView(targetPath);
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            onBackToBlog={() => {
-              setArticleSlug(null);
-              const targetPath = '/blog';
-              if (window.location.pathname !== targetPath) {
-                window.history.pushState({ tab: 'blog' }, '', targetPath);
-              }
-              trackPageView(targetPath);
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            onNavigate={handleTabChange}
-          />
+          <Suspense fallback={<RouteLoadingFallback />}>
+            <BlogView
+              articleSlug={articleSlug}
+              onSelectArticle={(slug) => {
+                setArticleSlug(slug);
+                setActiveTab('blog');
+                const targetPath = `/blog/${slug}`;
+                if (window.location.pathname !== targetPath) {
+                  window.history.pushState({ tab: 'blog', articleSlug: slug }, '', targetPath);
+                }
+                trackPageView(targetPath);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              onBackToBlog={() => {
+                setArticleSlug(null);
+                const targetPath = '/blog';
+                if (window.location.pathname !== targetPath) {
+                  window.history.pushState({ tab: 'blog' }, '', targetPath);
+                }
+                trackPageView(targetPath);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              onNavigate={handleTabChange}
+            />
+          </Suspense>
         )}
 
         {activeTab === 'admin' && (
-          <AdminView
-            tools={tools}
-            onToolAdded={handleToolAdded}
-            onToolUpdated={handleToolUpdated}
-            onToolDeleted={handleToolDeleted}
-            onSelectTool={handleSelectTool}
-            onNavigate={handleTabChange}
-            onRefreshTools={fetchApiTools}
-          />
+          <Suspense fallback={<RouteLoadingFallback />}>
+            <AdminView
+              tools={tools}
+              onToolAdded={handleToolAdded}
+              onToolUpdated={handleToolUpdated}
+              onToolDeleted={handleToolDeleted}
+              onSelectTool={handleSelectTool}
+              onNavigate={handleTabChange}
+              onRefreshTools={fetchApiTools}
+            />
+          </Suspense>
         )}
 
         {activeTab === 'tool-detail' && selectedTool && (
-          <ToolDetailView
-            tool={selectedTool}
-            allTools={tools}
-            user={currentUser}
-            onBack={() => handleTabChange('directory')}
-            onSelectTool={handleSelectTool}
-            onSubscribePlan={() => {
-              window.open(selectedTool.url, '_blank', 'noopener,noreferrer');
-            }}
-            onAddReview={handleAddReview}
-          />
+          <Suspense fallback={<RouteLoadingFallback />}>
+            <ToolDetailView
+              tool={selectedTool}
+              allTools={tools}
+              user={currentUser}
+              onBack={() => handleTabChange('directory')}
+              onSelectTool={handleSelectTool}
+              onSubscribePlan={() => {
+                window.open(selectedTool.url, '_blank', 'noopener,noreferrer');
+              }}
+              onAddReview={handleAddReview}
+            />
+          </Suspense>
         )}
       </main>
 
       {/* AI Matcher Modal */}
-      <AIMatcherModal
-        isOpen={isMatcherOpen}
-        onClose={() => setIsMatcherOpen(false)}
-        tools={tools}
-        onSelectTool={handleSelectTool}
-        onNavigate={handleTabChange}
-      />
+      {isMatcherOpen && (
+        <Suspense fallback={null}>
+          <AIMatcherModal
+            isOpen={isMatcherOpen}
+            onClose={() => setIsMatcherOpen(false)}
+            tools={tools}
+            onSelectTool={handleSelectTool}
+            onNavigate={handleTabChange}
+          />
+        </Suspense>
+      )}
 
       {/* Bookmarks / Saved Stack Drawer */}
-      <BookmarksDrawer
-        isOpen={isBookmarksOpen}
-        onClose={() => setIsBookmarksOpen(false)}
-        bookmarkedIds={bookmarkedIds}
-        tools={tools}
-        onSelectTool={handleSelectTool}
-        onRemoveBookmark={handleToggleBookmark}
-        onClearAll={handleClearBookmarks}
-        onNavigate={handleTabChange}
-      />
+      {isBookmarksOpen && (
+        <Suspense fallback={null}>
+          <BookmarksDrawer
+            isOpen={isBookmarksOpen}
+            onClose={() => setIsBookmarksOpen(false)}
+            bookmarkedIds={bookmarkedIds}
+            tools={tools}
+            onSelectTool={handleSelectTool}
+            onRemoveBookmark={handleToggleBookmark}
+            onClearAll={handleClearBookmarks}
+            onNavigate={handleTabChange}
+          />
+        </Suspense>
+      )}
 
       {/* Video Demo Modal */}
-      <VideoPreviewModal
-        tool={videoPreviewTool}
-        isOpen={!!videoPreviewTool}
-        onClose={() => setVideoPreviewTool(null)}
-        onSelectTool={handleSelectTool}
-      />
+      {!!videoPreviewTool && (
+        <Suspense fallback={null}>
+          <VideoPreviewModal
+            tool={videoPreviewTool}
+            isOpen={!!videoPreviewTool}
+            onClose={() => setVideoPreviewTool(null)}
+            onSelectTool={handleSelectTool}
+          />
+        </Suspense>
+      )}
 
       {/* Auth Modal */}
-      <AuthModal
-        isOpen={isAuthOpen}
-        onClose={() => setIsAuthOpen(false)}
-        onLoginSuccess={(user) => {
-          setCurrentUser(user);
-          setIsAuthOpen(false);
-        }}
-      />
+      {isAuthOpen && (
+        <Suspense fallback={null}>
+          <AuthModal
+            isOpen={isAuthOpen}
+            onClose={() => setIsAuthOpen(false)}
+            onLoginSuccess={(user) => {
+              setCurrentUser(user);
+              setIsAuthOpen(false);
+            }}
+          />
+        </Suspense>
+      )}
 
       {/* User Account Modal */}
-      {currentUser && (
-        <UserAccountModal
-          isOpen={isAccountOpen}
-          onClose={() => setIsAccountOpen(false)}
-          user={currentUser}
-          allTools={tools}
-          onLogout={() => {
-            setCurrentUser(null);
-            setIsAccountOpen(false);
-          }}
-          onUpgradePlan={() => {
-            setIsAccountOpen(false);
-            handleTabChange('deals');
-          }}
-          onCancelSubscription={() => {
-            setCurrentUser((prev) =>
-              prev ? { ...prev, subscription: undefined } : null
-            );
-          }}
-          onSelectTool={handleSelectTool}
-          onOpenSubmitTool={() => {
-            setIsAccountOpen(false);
-            setIsSuggestOpen(true);
-          }}
-        />
+      {currentUser && isAccountOpen && (
+        <Suspense fallback={null}>
+          <UserAccountModal
+            isOpen={isAccountOpen}
+            onClose={() => setIsAccountOpen(false)}
+            user={currentUser}
+            allTools={tools}
+            onLogout={() => {
+              setCurrentUser(null);
+              setIsAccountOpen(false);
+            }}
+            onUpgradePlan={() => {
+              setIsAccountOpen(false);
+              handleTabChange('deals');
+            }}
+            onCancelSubscription={() => {
+              setCurrentUser((prev) =>
+                prev ? { ...prev, subscription: undefined } : null
+              );
+            }}
+            onSelectTool={handleSelectTool}
+            onOpenSubmitTool={() => {
+              setIsAccountOpen(false);
+              setIsSuggestOpen(true);
+            }}
+          />
+        </Suspense>
       )}
 
       {/* Suggest a Tool Modal */}
-      <SuggestToolModal
-        isOpen={isSuggestOpen}
-        onClose={() => setIsSuggestOpen(false)}
-      />
+      {isSuggestOpen && (
+        <Suspense fallback={null}>
+          <SuggestToolModal
+            isOpen={isSuggestOpen}
+            onClose={() => setIsSuggestOpen(false)}
+          />
+        </Suspense>
+      )}
 
       {/* Floating Ask AI Matcher Copilot Widget (Bottom Right) */}
       <div className="fixed bottom-6 right-6 z-40">

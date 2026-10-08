@@ -189,7 +189,10 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                       <img
                         src={tool.logoUrl}
                         alt={`${tool.name} logo`}
+                        width={72}
+                        height={72}
                         loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-contain"
                       />
                     </div>

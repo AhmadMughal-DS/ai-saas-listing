@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useDeferredValue } from 'react';
 import { AITool, ActiveTab } from '../types';
 import { 
   TrendingUp, 
@@ -36,6 +36,7 @@ export const RankingsView: React.FC<RankingsViewProps> = ({
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
   const [pricingFilter, setPricingFilter] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const deferredSearch = useDeferredValue(searchQuery);
 
   const categories = useMemo(() => {
     const set = new Set(tools.map((t) => t.category));
@@ -43,13 +44,15 @@ export const RankingsView: React.FC<RankingsViewProps> = ({
   }, [tools]);
 
   const sortedAndFilteredTools = useMemo(() => {
+    const cleanSearch = deferredSearch.trim().toLowerCase();
     let list = tools.filter((t) => {
       const matchCat = categoryFilter === 'All' || t.category === categoryFilter;
       const matchPricing = pricingFilter === 'All' || t.pricingType === pricingFilter;
       const matchSearch =
-        t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.tagline.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.category.toLowerCase().includes(searchQuery.toLowerCase());
+        !cleanSearch ||
+        t.name.toLowerCase().includes(cleanSearch) ||
+        t.tagline.toLowerCase().includes(cleanSearch) ||
+        t.category.toLowerCase().includes(cleanSearch);
       return matchCat && matchPricing && matchSearch;
     });
 
@@ -64,7 +67,7 @@ export const RankingsView: React.FC<RankingsViewProps> = ({
     }
 
     return list;
-  }, [tools, rankingFilter, categoryFilter, pricingFilter, searchQuery]);
+  }, [tools, rankingFilter, categoryFilter, pricingFilter, deferredSearch]);
 
   const maxTraffic = useMemo(() => {
     return Math.max(...tools.map((t) => t.monthlyVisits || 1), 1000000);
@@ -272,6 +275,10 @@ export const RankingsView: React.FC<RankingsViewProps> = ({
                           <img
                             src={tool.logoUrl}
                             alt={tool.name}
+                            width={36}
+                            height={36}
+                            loading="lazy"
+                            decoding="async"
                             className="w-full h-full object-contain rounded-lg"
                           />
                         </a>

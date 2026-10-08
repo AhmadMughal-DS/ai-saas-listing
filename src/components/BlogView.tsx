@@ -203,6 +203,8 @@ export const BlogView: React.FC<BlogViewProps> = ({
             height={675}
             className="w-full h-full object-cover"
             loading="eager"
+            decoding="async"
+            {...({ fetchpriority: 'high' } as any)}
           />
         </div>
 
@@ -428,6 +430,7 @@ export const BlogView: React.FC<BlogViewProps> = ({
                 height={500}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 loading="eager"
+                decoding="async"
               />
               <div className="absolute top-4 left-4">
                 <span className="px-3.5 py-1 rounded-full text-xs font-bold bg-indigo-600 text-white shadow-xs">

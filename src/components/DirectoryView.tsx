@@ -1,7 +1,6 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useDeferredValue, Suspense } from 'react';
 import { AITool, ActiveTab } from '../types';
 import { trackSearch, trackCategoryView } from '../lib/analytics';
-import { Hero3DModel } from './Hero3DModel';
 import { 
   Search, 
   Star, 
@@ -21,6 +20,11 @@ import {
   LockOpen,
   Plus
 } from 'lucide-react';
+
+// Lazy-load Three.js 3D backdrop to isolate ~635KB dependency from initial critical JS payload
+const Hero3DModel = React.lazy(() =>
+  import('./Hero3DModel').then((m) => ({ default: m.Hero3DModel }))
+);
 
 interface DirectoryViewProps {
   tools: AITool[];
@@ -52,6 +56,7 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
   isLoading = false,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const deferredSearchQuery = useDeferredValue(searchQuery);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [featureFilter, setFeatureFilter] = useState<'all' | 'traffic' | 'growth' | 'deals' | 'api' | 'opensource' | 'featured' | 'verified'>('all');
   const [sortBy, setSortBy] = useState<'popular' | 'traffic' | 'rating' | 'newest'>('popular');
@@ -62,6 +67,7 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
   }, [tools]);
 
   const filteredTools = useMemo(() => {
+    const cleanSearch = deferredSearchQuery.trim().toLowerCase();
     let list = tools.filter((t) => {
       const matchesCategory =
         selectedCategory === 'All' || 
@@ -69,10 +75,11 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
         selectedCategory.toLowerCase().includes(t.category.toLowerCase());
       
       const matchesSearch =
-        t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.tagline.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.keyFeatures?.some((f) => f.toLowerCase().includes(searchQuery.toLowerCase()));
+        !cleanSearch ||
+        t.name.toLowerCase().includes(cleanSearch) ||
+        t.tagline.toLowerCase().includes(cleanSearch) ||
+        t.category.toLowerCase().includes(cleanSearch) ||
+        t.keyFeatures?.some((f) => f.toLowerCase().includes(cleanSearch));
 
       let matchesFeature = true;
       if (featureFilter === 'deals') matchesFeature = Boolean(t.deal);
@@ -97,7 +104,7 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
     }
 
     return list;
-  }, [tools, selectedCategory, searchQuery, featureFilter, sortBy]);
+  }, [tools, selectedCategory, deferredSearchQuery, featureFilter, sortBy]);
 
   // Debounced search tracking for GA4 — fires only when user pauses typing (700ms)
   useEffect(() => {
@@ -118,8 +125,10 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
       <section className="relative pt-32 pb-16 px-4 sm:px-8 max-w-[1440px] mx-auto text-center flex flex-col items-center">
         {/* Main Headline with 3D Model in the Background */}
         <div className="relative w-full flex flex-col items-center justify-center mb-8 py-4 sm:py-6">
-          {/* 3D WebGL Mesh Backdrop directly centered behind headline */}
-          <Hero3DModel />
+          {/* 3D WebGL Mesh Backdrop directly centered behind headline - Lazy Loaded with zero-CLS placeholder */}
+          <Suspense fallback={<div className="absolute top-[58%] sm:top-[62%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[380px] sm:w-[580px] md:w-[720px] lg:w-[860px] h-[400px] sm:h-[490px] md:h-[540px] pointer-events-none select-none -z-0" />}>
+            <Hero3DModel />
+          </Suspense>
 
           <div className="relative z-10 flex flex-col items-center max-w-4xl">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-semibold tracking-wide uppercase mb-6 shadow-xs backdrop-blur-xs">
@@ -362,6 +371,9 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
                         <img
                           src={partner.logoUrl}
                           alt={partner.name}
+                          width={48}
+                          height={48}
+                          decoding="async"
                           className="w-full h-full object-contain rounded-lg"
                         />
                       </a>
@@ -577,7 +589,10 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
                     <img
                       src={tool.logoUrl}
                       alt={`${tool.name} logo`}
+                      width={72}
+                      height={72}
                       loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-contain"
                     />
                   </div>
