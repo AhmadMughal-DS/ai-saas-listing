@@ -767,7 +767,7 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
               Browse AI Tools by Category
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Explore 120+ verified tools across 8 curated categories with live traffic and comparison data.
+              Explore 120+ tools across 8 curated categories with estimated traffic and comparison data.
             </p>
           </div>
           <a

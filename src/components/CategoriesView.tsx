@@ -146,7 +146,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
         <header className="mb-12">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-semibold uppercase mb-4 shadow-xs">
             <Icon className="w-4 h-4 text-indigo-600" />
-            <span>Curated Taxonomy • {categoryTools.length} Verified Tools</span>
+            <span>Curated Taxonomy • {categoryTools.length} Tools</span>
           </div>
 
           <h1 className="font-heading text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight mb-4">
@@ -154,7 +154,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
           </h1>
 
           <p className="text-base sm:text-lg text-slate-600 max-w-3xl leading-relaxed">
-            Discover and compare the top {currentCategory.name.toLowerCase()} AI tools in 2026. Explore {categoryTools.length} verified solutions benchmarked on real monthly web traffic, core capabilities, developer pricing plans, and authentic industry reviews on ToolverAI.
+            Discover and compare the top {currentCategory.name.toLowerCase()} AI tools in 2026. Explore {categoryTools.length} curated solutions benchmarked on estimated monthly web traffic, core capabilities, developer pricing plans, and authentic industry reviews on ToolverAI.
           </p>
         </header>
 

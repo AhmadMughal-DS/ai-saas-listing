@@ -66,7 +66,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenSuggestTool })
           <div className="flex flex-col items-center sm:items-start gap-3">
             <Logo size="md" showText={true} onClick={() => onNavigate('directory')} />
             <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs text-center sm:text-left leading-relaxed">
-              The leading AI tools directory — discover, compare, and track 1000+ AI tools by real monthly traffic, pricing, and verified deals.
+              The leading AI tools directory — discover, compare, and track 120+ AI tools by estimated monthly traffic, pricing, and deals.
             </p>
             <a
               href="mailto:marketing@toolverai.com"
@@ -182,6 +182,45 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenSuggestTool })
               </ul>
             </div>
 
+            {/* Editorial & Trust */}
+            <div>
+              <h3 className="font-semibold text-slate-800 dark:text-slate-200 mb-3 text-xs uppercase tracking-wider">Trust & Standards</h3>
+              <ul className="space-y-2 text-sm">
+                <li>
+                  <a
+                    href="/editorial-policy"
+                    className="text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                  >
+                    Editorial Policy
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="/how-we-rank-tools"
+                    className="text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                  >
+                    Ranking Methodology
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="/about"
+                    className="text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                  >
+                    About ToolverAI
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="/affiliate-disclosure"
+                    className="text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                  >
+                    Affiliate Disclosure
+                  </a>
+                </li>
+              </ul>
+            </div>
+
             {/* Legal */}
             <div>
               <h3 className="font-semibold text-slate-800 dark:text-slate-200 mb-3 text-xs uppercase tracking-wider">Legal</h3>
@@ -200,22 +239,6 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenSuggestTool })
                     className="text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                   >
                     Terms of Service
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="/affiliate-disclosure"
-                    className="text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-                  >
-                    Affiliate Disclosure
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="/about"
-                    className="text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-                  >
-                    About ToolverAI
                   </a>
                 </li>
                 <li>
@@ -281,10 +304,10 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenSuggestTool })
             <a href="https://toolverai.com" className="hover:text-indigo-600 transition-colors">
               toolverai.com
             </a>
-            ). Real-time traffic data, model comparisons, and verified AI deals.
+            ). Estimated traffic data, model comparisons, and curated AI deals.
           </p>
           <p className="text-xs text-slate-400 dark:text-slate-500 text-center sm:text-right">
-            Rankings based on real monthly web traffic.{' '}
+            Rankings based on estimated monthly web traffic.{' '}
             <span className="opacity-60">Not affiliated with listed AI tools.</span>
           </p>
         </div>

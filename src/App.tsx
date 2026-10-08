@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { AITool, ActiveTab, ToolReview, UserAccount } from './types';
+import { AITool, ActiveTab, ToolReview, UserAccount, BlogPost } from './types';
+import { getArticleBySlug } from './data/blogData';
 import { CyberBackground } from './components/CyberBackground';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
@@ -83,6 +84,14 @@ const getAlternativesSlugFromUrl = (): string | null => {
   return match && match[1] ? decodeURIComponent(match[1]) : null;
 };
 
+// Helper to parse URL path into blog article slug (e.g. /blog/how-to-choose-an-ai-coding-tool)
+const getArticleSlugFromUrl = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  const path = window.location.pathname.toLowerCase();
+  const match = path.match(/\/blog\/([^/?#]+)/i);
+  return match && match[1] ? decodeURIComponent(match[1]) : null;
+};
+
 // Helper to parse URL path/hash into ActiveTab
 const getInitialTabFromUrl = (): ActiveTab => {
   if (typeof window === 'undefined') return 'directory';
@@ -126,6 +135,7 @@ export const App: React.FC = () => {
   const [categorySlug, setCategorySlug] = useState<string | null>(getCategorySlugFromUrl);
   const [comparisonPair, setComparisonPair] = useState<{ slug1: string; slug2: string } | null>(getComparisonPairFromUrl);
   const [alternativesSlug, setAlternativesSlug] = useState<string | null>(getAlternativesSlugFromUrl);
+  const [articleSlug, setArticleSlug] = useState<string | null>(getArticleSlugFromUrl);
   const [selectedTool, setSelectedTool] = useState<AITool | null>(null);
   const [videoPreviewTool, setVideoPreviewTool] = useState<AITool | null>(null);
   const [isMatcherOpen, setIsMatcherOpen] = useState<boolean>(false);
@@ -160,6 +170,12 @@ export const App: React.FC = () => {
     return tools.find((t) => t.slug === alternativesSlug) || null;
   }, [alternativesSlug, tools]);
 
+  // Resolve blog article from articleSlug
+  const selectedArticle = useMemo<BlogPost | null>(() => {
+    if (activeTab !== 'blog' || !articleSlug) return null;
+    return getArticleBySlug(articleSlug) || null;
+  }, [activeTab, articleSlug]);
+
   // Clear any residual tools from localStorage to ensure 100% pure MongoDB usage
   useEffect(() => {
     try {
@@ -178,6 +194,7 @@ export const App: React.FC = () => {
       setCategorySlug(getCategorySlugFromUrl());
       setComparisonPair(getComparisonPairFromUrl());
       setAlternativesSlug(getAlternativesSlugFromUrl());
+      setArticleSlug(getArticleSlugFromUrl());
     };
 
     window.addEventListener('popstate', handleLocationChange);
@@ -314,6 +331,9 @@ export const App: React.FC = () => {
     if (tab !== 'alternatives') {
       setAlternativesSlug(null);
     }
+    if (tab !== 'blog') {
+      setArticleSlug(null);
+    }
     setActiveTab(tab);
     try {
       // Map tabs to clean SEO-friendly URL paths
@@ -434,6 +454,7 @@ export const App: React.FC = () => {
         selectedTool={activeTab === 'alternatives' ? alternativesTool : selectedTool}
         categorySlug={categorySlug}
         comparisonTools={comparisonTools}
+        selectedArticle={selectedArticle}
       />
 
       {/* Dynamic Cyber Background */}
@@ -538,7 +559,31 @@ export const App: React.FC = () => {
           />
         )}
 
-        {activeTab === 'blog' && <BlogView />}
+        {activeTab === 'blog' && (
+          <BlogView
+            articleSlug={articleSlug}
+            onSelectArticle={(slug) => {
+              setArticleSlug(slug);
+              setActiveTab('blog');
+              const targetPath = `/blog/${slug}`;
+              if (window.location.pathname !== targetPath) {
+                window.history.pushState({ tab: 'blog', articleSlug: slug }, '', targetPath);
+              }
+              trackPageView(targetPath);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onBackToBlog={() => {
+              setArticleSlug(null);
+              const targetPath = '/blog';
+              if (window.location.pathname !== targetPath) {
+                window.history.pushState({ tab: 'blog' }, '', targetPath);
+              }
+              trackPageView(targetPath);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onNavigate={handleTabChange}
+          />
+        )}
 
         {activeTab === 'admin' && (
           <AdminView

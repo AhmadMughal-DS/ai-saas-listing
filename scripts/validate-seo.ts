@@ -365,6 +365,78 @@ async function runValidation() {
       expectedRedirect: '/alternatives/cursor',
       isRedirect: true,
     },
+    // ── Day 4: Blog Hub & Editorial Articles ─────────────────────────────
+    {
+      route: '/blog',
+      expectedStatus: 200,
+      expectedCanonical: 'https://toolverai.com/blog',
+      expectedRobots: 'index, follow',
+      isRedirect: false,
+    },
+    {
+      route: '/blog/how-to-choose-an-ai-coding-tool',
+      expectedStatus: 200,
+      expectedCanonical: 'https://toolverai.com/blog/how-to-choose-an-ai-coding-tool',
+      expectedRobots: 'index, follow',
+      isRedirect: false,
+    },
+    {
+      route: '/blog/ai-coding-assistants-vs-autonomous-coding-agents',
+      expectedStatus: 200,
+      expectedCanonical: 'https://toolverai.com/blog/ai-coding-assistants-vs-autonomous-coding-agents',
+      expectedRobots: 'index, follow',
+      isRedirect: false,
+    },
+    {
+      route: '/blog/how-to-choose-an-ai-image-generator',
+      expectedStatus: 200,
+      expectedCanonical: 'https://toolverai.com/blog/how-to-choose-an-ai-image-generator',
+      expectedRobots: 'index, follow',
+      isRedirect: false,
+    },
+    {
+      route: '/blog/how-to-choose-an-ai-video-generator',
+      expectedStatus: 200,
+      expectedCanonical: 'https://toolverai.com/blog/how-to-choose-an-ai-video-generator',
+      expectedRobots: 'index, follow',
+      isRedirect: false,
+    },
+    {
+      route: '/blog/ai-agents-vs-ai-assistants-key-differences',
+      expectedStatus: 200,
+      expectedCanonical: 'https://toolverai.com/blog/ai-agents-vs-ai-assistants-key-differences',
+      expectedRobots: 'index, follow',
+      isRedirect: false,
+    },
+    {
+      route: '/blog/fake-nonexistent-guide',
+      expectedStatus: 404,
+      expectedCanonical: 'https://toolverai.com/blog/fake-nonexistent-guide',
+      expectedRobots: 'noindex, nofollow',
+      isRedirect: false,
+    },
+    // Case sensitivity 301 Redirect for Blog Articles
+    {
+      route: '/blog/How-To-Choose-An-AI-Coding-Tool',
+      expectedStatus: 301,
+      expectedRedirect: '/blog/how-to-choose-an-ai-coding-tool',
+      isRedirect: true,
+    },
+    // ── Day 4: Editorial & Trust Pages ───────────────────────────────────
+    {
+      route: '/editorial-policy',
+      expectedStatus: 200,
+      expectedCanonical: 'https://toolverai.com/editorial-policy',
+      expectedRobots: 'index, follow',
+      isRedirect: false,
+    },
+    {
+      route: '/how-we-rank-tools',
+      expectedStatus: 200,
+      expectedCanonical: 'https://toolverai.com/how-we-rank-tools',
+      expectedRobots: 'index, follow',
+      isRedirect: false,
+    },
   ];
 
   for (const tc of testCases) {
@@ -542,6 +614,20 @@ async function runValidation() {
   }
   if (alternativesMatches.length === 0) {
     sitemapErrors.push('Expected curated alternatives in sitemap, found 0');
+  }
+
+  // Extract blog post URLs from sitemap
+  const blogMatches = sitemapRes.body.match(/<loc>https:\/\/toolverai\.com\/blog\/([^<]+)<\/loc>/g) || [];
+  if (blogMatches.length < 5) {
+    sitemapErrors.push(`Expected at least 5 published blog articles in sitemap, found ${blogMatches.length}`);
+  }
+
+  // Check trust pages in sitemap
+  if (!sitemapRes.body.includes('<loc>https://toolverai.com/editorial-policy</loc>')) {
+    sitemapErrors.push('Missing /editorial-policy in sitemap');
+  }
+  if (!sitemapRes.body.includes('<loc>https://toolverai.com/how-we-rank-tools</loc>')) {
+    sitemapErrors.push('Missing /how-we-rank-tools in sitemap');
   }
 
   // Ensure no reversed comparisons in sitemap

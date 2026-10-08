@@ -116,18 +116,31 @@ export interface BlogPost {
   id: string;
   slug: string;
   title: string;
+  seoTitle?: string;
+  metaDescription?: string;
   excerpt: string;
   content: string;
   coverImage: string;
-  category: 'AI News' | 'Guides & Tutorials' | 'Product Updates' | 'Founder Interviews' | 'Case Studies';
+  heroImage?: string;
+  topic?: string;
+  category: string;
   readTime: string;
   publishedDate: string;
+  publishedAt?: string;
+  updatedAt?: string;
+  status?: 'published' | 'draft';
   isFeatured?: boolean;
   author: {
     name: string;
     role: string;
     avatar: string;
+    url?: string;
   };
+  relatedToolSlugs?: string[];
+  relatedCategorySlugs?: string[];
+  relatedComparisonSlugs?: string[];
+  relatedAlternativeSlugs?: string[];
+  relatedArticleSlugs?: string[];
 }
 
 export interface MembershipPlan {

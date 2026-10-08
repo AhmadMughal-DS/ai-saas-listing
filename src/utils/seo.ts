@@ -1,4 +1,4 @@
-import { ActiveTab, AITool } from '../types';
+import { ActiveTab, AITool, BlogPost } from '../types';
 
 export interface SEOData {
   title: string;
@@ -30,8 +30,67 @@ export function generateSEOData(
   activeTab: ActiveTab,
   tool: AITool | null,
   categorySlugParam?: string | null,
-  comparisonTools?: [AITool, AITool] | null
+  comparisonTools?: [AITool, AITool] | null,
+  selectedArticle?: BlogPost | null
 ): SEOData {
+  // ── Standalone Blog Article ──────────────────────────────────────────
+  if (activeTab === 'blog' && selectedArticle) {
+    const article = selectedArticle;
+    const articleUrl = `${BASE_URL}/blog/${article.slug}`;
+    const articleTitle = `${article.seoTitle || article.title} | ToolverAI`;
+    const articleDesc = article.metaDescription || article.excerpt;
+    const articleImage = article.heroImage || article.coverImage || DEFAULT_IMAGE;
+
+    return {
+      title: articleTitle,
+      description: articleDesc,
+      canonicalUrl: articleUrl,
+      ogType: 'article',
+      ogImage: articleImage,
+      keywords: [
+        article.topic || 'AI Guides',
+        'AI tools evaluation',
+        article.title,
+        'ToolverAI editorial',
+      ],
+      jsonLd: [
+        {
+          '@context': 'https://schema.org',
+          '@type': 'BlogPosting',
+          '@id': `${articleUrl}#article`,
+          headline: article.title,
+          description: articleDesc,
+          image: articleImage,
+          datePublished: article.publishedAt || article.publishedDate,
+          dateModified: article.updatedAt || article.publishedAt || article.publishedDate,
+          author: {
+            '@type': 'Organization',
+            name: article.author.name || 'ToolverAI Editorial Team',
+            url: `${BASE_URL}/about`,
+          },
+          publisher: {
+            '@type': 'Organization',
+            name: 'ToolverAI',
+            url: BASE_URL,
+            logo: { '@type': 'ImageObject', url: `${BASE_URL}/og-banner.png` },
+          },
+          mainEntityOfPage: {
+            '@type': 'WebPage',
+            '@id': articleUrl,
+          },
+        },
+        {
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: `${BASE_URL}/` },
+            { '@type': 'ListItem', position: 2, name: 'Blog', item: `${BASE_URL}/blog` },
+            { '@type': 'ListItem', position: 3, name: article.title, item: articleUrl },
+          ],
+        },
+      ],
+    };
+  }
   // ── Tool Detail Page ──────────────────────────────────────────────────
   if (activeTab === 'tool-detail' && tool) {
     const cleanName = tool.name.trim();
@@ -127,8 +186,8 @@ export function generateSEOData(
   switch (activeTab) {
     case 'rankings':
       return {
-        title: 'Top AI Tools by Monthly Traffic — Verified Rankings 2026 | ToolverAI',
-        description: 'Explore verified monthly traffic statistics, growth velocity, and user volume leaderboards across Coding, LLMs, Image, and Audio AI platforms. Updated weekly.',
+        title: 'Top AI Tools by Monthly Traffic — Estimated Traffic Rankings 2026 | ToolverAI',
+        description: 'Explore estimated monthly traffic statistics, growth velocity, and user volume leaderboards across Coding, LLMs, Image, and Audio AI platforms. Updated weekly.',
         canonicalUrl: `${BASE_URL}/rankings`,
         ogType: 'website',
         ogImage: DEFAULT_IMAGE,
@@ -146,7 +205,7 @@ export function generateSEOData(
             '@type': 'CollectionPage',
             '@id': `${BASE_URL}/rankings#page`,
             name: 'AI Tools Traffic Rankings & Growth Leaderboard',
-            description: 'Verified monthly web traffic rankings and engagement stats for top generative AI software.',
+            description: 'Estimated monthly web traffic rankings and engagement stats for top generative AI software.',
             url: `${BASE_URL}/rankings`,
             publisher: { '@type': 'Organization', name: 'ToolverAI', url: BASE_URL },
           },
@@ -246,7 +305,7 @@ export function generateSEOData(
       if (tool) {
         const cleanName = tool.name.trim();
         const title = `Best ${cleanName} Alternatives in 2026 | ToolverAI`;
-        const description = `Looking for the best ${cleanName} alternatives in 2026? Compare top verified ${tool.category} AI tools by pricing, monthly traffic, features, and authentic user reviews on ToolverAI.`;
+        const description = `Looking for the best ${cleanName} alternatives in 2026? Compare top ${tool.category} AI tools by pricing, estimated monthly traffic, features, and authentic user reviews on ToolverAI.`;
         const canonicalUrl = `${BASE_URL}/alternatives/${tool.slug || tool.id}`;
 
         return {
@@ -288,7 +347,7 @@ export function generateSEOData(
 
       return {
         title: 'Best AI Tool Alternatives & Competitor Directory | ToolverAI',
-        description: 'Discover top alternative AI software for ChatGPT, Cursor, Midjourney, and leading AI models. Verified feature matrices and pricing breakdowns on ToolverAI.',
+        description: 'Discover top alternative AI software for ChatGPT, Cursor, Midjourney, and leading AI models. Detailed feature matrices and pricing breakdowns on ToolverAI.',
         canonicalUrl: `${BASE_URL}/compare`,
         ogType: 'website',
         ogImage: DEFAULT_IMAGE,
@@ -383,7 +442,7 @@ export function generateSEOData(
           .join(' ');
         const catCanonical = `${BASE_URL}/categories/${catSlug}`;
         const catTitle = `Best ${catName} Tools in 2026 | ToolverAI`;
-        const catDesc = `Discover the best ${catName} tools in 2026. Compare top verified AI tools ranked by monthly traffic, pricing, and authentic user reviews on ToolverAI.`;
+        const catDesc = `Discover the best ${catName} tools in 2026. Compare top ${catName} AI tools ranked by estimated monthly traffic, pricing, and authentic user reviews on ToolverAI.`;
 
         return {
           title: catTitle,
@@ -422,7 +481,7 @@ export function generateSEOData(
 
       return {
         title: 'AI Tools by Category — Coding, Writing, Image, Video & More | ToolverAI',
-        description: 'Browse 1000+ AI tools organized by category. Find the best Coding AI, Writing AI, Image Generation, Video AI, Marketing AI, and more. All tools ranked and verified.',
+        description: 'Browse 120+ AI tools organized across 8 core categories. Find the best Coding AI, Writing AI, Image Generation, Video AI, Marketing AI, and more on ToolverAI.',
         canonicalUrl: `${BASE_URL}/categories`,
         ogType: 'website',
         ogImage: DEFAULT_IMAGE,
@@ -518,7 +577,7 @@ export function generateSEOData(
     default:
       return {
         title: 'Best AI Tools & AI Tools Directory | ToolverAI',
-        description: 'Explore the best AI tools in 2026. Discover, compare, and track top AI tools across coding, productivity, image, and video generation in our verified AI tools directory.',
+        description: 'Explore the best AI tools in 2026. Discover, compare, and track top AI tools across coding, productivity, image, and video generation in our curated AI tools directory.',
         canonicalUrl: `${BASE_URL}/`,
         ogType: 'website',
         ogImage: DEFAULT_IMAGE,
@@ -544,7 +603,7 @@ export function generateSEOData(
               width: 1200,
               height: 630,
             },
-            description: 'ToolverAI is the leading AI tools discovery platform with rankings, comparisons, verified deals, and reviews.',
+            description: 'ToolverAI is the leading AI tools discovery platform with rankings, comparisons, curated deals, and reviews.',
             sameAs: ['https://x.com/toolverai'],
           },
           {
@@ -553,7 +612,7 @@ export function generateSEOData(
             '@id': `${BASE_URL}/#website`,
             url: BASE_URL,
             name: 'ToolverAI',
-            description: 'Discover, compare and track the best AI tools. Real traffic data, verified deals, and expert reviews.',
+            description: 'Discover, compare and track the best AI tools. Estimated traffic data, curated deals, and software reviews.',
             publisher: { '@id': `${BASE_URL}/#organization` },
             potentialAction: {
               '@type': 'SearchAction',

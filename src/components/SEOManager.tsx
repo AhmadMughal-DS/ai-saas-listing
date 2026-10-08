@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActiveTab, AITool } from '../types';
+import { ActiveTab, AITool, BlogPost } from '../types';
 import { generateSEOData, applySEOMetaTags, SEOData } from '../utils/seo';
 import { Globe, Copy, Check, Eye, X, Code, Share2, Sparkles, Search, CheckCircle2, ExternalLink } from 'lucide-react';
 
@@ -8,6 +8,7 @@ interface SEOManagerProps {
   selectedTool: AITool | null;
   categorySlug?: string | null;
   comparisonTools?: [AITool, AITool] | null;
+  selectedArticle?: BlogPost | null;
   showFloatingInspectorButton?: boolean;
 }
 
@@ -16,19 +17,20 @@ export const SEOManager: React.FC<SEOManagerProps> = ({
   selectedTool,
   categorySlug,
   comparisonTools,
+  selectedArticle,
   showFloatingInspectorButton = true,
 }) => {
-  const [currentSEO, setCurrentSEO] = useState<SEOData>(() => generateSEOData(activeTab, selectedTool, categorySlug, comparisonTools));
+  const [currentSEO, setCurrentSEO] = useState<SEOData>(() => generateSEOData(activeTab, selectedTool, categorySlug, comparisonTools, selectedArticle));
   const [isInspectorOpen, setIsInspectorOpen] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [activeTabPreview, setActiveTabPreview] = useState<'google' | 'social' | 'schema'>('google');
 
-  // Reactively apply SEO updates to <head> whenever activeTab, selectedTool, categorySlug or comparisonTools changes
+  // Reactively apply SEO updates to <head> whenever activeTab, selectedTool, categorySlug, comparisonTools, or selectedArticle changes
   useEffect(() => {
-    const seo = generateSEOData(activeTab, selectedTool, categorySlug, comparisonTools);
+    const seo = generateSEOData(activeTab, selectedTool, categorySlug, comparisonTools, selectedArticle);
     setCurrentSEO(seo);
     applySEOMetaTags(seo);
-  }, [activeTab, selectedTool, categorySlug, comparisonTools]);
+  }, [activeTab, selectedTool, categorySlug, comparisonTools, selectedArticle]);
 
   const handleCopy = (text: string, key: string) => {
     navigator.clipboard.writeText(text);

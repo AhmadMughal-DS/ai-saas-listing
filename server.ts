@@ -24,6 +24,7 @@ import {
   getToolAlternatives,
   getRelatedComparisonsForPair,
 } from './src/utils/programmaticSeo';
+import { getPublishedArticles, getArticleBySlug } from './src/data/blogData';
 
 dotenv.config();
 
@@ -1395,7 +1396,7 @@ async function startServer() {
         });
       }
 
-      const prompt = `You are the chief AI Analyst for ToolverAI (toolverai.com, an AI directory combining Toolify.ai traffic intelligence and verified AI deals).
+      const prompt = `You are the chief AI Analyst for ToolverAI (toolverai.com, an AI directory combining Toolify.ai traffic intelligence and curated AI deals).
 The user wants recommendations for:
 - User Goal / Query: "${userGoal || 'General AI tools'}"
 - Budget / Pricing Preference: "${budget || 'Any'}"
@@ -1678,7 +1679,7 @@ Only return valid JSON.`;
         const htmlTemplate = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
         const baseUrl = resolveBaseUrl(req);
         const title = 'Best AI Tools & AI Tools Directory | ToolverAI';
-        const desc = 'Explore the best AI tools in 2026. Discover, compare, and track top AI tools across coding, productivity, image, and video generation in our verified AI tools directory.';
+        const desc = 'Explore the best AI tools in 2026. Discover, compare, and track top AI tools across coding, productivity, image, and video generation in our curated AI tools directory.';
         const canonical = `${baseUrl}/`;
         const tools = await getToolsFromDbOrFallback();
 
@@ -1733,7 +1734,7 @@ Only return valid JSON.`;
 <main>
   <section>
     <h1>Discover, Compare &amp; Find the Best AI Tools</h1>
-    <p>ToolverAI is the premier AI tools directory and software discovery platform. Explore over 1000+ verified artificial intelligence applications, compare pricing and real monthly traffic rankings, discover exclusive deals, and supercharge your engineering, creative, and business workflows.</p>
+    <p>ToolverAI is the premier AI tools directory and software discovery platform. Explore 120+ artificial intelligence applications, compare pricing and estimated monthly traffic rankings, discover curated deals, and supercharge your engineering, creative, and business workflows.</p>
     <nav aria-label="Explore Core Features">
       <a href="/rankings">Traffic Rankings</a>
       <a href="/deals">Exclusive AI Deals</a>
@@ -1751,7 +1752,7 @@ Only return valid JSON.`;
   </section>
   <section>
     <h2>Trending &amp; Popular AI Tools in 2026</h2>
-    <p>The top artificial intelligence tools ranked by verified monthly web visits and community engagement:</p>
+    <p>The top artificial intelligence tools ranked by estimated monthly web visits and community engagement:</p>
     <ul>
       ${topTools.map((t) => `<li><a href="/tool/${t.slug || t.id}"><strong>${t.name}</strong></a> (${t.category}) — ${t.tagline || t.description?.slice(0, 80)} [${t.monthlyVisitsFormatted || 'N/A'} visits/mo | ${t.pricingType || 'Freemium'}]</li>`).join('\n      ')}
     </ul>
@@ -1893,8 +1894,8 @@ Only return valid JSON.`;
       <ul>
         <li><strong>Category:</strong> <a href="/categories/${categorySlug}">${tool.category}</a></li>
         <li><strong>Pricing Model:</strong> ${tool.pricingType || 'Freemium'}</li>
-        <li><strong>Monthly Web Visits:</strong> ${tool.monthlyVisitsFormatted || 'N/A'}</li>
-        <li><strong>Verified Rating:</strong> ${tool.rating || 4.5} / 5 (${tool.reviewCount || 1} reviews)</li>
+        <li><strong>Estimated Monthly Web Visits:</strong> ${tool.monthlyVisitsFormatted || 'N/A'}</li>
+        <li><strong>Community Rating:</strong> ${tool.rating || 4.5} / 5 (${tool.reviewCount || 1} reviews)</li>
         <li><strong>Official Website:</strong> <a href="${tool.url}" rel="nofollow noopener noreferrer" target="_blank">${cleanName}</a></li>
       </ul>
     </section>
@@ -1922,7 +1923,7 @@ Only return valid JSON.`;
       <p>
         <a href="/alternatives/${tool.slug || tool.id}">Top ${cleanName} Alternatives</a> |
         <a href="/compare">Compare ${cleanName} Side-by-Side</a> |
-        <a href="/deals">Browse Verified AI Discounts &amp; Deals</a> |
+        <a href="/deals">Browse Curated AI Discounts &amp; Deals</a> |
         <a href="/categories/${categorySlug}">All ${tool.category} Tools</a>
       </p>
     </section>
@@ -1976,7 +1977,7 @@ Only return valid JSON.`;
 
         const canonical = `${baseUrl}/categories/${normalizedCategory}`;
         const title = `Best ${categoryName} Tools in 2026 | ToolverAI`;
-        const desc = `Discover the best ${categoryName} tools in 2026. Compare ${categoryTools.length}+ verified AI tools ranked by monthly traffic, pricing, and authentic user reviews on ToolverAI.`;
+        const desc = `Discover the best ${categoryName} tools in 2026. Compare ${categoryTools.length}+ AI tools ranked by estimated monthly traffic, pricing, and authentic user reviews on ToolverAI.`;
 
         const relatedCategories = SSR_CATEGORIES.filter((c) => c.slug !== normalizedCategory);
 
@@ -2012,7 +2013,7 @@ Only return valid JSON.`;
 <main>
   <section>
     <h1>Best ${categoryName} Tools in 2026</h1>
-    <p>Discover the top ${categoryTools.length} verified ${categoryName} tools in 2026. Compare software features, pricing tiers, and monthly traffic analytics to find the ideal AI solution for your workflow.</p>
+    <p>Discover top ${categoryTools.length} ${categoryName} tools in 2026. Compare software features, pricing tiers, and estimated monthly traffic analytics to find the ideal AI solution for your workflow.</p>
   </section>
   <section>
     <h2>Top Ranked ${categoryName} Tools</h2>
@@ -2054,6 +2055,8 @@ Only return valid JSON.`;
       '/privacy-policy': 'privacy-policy.html',
       '/terms': 'terms.html',
       '/affiliate-disclosure': 'affiliate-disclosure.html',
+      '/editorial-policy': 'editorial-policy.html',
+      '/how-we-rank-tools': 'how-we-rank-tools.html',
     };
 
     Object.entries(staticPageMap).forEach(([routePath, fileName]) => {
@@ -2074,7 +2077,7 @@ Only return valid JSON.`;
         const htmlTemplate = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
         const baseUrl = resolveBaseUrl(req);
         const title = 'Submit an AI Tool — Get Listed on ToolverAI';
-        const desc = 'Submit your AI tool to the ToolverAI directory. Get reviewed, verified, and listed alongside 1000+ AI tools ranked by real monthly traffic.';
+        const desc = 'Submit your AI tool to the ToolverAI directory. Get reviewed and listed alongside 120+ AI tools ranked by estimated monthly traffic.';
         const canonical = `${baseUrl}/submit-tool`;
 
         const submitBodyHtml = `
@@ -2113,7 +2116,7 @@ Only return valid JSON.`;
     const majorPageSeo: Record<string, { title: string; desc: string; h1: string; type?: 'website' | 'article' }> = {
       '/rankings': {
         title: 'Top AI Tools by Monthly Traffic — Verified Rankings 2026 | ToolverAI',
-        desc: 'Explore verified monthly traffic statistics, growth velocity, and user volume leaderboards across Coding, LLMs, Image, and Audio AI platforms. Updated weekly on ToolverAI.',
+        desc: 'Explore estimated monthly traffic statistics, growth velocity, and user volume leaderboards across Coding, LLMs, Image, and Audio AI platforms. Updated weekly on ToolverAI.',
         h1: 'Top AI Tools by Monthly Traffic — Verified Rankings 2026',
       },
       '/compare': {
@@ -2133,14 +2136,14 @@ Only return valid JSON.`;
       },
       '/categories': {
         title: 'AI Tools by Category — Coding, Writing, Image, Video & More | ToolverAI',
-        desc: 'Browse 1000+ AI tools organized by category. Find the best Coding AI, Writing AI, Image Generation, Video AI, Marketing AI tools — all ranked and verified on ToolverAI.',
+        desc: 'Browse 120+ AI tools organized across 8 core categories. Find top Coding AI, Writing AI, Image Generation, Video AI, and Marketing AI tools ranked on ToolverAI.',
         h1: 'Browse AI Tools by Category',
       },
       '/blog': {
-        title: 'AI Tools Blog — News, Reviews & Tutorials | ToolverAI',
-        desc: 'Read expert AI tool analysis, LLM benchmark comparisons, step-by-step tutorials, and the latest AI software news at ToolverAI.',
-        h1: 'ToolverAI Blog',
-        type: 'article',
+        title: 'AI Tools Blog & Decision Guides — Expert Analysis | ToolverAI',
+        desc: 'Read in-depth AI tool comparisons, buyer guides, and architectural decision frameworks from the ToolverAI Editorial Team. Grounded in real data.',
+        h1: 'ToolverAI Editorial Guides & Insights',
+        type: 'website',
       },
     };
 
@@ -2191,7 +2194,7 @@ Only return valid JSON.`;
             extraContent = `
     <section>
       <h2>Featured AI Comparisons</h2>
-      <p>Compare top artificial intelligence software side-by-side with verified traffic rankings, platform compatibility, and features:</p>
+      <p>Compare top artificial intelligence software side-by-side with estimated traffic rankings, platform compatibility, and features:</p>
       <ul>
         ${ELIGIBLE_COMPARISONS.map((c) => {
           const t1 = tools.find((t: any) => t.slug === c.slug1);
@@ -2211,6 +2214,16 @@ Only return valid JSON.`;
           const name = t?.name || a.toolSlug;
           return `<li><a href="/alternatives/${a.toolSlug}"><strong>Best ${name} Alternatives</strong></a> (${a.category}) — ${a.reason}</li>`;
         }).join('\n        ')}
+      </ul>
+    </section>`;
+          } else if (routePath === '/blog') {
+            const articles = getPublishedArticles();
+            extraContent = `
+    <section>
+      <h2>Editorial Guides &amp; Decision Frameworks</h2>
+      <p>In-depth evaluations and architectural comparisons written by the ToolverAI Editorial Team:</p>
+      <ul>
+        ${articles.map((a) => `<li><a href="/blog/${a.slug}"><strong>${a.title}</strong></a> (${a.topic}) — ${a.excerpt} [Updated: ${a.updatedAt || a.publishedAt}]</li>`).join('\n        ')}
       </ul>
     </section>`;
           }
@@ -2399,7 +2412,7 @@ Only return valid JSON.`;
 <main>
   <article>
     <h1>${name1} vs ${name2} (2026): Features, Pricing &amp; Comparison</h1>
-    <p>Comprehensive side-by-side evaluation of ${name1} and ${name2} across pricing, verified web traffic volume, supported platforms, core features, and architectural strengths.</p>
+    <p>Comprehensive side-by-side evaluation of ${name1} and ${name2} across pricing, estimated web traffic volume, supported platforms, core features, and architectural strengths.</p>
 
     <section>
       <h2>Quick Specification Comparison</h2>
@@ -2591,7 +2604,7 @@ Only return valid JSON.`;
 <main>
   <article>
     <h1>Best ${cleanName} Alternatives in 2026</h1>
-    <p>Discover the top ${altCount} verified competitors and alternatives to ${cleanName} in 2026. Compare feature capabilities, subscription pricing, and monthly user traffic to find the ideal match for your stack.</p>
+    <p>Discover top competitors and alternatives to ${cleanName} in 2026. Compare feature capabilities, subscription pricing, and estimated monthly traffic to find the ideal match for your stack.</p>
 
     <section>
       <h2>Why Consider Alternatives to ${cleanName}?</h2>
@@ -2644,6 +2657,171 @@ Only return valid JSON.`;
       }
     });
 
+    // ── SSR: Blog Article Pages (/blog/:slug) ──────────────────────────
+    app.get('/blog/:slug', async (req, res) => {
+      try {
+        const { slug } = req.params;
+        const normalizedSlug = slug.toLowerCase();
+
+        // 1. Permanent redirect for case sensitivity (e.g. /blog/How-To -> /blog/how-to)
+        if (slug !== normalizedSlug) {
+          return res.redirect(301, `/blog/${normalizedSlug}`);
+        }
+
+        const baseUrl = resolveBaseUrl(req);
+        const htmlTemplate = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
+
+        // Look up article
+        const article = getArticleBySlug(normalizedSlug);
+
+        // Quality gate: 404 for nonexistent or draft articles
+        if (!article || article.status !== 'published') {
+          const notFoundHtml = renderSsrPage(htmlTemplate, {
+            title: 'Article Not Found — ToolverAI',
+            description: 'The requested AI editorial guide could not be found.',
+            canonical: `${baseUrl}/blog/${normalizedSlug}`,
+            robots: 'noindex, nofollow',
+          });
+          res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+          return res.status(404).send(notFoundHtml);
+        }
+
+        const canonical = `${baseUrl}/blog/${article.slug}`;
+        const title = `${article.seoTitle || article.title} | ToolverAI`;
+        const desc = (article.metaDescription || article.excerpt).slice(0, 160);
+        const heroImage = article.heroImage || article.coverImage || `${baseUrl}/og-banner.png`;
+        const tools = await getToolsFromDbOrFallback();
+
+        const breadcrumbJsonLd = {
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: `${baseUrl}/` },
+            { '@type': 'ListItem', position: 2, name: 'Blog', item: `${baseUrl}/blog` },
+            { '@type': 'ListItem', position: 3, name: article.title, item: canonical },
+          ],
+        };
+
+        const blogPostingJsonLd = {
+          '@context': 'https://schema.org',
+          '@type': 'BlogPosting',
+          '@id': `${canonical}#article`,
+          headline: article.title,
+          description: desc,
+          image: heroImage,
+          datePublished: article.publishedAt,
+          dateModified: article.updatedAt || article.publishedAt,
+          author: {
+            '@type': 'Organization',
+            name: article.author?.name || 'ToolverAI Editorial Team',
+            url: `${baseUrl}/about`,
+          },
+          publisher: {
+            '@type': 'Organization',
+            name: 'ToolverAI',
+            url: baseUrl,
+            logo: {
+              '@type': 'ImageObject',
+              url: `${baseUrl}/og-banner.png`,
+            },
+          },
+          mainEntityOfPage: {
+            '@type': 'WebPage',
+            '@id': canonical,
+          },
+        };
+
+        // Render referenced tools
+        const relatedTools = (article.relatedToolSlugs || [])
+          .map((tSlug) => tools.find((t: any) => t.slug === tSlug || t.id === tSlug))
+          .filter(Boolean);
+
+        const articleBodyHtml = `
+<header>
+  <nav aria-label="Breadcrumb">
+    <ol>
+      <li><a href="/">Home</a></li>
+      <li><a href="/blog">Blog</a></li>
+      <li aria-current="page">${article.title}</li>
+    </ol>
+  </nav>
+</header>
+<main>
+  <article>
+    <header>
+      <span class="badge">${article.topic || 'AI Guide'}</span>
+      <h1>${article.title}</h1>
+      <p class="byline">By <strong>ToolverAI Editorial Team</strong> | Published: ${article.publishedAt} | Updated: ${article.updatedAt || article.publishedAt} | ${article.readTime || '6 min read'}</p>
+    </header>
+
+    <div class="article-content">
+      <p><strong>${article.excerpt}</strong></p>
+      <div>${article.content.replace(/#+\s+(.*?)\n/g, '<h2>$1</h2>\n').replace(/\n\n/g, '</p><p>')}</div>
+    </div>
+
+    ${relatedTools.length > 0 ? `
+    <section>
+      <h2>Tools Mentioned in This Guide</h2>
+      <ul>
+        ${relatedTools.map((t: any) => `<li><a href="/tool/${t.slug || t.id}"><strong>${t.name}</strong></a> (${t.category} | ${t.monthlyVisitsFormatted || 'N/A'} visits/mo) — ${t.tagline || t.description?.slice(0, 80)}</li>`).join('\n        ')}
+      </ul>
+    </section>` : ''}
+
+    ${(article.relatedComparisonSlugs || []).length > 0 ? `
+    <section>
+      <h2>Related Head-to-Head Comparisons</h2>
+      <ul>
+        ${article.relatedComparisonSlugs!.map((cSlug) => `<li><a href="/compare/${cSlug}">Compare ${cSlug.replace('-vs-', ' vs ')}</a></li>`).join('\n        ')}
+      </ul>
+    </section>` : ''}
+
+    ${(article.relatedAlternativeSlugs || []).length > 0 ? `
+    <section>
+      <h2>Curated Alternatives Guides</h2>
+      <ul>
+        ${article.relatedAlternativeSlugs!.map((aSlug) => `<li><a href="/alternatives/${aSlug}">Best ${aSlug} Alternatives</a></li>`).join('\n        ')}
+      </ul>
+    </section>` : ''}
+
+    ${(article.relatedCategorySlugs || []).length > 0 ? `
+    <section>
+      <h2>Explore Related Categories</h2>
+      <ul>
+        ${article.relatedCategorySlugs!.map((catSlug) => `<li><a href="/categories/${catSlug}">Browse ${catSlug.replace('-', ' ')} Tools</a></li>`).join('\n        ')}
+      </ul>
+    </section>` : ''}
+
+    <nav aria-label="Editorial Links">
+      <p>
+        <a href="/editorial-policy">Editorial Policy</a> |
+        <a href="/how-we-rank-tools">Ranking Methodology</a> |
+        <a href="/blog">All Editorial Guides</a> |
+        <a href="/">Home Directory</a>
+      </p>
+    </nav>
+  </article>
+</main>`;
+
+        const finalHtml = renderSsrPage(htmlTemplate, {
+          title,
+          description: desc,
+          canonical,
+          robots: 'index, follow, max-image-preview:large, max-snippet:-1',
+          ogType: 'article',
+          ogImage: heroImage,
+          jsonLd: [breadcrumbJsonLd, blogPostingJsonLd],
+          bodyHtml: articleBodyHtml,
+        });
+
+        res.header('Content-Type', 'text/html; charset=utf-8');
+        res.header('Cache-Control', 'public, max-age=300, s-maxage=3600');
+        return res.status(200).send(finalHtml);
+      } catch (err: any) {
+        console.error('SSR error for /blog/:slug:', err);
+        res.sendFile(path.join(distPath, 'index.html'));
+      }
+    });
+
     // ── SSR: Admin Console (/admin) ─────────────────────────────────────
     app.get(['/admin', '/admin/*'], (req, res) => {
       try {
@@ -2670,6 +2848,7 @@ Only return valid JSON.`;
       const knownRoutes = [
         '/', '/rankings', '/compare', '/deals', '/prompts', '/categories',
         '/blog', '/submit-tool', '/about', '/privacy-policy', '/terms', '/affiliate-disclosure',
+        '/editorial-policy', '/how-we-rank-tools',
         '/alternatives',
       ];
       const isKnown = knownRoutes.includes(req.path)

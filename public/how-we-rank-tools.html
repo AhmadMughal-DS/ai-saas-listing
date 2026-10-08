@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How We Rank AI Tools — Ranking Methodology | ToolverAI</title>
+  <meta name="description" content="Learn how ToolverAI ranks AI tools: sorting by estimated monthly web visits, interactive sort options, and informational metadata." />
+  <link rel="canonical" href="https://toolverai.com/how-we-rank-tools" />
+  <meta name="robots" content="index, follow" />
+  <meta property="og:title" content="How We Rank AI Tools — Ranking Methodology | ToolverAI" />
+  <meta property="og:description" content="Transparent explanation of ToolverAI's ranking logic: estimated monthly visits sorting, user filters, and informational signals." />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://toolverai.com/how-we-rank-tools" />
+  <meta property="og:image" content="https://toolverai.com/og-banner.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="How We Rank AI Tools | ToolverAI" />
+  <meta name="twitter:description" content="Transparent ranking methodology for AI tools: estimated web visits, sort filters, and directory metadata." />
+  <meta name="twitter:site" content="@toolverai" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 44'%3E%3Crect width='44' height='44' rx='11' fill='%234F46E5'/%3E%3Cpath d='M10 13h24v3.5H10z' fill='%23fff'/%3E%3Cpath d='M16 17.5l6 14 6-14h-4l-2 6-2-6h-4z' fill='%23fff'/%3E%3Ccircle cx='22' cy='18' r='2.5' fill='%2338BDF8'/%3E%3C/svg%3E" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://toolverai.com/#organization",
+        "name": "ToolverAI",
+        "url": "https://toolverai.com",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://toolverai.com/og-banner.png"
+        }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://toolverai.com/" },
+          { "@type": "ListItem", "position": 2, "name": "How We Rank Tools", "item": "https://toolverai.com/how-we-rank-tools" }
+        ]
+      }
+    ]
+  }
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #F8FAFC; color: #0F172A; line-height: 1.7; }
+    header { background: #4F46E5; padding: 1rem 2rem; display: flex; align-items: center; justify-content: space-between; }
+    header a { color: white; text-decoration: none; font-weight: 700; font-size: 1.2rem; }
+    header nav a { color: rgba(255,255,255,0.85); font-size: 0.9rem; margin-left: 1.5rem; text-decoration: none; }
+    header nav a:hover { color: white; }
+    main { max-width: 820px; margin: 0 auto; padding: 3rem 1.5rem; }
+    nav.breadcrumb { font-size: 0.85rem; color: #64748B; margin-bottom: 2rem; }
+    nav.breadcrumb a { color: #4F46E5; text-decoration: none; }
+    nav.breadcrumb span { margin: 0 0.5rem; }
+    h1 { font-size: 2.25rem; font-weight: 800; margin-bottom: 1rem; color: #0F172A; }
+    .hero-tagline { font-size: 1.1rem; color: #475569; margin-bottom: 2.5rem; max-width: 660px; }
+    h2 { font-size: 1.35rem; font-weight: 700; margin: 2.5rem 0 0.75rem; color: #1E293B; }
+    p, li { color: #475569; margin-bottom: 0.85rem; }
+    ul { padding-left: 1.5rem; margin-bottom: 1.25rem; }
+    a { color: #4F46E5; }
+    .factor-card { background: white; border: 1px solid #E2E8F0; border-radius: 12px; padding: 1.25rem; margin-bottom: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+    .factor-title { font-size: 1.1rem; font-weight: 700; color: #1E293B; margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: space-between; }
+    .factor-badge { background: #EEF2FF; color: #4F46E5; font-size: 0.75rem; font-weight: 700; padding: 0.25rem 0.6rem; border-radius: 9999px; text-transform: uppercase; }
+    .callout { background: #EEF2FF; border-left: 4px solid #4F46E5; padding: 1rem 1.25rem; border-radius: 0 8px 8px 0; margin: 1.5rem 0; }
+    .meta-byline { display: flex; align-items: center; gap: 1rem; font-size: 0.85rem; color: #64748B; padding-bottom: 1.5rem; border-bottom: 1px solid #E2E8F0; margin-bottom: 2rem; }
+    footer { background: #1E293B; color: #94A3B8; text-align: center; padding: 1.5rem; font-size: 0.85rem; margin-top: 4rem; }
+    footer a { color: #818CF8; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="/">ToolverAI</a>
+    <nav>
+      <a href="/">Directory</a>
+      <a href="/categories">Categories</a>
+      <a href="/deals">Deals</a>
+      <a href="/blog">Blog</a>
+    </nav>
+  </header>
+
+  <main>
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a href="/">Home</a><span>›</span>
+      <span>How We Rank Tools</span>
+    </nav>
+
+    <h1>How We Rank AI Tools</h1>
+    <div class="meta-byline">
+      <span>By <strong>ToolverAI Team</strong></span>
+      <span>•</span>
+      <span>Last Updated: October 2026</span>
+    </div>
+
+    <p class="hero-tagline">This page explains the exact ranking and sorting logic used across ToolverAI. We do not use hidden algorithm weights or opaque scoring formulas.</p>
+
+    <h2>1. Default Ranking: Estimated Monthly Web Traffic</h2>
+    <p>By default, tools on the <a href="/rankings">Rankings leaderboard</a> and within category views are ordered strictly in descending order of <strong>estimated monthly web visits</strong>.</p>
+    <div class="factor-card">
+      <div class="factor-title">
+        <span>Estimated Monthly Visits</span>
+        <span class="factor-badge">Default Sort</span>
+      </div>
+      <p>Traffic figures are compiled from publicly accessible web telemetry and traffic estimation sources. Because software adoption is a helpful indicator of real-world utility, higher estimated web traffic places a tool higher on the default leaderboard.</p>
+    </div>
+
+    <h2>2. Interactive User Sort Filters</h2>
+    <p>Visitors can re-sort the directory and ranking tables at any time using one of three alternative metrics:</p>
+    <ul>
+      <li><strong>Growth Velocity:</strong> Sorts tools by estimated month-over-month traffic growth percentage, highlighting rapidly emerging software.</li>
+      <li><strong>Community Rating:</strong> Sorts tools by average star rating (1 to 5 stars) submitted by registered ToolverAI community members.</li>
+      <li><strong>Community Upvotes:</strong> Sorts tools by the total number of user upvotes recorded on the platform.</li>
+    </ul>
+
+    <h2>3. Informational Fields vs. Ranking Inputs</h2>
+    <p>To keep evaluations transparent, we distinguish between what determines a tool's rank position versus the informational fields displayed alongside it:</p>
+    <ul>
+      <li><strong>Ranking Inputs:</strong> The specific metric selected by the user (default: estimated monthly visits). No composite or weighted formula is applied.</li>
+      <li><strong>Informational Fields:</strong> Metadata displayed on cards and detail pages to help users evaluate tools—such as pricing model (Free, Freemium, Paid, Open Source), platform support (Web, Mac, Windows, VS Code), API availability, and community reviews. These fields do not alter organic ranking position unless used as an active category filter.</li>
+    </ul>
+
+    <h2>4. Commercial Independence: Zero Pay-to-Rank</h2>
+    <div class="callout">
+      <strong>No Paid Organic Rankings:</strong> Software vendors cannot purchase a higher organic ranking position or alter metric-based sorting. Any sponsored placement or featured profile on ToolverAI is clearly marked with a distinct badge and does not manipulate the underlying traffic, rating, or growth sort results.
+    </div>
+
+    <h2>5. Category Segmentation</h2>
+    <p>Because comparing an IDE code assistant to a text-to-video diffusion model provides little practical insight, rankings are segmented across 8 core categories:</p>
+    <ul>
+      <li><a href="/categories/coding">Coding AI Tools</a></li>
+      <li><a href="/categories/productivity">Productivity AI Tools</a></li>
+      <li><a href="/categories/image-ai">Image AI Tools</a></li>
+      <li><a href="/categories/video-ai">Video AI Tools</a></li>
+      <li><a href="/categories/audio-ai">Audio AI Tools</a></li>
+      <li><a href="/categories/copywriting">Copywriting AI Tools</a></li>
+      <li><a href="/categories/data-analytics">Data &amp; Analytics AI Tools</a></li>
+      <li><a href="/categories/agents">AI Agents</a></li>
+    </ul>
+
+    <h2>Questions or Corrections</h2>
+    <p>If you have questions about directory listings or notice an inaccurate metric, please contact our team at <a href="mailto:marketing@toolverai.com">marketing@toolverai.com</a>.</p>
+  </main>
+
+  <footer>
+    <p>© 2026 ToolverAI Intelligence Directory | <a href="/">Home</a> | <a href="/editorial-policy">Editorial Policy</a> | <a href="/how-we-rank-tools">Ranking Methodology</a> | <a href="/privacy-policy">Privacy Policy</a> | <a href="/terms">Terms</a> | <a href="/affiliate-disclosure">Affiliate Disclosure</a> | <a href="/sitemap.xml">Sitemap</a></p>
+  </footer>
+</body>
+</html>

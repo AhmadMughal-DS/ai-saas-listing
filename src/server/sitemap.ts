@@ -1,4 +1,4 @@
-import { INITIAL_BLOG_POSTS } from '../data/initialData';
+import { getPublishedArticles } from '../data/blogData';
 import { ELIGIBLE_COMPARISONS, ELIGIBLE_ALTERNATIVES } from '../utils/programmaticSeo';
 
 export interface SitemapUrlEntry {
@@ -119,6 +119,18 @@ export function generateSitemapEntries(baseUrl: string, tools: any[] = []): Site
       priority: '0.5',
     },
     {
+      loc: `${cleanBaseUrl}/editorial-policy`,
+      lastmod: today,
+      changefreq: 'monthly',
+      priority: '0.5',
+    },
+    {
+      loc: `${cleanBaseUrl}/how-we-rank-tools`,
+      lastmod: today,
+      changefreq: 'monthly',
+      priority: '0.5',
+    },
+    {
       loc: `${cleanBaseUrl}/privacy-policy`,
       lastmod: today,
       changefreq: 'yearly',
@@ -158,35 +170,29 @@ export function generateSitemapEntries(baseUrl: string, tools: any[] = []): Site
   });
 
 
-  // 3. Blog Articles & Technical Guides
-  // NOTE: Blog posts use /blog/[slug] path format for proper crawlability.
-  // Hash-based URLs (#slug) are NOT crawlable by search engines.
-  // Until individual blog post routes are implemented server-side, we only
-  // include the /blog index page (already added above).
-  // Individual blog post pages will be added here when /blog/:slug routes exist.
+  // 3. Blog Articles & Technical Guides (/blog/:slug)
   try {
-    if (Array.isArray(INITIAL_BLOG_POSTS)) {
-      INITIAL_BLOG_POSTS.forEach((post) => {
-        const postSlug = post.slug || post.id;
-        if (post && postSlug) {
-          // Only include if we're confident the URL serves an actual page
-          // Currently blog uses hash routing — only add proper path URLs
-          // Comment out hash-based entries to avoid submitting non-crawlable URLs:
-          // entries.push({ loc: `${cleanBaseUrl}/blog#${postSlug}`, ... }) // NOT crawlable
-          //
-          // Future: when /blog/:slug routes are live, uncomment:
-          // entries.push({
-          //   loc: `${cleanBaseUrl}/blog/${encodeURIComponent(postSlug)}`,
-          //   lastmod: formatLastMod(post.publishedDate),
-          //   changefreq: 'monthly',
-          //   priority: '0.7',
-          //   image: post.coverImage ? { loc: post.coverImage, title: post.title } : undefined,
-          // });
+    const publishedArticles = getPublishedArticles();
+    if (Array.isArray(publishedArticles)) {
+      publishedArticles.forEach((post) => {
+        if (post && post.slug) {
+          const articleUrl = `${cleanBaseUrl}/blog/${encodeURIComponent(post.slug)}`;
+          const lastMod = formatLastMod(post.updatedAt || post.publishedAt);
+          entries.push({
+            loc: articleUrl,
+            lastmod: lastMod,
+            changefreq: 'monthly',
+            priority: '0.75',
+            image: post.heroImage || post.coverImage ? {
+              loc: post.heroImage || post.coverImage || `${cleanBaseUrl}/og-banner.png`,
+              title: post.title,
+            } : undefined,
+          });
         }
       });
     }
-  } catch {
-    // Ignore blog fallback errors
+  } catch (err) {
+    console.error('Error generating blog sitemap entries:', err);
   }
 
   // 4. Dynamic AI Tools from Database

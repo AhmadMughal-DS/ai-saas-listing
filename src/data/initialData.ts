@@ -1569,79 +1569,9 @@ Output a Markdown table with:
   }
 ];
 
-export const INITIAL_BLOG_POSTS: BlogPost[] = [
-  {
-    id: 'post-1',
-    slug: 'next-generation-generative-models-beyond-transformers',
-    title: 'The Next Generation of Generative Models: Beyond Transformers',
-    excerpt: 'An in-depth analysis of emerging architectures poised to overtake traditional transformer models, examining state-space models, diffusion updates, and the pursuit of AGI.',
-    content: `## The Evolution of Deep Learning Architectures
+import { PUBLISHED_ARTICLES } from './blogData';
 
-For the past seven years, the Transformer architecture has reigned supreme across natural language processing, computer vision, and multimodal generation. However, as contextual windows push towards 10 million tokens and edge deployment demands sub-millisecond latencies, structural bottlenecks in quadratic attention complexity have spurred an explosion of novel algorithmic paradigms.
-
-### 1. State-Space Models (SSMs) and Mamba
-State-space models represent a monumental shift in how neural networks maintain recurrent memory without the quadratic compute cost. By leveraging selective state spaces, Mamba-based architectures achieve:
-- **Linear time inference**: Processing millions of tokens with continuous O(1) memory footprint.
-- **Hardware-aware selective scan**: Unlocking up to 5x higher throughput compared to standard FlashAttention-2.
-
-### 2. Diffusion-Transformer Hybrids (DiT)
-In generative media, diffusion models are marrying transformer backbones to provide unprecedented spatial coherence. Diffusion Transformers replace the traditional U-Net with isotropic transformer blocks, enabling scaling laws that mirror text LLMs.
-
-### 3. Looking Forward to 2026 and Beyond
-As foundation models transition into autonomous compound AI systems, architectural diversity will be key. The future is not a single monolithic model, but an ensemble of specialized sub-systems running on optimized silicon.`,
-    coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80',
-    category: 'AI News',
-    readTime: '8 min read',
-    publishedDate: 'Feb 15, 2026',
-    isFeatured: true,
-    author: {
-      name: 'Dr. Evelyn Reed',
-      role: 'Chief AI Scientist',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'
-    }
-  },
-  {
-    id: 'post-2',
-    slug: 'optimizing-rag-pipelines-vector-databases',
-    title: 'Optimizing RAG Pipelines with Vector Databases & Hybrid Indexing',
-    excerpt: 'Learn how to significantly reduce latency and improve context retrieval in your Retrieval-Augmented Generation applications.',
-    content: `Retrieval-Augmented Generation (RAG) has matured from basic naive chunking to sophisticated multi-stage retrieval pipelines. In this technical guide, we break down:
-
-- **Hierarchical Indexing & Late Chunking**: Preserving cross-document context across embedding boundaries.
-- **Hybrid Sparse-Dense Search**: Combining BM25 lexical precision with HNSW vector representations.
-- **Re-ranking with Cross-Encoders**: Filtering top-100 candidates down to top-5 highest scoring snippets for optimal LLM context packing.`,
-    coverImage: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=800&auto=format&fit=crop&q=80',
-    category: 'Guides & Tutorials',
-    readTime: '5 min read',
-    publishedDate: 'Feb 10, 2026',
-    author: {
-      name: 'Julian Hayes',
-      role: 'Infrastructure Architect',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80'
-    }
-  },
-  {
-    id: 'post-3',
-    slug: 'deepseek-r1-and-the-open-weights-revolution',
-    title: 'DeepSeek-R1 and the Open-Weights Revolution: What Founders Need to Know',
-    excerpt: 'How open reasoning models are slashing API inference costs by 90% and enabling private on-premise AI deployments.',
-    content: `The emergence of frontier open-weight reasoning models like DeepSeek-R1 marks a historic turning point in artificial intelligence economics. Founders are no longer locked into proprietary vendor pricing models.
-
-### Key Takeaways for Builders:
-- **Local Deployment Viability**: Run full reasoning chains on private GPU clusters without telemetry leakage.
-- **Micro-Fine Tuning**: Adapt reasoning patterns to proprietary enterprise domains with modest compute.
-- **Compound Agent Architectures**: Route fast queries to small models and deep reasoning to R1 for optimal cost curves.`,
-    coverImage: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&auto=format&fit=crop&q=80',
-    category: 'AI News',
-    readTime: '6 min read',
-    publishedDate: 'Feb 02, 2026',
-    author: {
-      name: 'Kai Robertson',
-      role: 'Senior AI Editor',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80'
-    }
-  }
-];
+export const INITIAL_BLOG_POSTS: BlogPost[] = PUBLISHED_ARTICLES;
 
 export const MEMBERSHIP_PLANS: MembershipPlan[] = [
   {
