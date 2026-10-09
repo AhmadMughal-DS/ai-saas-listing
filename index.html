@@ -54,19 +54,29 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://www.googletagmanager.com" />
 
-    <!-- ── Fonts (Optimized Non-Blocking) ────────────────────── -->
+    <!-- ── Fonts (CSP-safe async load — no onload attr, no unsafe-inline) ── -->
+    <!-- Preload hint so browser can discover the stylesheet early            -->
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" media="print" onload="this.media='all'" />
+    <!-- Injected by GA4 init script block below; noscript fallback here: -->
     <noscript>
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" />
     </noscript>
 
-    <!-- ── Google Analytics 4 (GA4) ─────────────────────────── -->
+    <!-- ── Google Analytics 4 (GA4) + Async Font Loader ──────── -->
     <!-- Loads only if VITE_GA4_MEASUREMENT_ID is set in .env   -->
     <!-- send_page_view: false — React fires page_view manually  -->
     <!-- via src/lib/analytics.ts to avoid SPA duplicate hits.   -->
+    <!-- Font loader uses createElement — CSP-safe, no onload    -->
     <script>
       (function() {
+        // ── Async font injection (CSP-safe, no inline event attribute) ──
+        var fontHref = 'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap';
+        var fontLink = document.createElement('link');
+        fontLink.rel = 'stylesheet';
+        fontLink.href = fontHref;
+        document.head.appendChild(fontLink);
+
+        // ── GA4 ──
         var gid = '%VITE_GA4_MEASUREMENT_ID%';
         if (!gid || gid === '%VITE_GA4_MEASUREMENT_ID%' || !gid.startsWith('G-')) return;
         var s = document.createElement('script');

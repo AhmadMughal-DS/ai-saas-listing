@@ -61,6 +61,23 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
   const [featureFilter, setFeatureFilter] = useState<'all' | 'traffic' | 'growth' | 'deals' | 'api' | 'opensource' | 'featured' | 'verified'>('all');
   const [sortBy, setSortBy] = useState<'popular' | 'traffic' | 'rating' | 'newest'>('popular');
   const [visibleCount, setVisibleCount] = useState(9);
+  const [shouldLoad3D, setShouldLoad3D] = useState(false);
+
+  // Defer downloading the ~510KB Three.js chunk until after critical content is painted & interactive
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if ('requestIdleCallback' in window) {
+      const handle = (window as any).requestIdleCallback(() => {
+        setShouldLoad3D(true);
+      }, { timeout: 2500 });
+      return () => (window as any).cancelIdleCallback(handle);
+    } else {
+      const timer = setTimeout(() => {
+        setShouldLoad3D(true);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   const featuredPartners = useMemo(() => {
     return tools.filter((t) => t.isFeatured).slice(0, 3);
@@ -125,10 +142,14 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
       <section className="relative pt-32 pb-16 px-4 sm:px-8 max-w-[1440px] mx-auto text-center flex flex-col items-center">
         {/* Main Headline with 3D Model in the Background */}
         <div className="relative w-full flex flex-col items-center justify-center mb-8 py-4 sm:py-6">
-          {/* 3D WebGL Mesh Backdrop directly centered behind headline - Lazy Loaded with zero-CLS placeholder */}
-          <Suspense fallback={<div className="absolute top-[58%] sm:top-[62%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[380px] sm:w-[580px] md:w-[720px] lg:w-[860px] h-[400px] sm:h-[490px] md:h-[540px] pointer-events-none select-none -z-0" />}>
-            <Hero3DModel />
-          </Suspense>
+          {/* 3D WebGL Mesh Backdrop directly centered behind headline - Defer load to idle time with fixed zero-CLS placeholder */}
+          <div className="absolute top-[58%] sm:top-[62%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[380px] sm:w-[580px] md:w-[720px] lg:w-[860px] h-[400px] sm:h-[490px] md:h-[540px] pointer-events-none select-none -z-0">
+            {shouldLoad3D ? (
+              <Suspense fallback={null}>
+                <Hero3DModel />
+              </Suspense>
+            ) : null}
+          </div>
 
           <div className="relative z-10 flex flex-col items-center max-w-4xl">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-semibold tracking-wide uppercase mb-6 shadow-xs backdrop-blur-xs">

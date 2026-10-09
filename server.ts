@@ -401,6 +401,12 @@ async function startServer() {
       }
 
       const contentType = (res.getHeader('Content-Type') as string) || '';
+      // Skip if already compressed upstream (prevents double-encoding)
+      const existingEncoding = res.getHeader('Content-Encoding') as string | undefined;
+      if (existingEncoding) {
+        res.setHeader('Content-Length', buffer.length);
+        return originalEnd(buffer);
+      }
       // Only compress text, HTML, CSS, JavaScript, JSON, SVG, and XML
       const compressible = /text\/(html|css|plain|xml)|application\/(javascript|json|xml|x-javascript)|image\/svg\+xml/i.test(contentType);
       if (!compressible) {
@@ -2073,7 +2079,7 @@ Only return valid JSON.`;
         });
 
         res.header('Content-Type', 'text/html; charset=utf-8');
-        res.header('Cache-Control', 'public, max-age=300, s-maxage=1800');
+        res.header('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=3600');
         return res.status(200).send(finalHtml);
       } catch (err: any) {
         console.error('SSR error for /tool/:slug:', err);
@@ -2388,7 +2394,8 @@ Only return valid JSON.`;
           });
 
           res.header('Content-Type', 'text/html; charset=utf-8');
-          res.header('Cache-Control', 'public, max-age=300, s-maxage=3600');
+          // Rankings/deals/compare pages contain live traffic data — keep browser cache short
+          res.header('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=3600');
           return res.status(200).send(finalHtml);
         } catch (err: any) {
           console.error(`SSR error for ${routePath}:`, err);
@@ -2643,7 +2650,7 @@ Only return valid JSON.`;
         });
 
         res.header('Content-Type', 'text/html; charset=utf-8');
-        res.header('Cache-Control', 'public, max-age=300, s-maxage=3600');
+        res.header('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=3600');
         return res.status(200).send(finalHtml);
       } catch (err: any) {
         console.error('SSR error for /compare/:comparison:', err);
@@ -2780,7 +2787,7 @@ Only return valid JSON.`;
         });
 
         res.header('Content-Type', 'text/html; charset=utf-8');
-        res.header('Cache-Control', 'public, max-age=300, s-maxage=3600');
+        res.header('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=3600');
         return res.status(200).send(finalHtml);
       } catch (err: any) {
         console.error('SSR error for /alternatives/:slug:', err);
