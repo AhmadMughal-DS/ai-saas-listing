@@ -1,7 +1,6 @@
 import React from 'react';
 import { ActiveTab, UserAccount } from '../types';
 import { Logo } from './Logo';
-import { ThemeToggle } from './ThemeToggle';
 import { 
   Sparkles, 
   Search, 
@@ -157,9 +156,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>Suggest Tool</span>
             </button>
           )}
-
-          {/* Global Theme Toggle Button */}
-          <ThemeToggle />
 
           {/* Quick Search Button */}
           <button
