@@ -100,25 +100,25 @@ export const AIMatcherModal: React.FC<AIMatcherModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col">
         {/* Modal Header */}
-        <div className="p-6 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white/95 backdrop-blur-sm z-10">
+        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between sticky top-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm z-10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+            <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-800/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
               <Bot className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="font-heading font-extrabold text-slate-900 text-lg sm:text-xl">
+              <h2 className="font-heading font-extrabold text-slate-900 dark:text-white text-lg sm:text-xl">
                 Smart AI Copilot Matcher
               </h2>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Powered by DeepSeek & ToolverAI traffic intelligence (toolverai.com)
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+            className="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -128,7 +128,7 @@ export const AIMatcherModal: React.FC<AIMatcherModalProps> = ({
         <div className="p-6 space-y-6">
           {/* Query Input */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
               What do you want to accomplish?
             </label>
             <div className="relative">
@@ -137,7 +137,7 @@ export const AIMatcherModal: React.FC<AIMatcherModalProps> = ({
                 onChange={(e) => setUserGoal(e.target.value)}
                 placeholder="e.g. I need an AI video generator that can create 4k realistic avatar videos with lip sync and voice cloning under $30/mo..."
                 rows={3}
-                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm text-slate-900 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all resize-none placeholder:text-slate-400"
+                className="w-full p-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-850 transition-all resize-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
               />
             </div>
           </div>
@@ -145,13 +145,13 @@ export const AIMatcherModal: React.FC<AIMatcherModalProps> = ({
           {/* Quick Filters */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+              <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                 Budget / Pricing Model
               </label>
               <select
                 value={budget}
                 onChange={(e) => setBudget(e.target.value)}
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none focus:border-indigo-500 cursor-pointer"
               >
                 <option value="Any Budget">Any Budget</option>
                 <option value="Completely Free / Open Source">Completely Free / Open Source</option>
@@ -162,13 +162,13 @@ export const AIMatcherModal: React.FC<AIMatcherModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+              <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                 Primary Category
               </label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none focus:border-indigo-500 cursor-pointer"
               >
                 <option value="All">All Categories</option>
                 <option value="Coding">Coding & Development</option>
@@ -183,7 +183,7 @@ export const AIMatcherModal: React.FC<AIMatcherModalProps> = ({
 
           {/* Preset Prompts */}
           <div>
-            <span className="text-[11px] font-semibold text-slate-400 mb-2 block">
+            <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 mb-2 block">
               Try popular prompts:
             </span>
             <div className="flex flex-wrap gap-1.5">
@@ -194,7 +194,7 @@ export const AIMatcherModal: React.FC<AIMatcherModalProps> = ({
                     setUserGoal(q);
                     handleMatch(q);
                   }}
-                  className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 border border-slate-200/80 text-xs font-medium text-slate-600 transition-all cursor-pointer text-left"
+                  className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-slate-700 hover:text-indigo-600 dark:hover:text-white border border-slate-200/80 dark:border-slate-700 text-xs font-medium text-slate-600 dark:text-slate-300 transition-all cursor-pointer text-left"
                 >
                   {q}
                 </button>
@@ -223,9 +223,9 @@ export const AIMatcherModal: React.FC<AIMatcherModalProps> = ({
 
           {/* Results Area */}
           {recommendations && (
-            <div className="pt-4 border-t border-slate-200 space-y-4 animate-fade-in">
+            <div className="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-4 animate-fade-in">
               {summary && (
-                <p className="text-xs font-semibold text-indigo-700 bg-indigo-50 p-3 rounded-xl border border-indigo-100">
+                <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 p-3 rounded-xl border border-indigo-100 dark:border-indigo-800/60">
                   {summary}
                 </p>
               )}
@@ -239,21 +239,21 @@ export const AIMatcherModal: React.FC<AIMatcherModalProps> = ({
                   return (
                     <div
                       key={i}
-                      className="p-4 rounded-2xl bg-white border border-slate-200 hover:border-indigo-300 hover:shadow-xs transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                      className="p-4 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-750 hover:border-indigo-300 dark:hover:border-indigo-500/50 hover:shadow-xs transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                     >
                       <div className="space-y-1 flex-1">
                         <div className="flex items-center gap-2.5">
-                          <span className="font-heading font-extrabold text-slate-900 text-base">
+                          <span className="font-heading font-extrabold text-slate-900 dark:text-white text-base">
                             {rec.toolName}
                           </span>
-                          <span className="px-2 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-100 text-emerald-800">
+                          <span className="px-2 py-0.5 rounded-full text-[11px] font-extrabold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60">
                             {rec.matchScore}% Match
                           </span>
                         </div>
-                        <p className="text-xs text-slate-600 leading-relaxed">
+                        <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
                           {rec.reason}
                         </p>
-                        <p className="text-[11px] font-semibold text-slate-400">
+                        <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500">
                           {rec.pricingNote}
                         </p>
                       </div>
@@ -275,7 +275,7 @@ export const AIMatcherModal: React.FC<AIMatcherModalProps> = ({
                               onNavigate('directory');
                               onClose();
                             }}
-                            className="px-3.5 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold cursor-pointer"
+                            className="px-3.5 py-2 rounded-xl bg-slate-900 dark:bg-indigo-600 hover:bg-slate-800 dark:hover:bg-indigo-500 text-white text-xs font-semibold cursor-pointer"
                           >
                             Explore
                           </button>

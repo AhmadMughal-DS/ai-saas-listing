@@ -101,33 +101,33 @@ export const SubmitToolView: React.FC<SubmitToolViewProps> = ({
     <div className="w-full pt-32 pb-24 px-4 sm:px-8 max-w-[1440px] mx-auto">
       {/* Header */}
       <div className="text-center max-w-3xl mx-auto mb-12">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-semibold uppercase mb-4 shadow-xs">
-          <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300 text-xs font-semibold uppercase mb-4 shadow-xs">
+          <Sparkles className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
           <span>Verified AI Directory Submission</span>
         </div>
 
-        <h1 className="font-heading text-4xl sm:text-6xl font-extrabold text-slate-900 tracking-tight mb-4">
+        <h1 className="font-heading text-4xl sm:text-6xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-4">
           Submit Your{' '}
-          <span className="text-indigo-600">
+          <span className="text-indigo-600 dark:text-indigo-400">
             AI Tool
           </span>
         </h1>
 
-        <p className="text-base sm:text-lg text-slate-500 font-normal leading-relaxed">
+        <p className="text-base sm:text-lg text-slate-500 dark:text-slate-400 font-normal leading-relaxed">
           Showcase your AI product to over 500,000+ monthly active developers, founders, and creators.
         </p>
       </div>
 
       {isSuccess ? (
-        <div className="max-w-xl mx-auto bg-white rounded-3xl p-10 text-center border border-slate-200 shadow-md animate-fade-in">
-          <div className="w-20 h-20 rounded-full bg-emerald-50 border-2 border-emerald-500 flex items-center justify-center text-emerald-600 mx-auto mb-6 shadow-xs">
+        <div className="max-w-xl mx-auto bg-white dark:bg-slate-900 rounded-3xl p-10 text-center border border-slate-200 dark:border-slate-800 shadow-md animate-fade-in">
+          <div className="w-20 h-20 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border-2 border-emerald-500 flex items-center justify-center text-emerald-600 dark:text-emerald-400 mx-auto mb-6 shadow-xs">
             <CheckCircle className="w-12 h-12" />
           </div>
-          <h2 className="font-heading text-3xl font-bold text-slate-900 mb-3">
+          <h2 className="font-heading text-3xl font-bold text-slate-900 dark:text-white mb-3">
             Tool Successfully Submitted!
           </h2>
-          <p className="text-sm text-slate-600 leading-relaxed mb-8">
-            <strong className="text-slate-900">{toolName}</strong> has been indexed in the live directory with real-time MongoDB storage.
+          <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed mb-8">
+            <strong className="text-slate-900 dark:text-white">{toolName}</strong> has been indexed in the live directory with real-time MongoDB storage.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -153,18 +153,18 @@ export const SubmitToolView: React.FC<SubmitToolViewProps> = ({
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 max-w-5xl mx-auto">
           {/* Left Form (8 Cols) */}
-          <div className="lg:col-span-7 bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-xs">
+          <div className="lg:col-span-7 bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-10 border border-slate-200 dark:border-slate-800 shadow-xs">
             {/* Step Wizard Tracker */}
-            <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-100">
+            <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-3">
-                <span className="w-8 h-8 rounded-full bg-indigo-600 text-white font-bold text-sm flex items-center justify-center shadow-xs">
+                <span className="w-8 h-8 rounded-full bg-indigo-600 dark:bg-indigo-500 text-white font-bold text-sm flex items-center justify-center shadow-xs">
                   {currentStep}
                 </span>
                 <div>
-                  <div className="text-xs text-indigo-600 font-semibold uppercase tracking-wider">
+                  <div className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold uppercase tracking-wider">
                     Step {currentStep} of 3
                   </div>
-                  <div className="text-sm font-heading font-bold text-slate-900">
+                  <div className="text-sm font-heading font-bold text-slate-900 dark:text-white">
                     {currentStep === 1
                       ? 'Basic Information'
                       : currentStep === 2
@@ -180,10 +180,10 @@ export const SubmitToolView: React.FC<SubmitToolViewProps> = ({
                     key={s}
                     className={`h-2 rounded-full transition-all ${
                       s === currentStep
-                        ? 'w-8 bg-indigo-600'
+                        ? 'w-8 bg-indigo-600 dark:bg-indigo-500'
                         : s < currentStep
-                        ? 'w-4 bg-indigo-300'
-                        : 'w-4 bg-slate-200'
+                        ? 'w-4 bg-indigo-300 dark:bg-indigo-800'
+                        : 'w-4 bg-slate-200 dark:bg-slate-700'
                     }`}
                   />
                 ))}
@@ -194,7 +194,7 @@ export const SubmitToolView: React.FC<SubmitToolViewProps> = ({
             {currentStep === 1 && (
               <div className="space-y-5">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wider">
                     Tool Name *
                   </label>
                   <input
@@ -203,12 +203,12 @@ export const SubmitToolView: React.FC<SubmitToolViewProps> = ({
                     onChange={(e) => setToolName(e.target.value)}
                     placeholder="e.g. NeuroWrite Pro, Lumina AI"
                     required
-                    className="w-full bg-white border border-slate-200 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-50 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none transition-all placeholder:text-slate-400"
+                    className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-indigo-600 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-950/40 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wider">
                     Website or App URL *
                   </label>
                   <div className="relative">
@@ -218,20 +218,20 @@ export const SubmitToolView: React.FC<SubmitToolViewProps> = ({
                       onChange={(e) => setToolUrl(e.target.value)}
                       placeholder="https://your-ai-tool.com"
                       required
-                      className="w-full bg-white border border-slate-200 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-50 rounded-xl px-4 py-3 text-sm text-slate-900 pl-10 focus:outline-none transition-all placeholder:text-slate-400"
+                      className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-indigo-600 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-950/40 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white pl-10 focus:outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
                     />
-                    <Globe className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                    <Globe className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-3.5" />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wider">
                     Primary Category *
                   </label>
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value as any)}
-                    className="w-full bg-white border border-slate-200 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-50 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none transition-all cursor-pointer"
+                    className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-indigo-600 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-950/40 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none transition-all cursor-pointer"
                   >
                     <option value="Copywriting">Copywriting</option>
                     <option value="Video AI">Video AI</option>
@@ -245,7 +245,7 @@ export const SubmitToolView: React.FC<SubmitToolViewProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wider">
                     One-line Tagline (Under 120 chars) *
                   </label>
                   <input
@@ -255,7 +255,7 @@ export const SubmitToolView: React.FC<SubmitToolViewProps> = ({
                     placeholder="Next-generation image upscaling and enhancement using proprietary diffusion models."
                     maxLength={140}
                     required
-                    className="w-full bg-white border border-slate-200 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-50 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none transition-all placeholder:text-slate-400"
+                    className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-indigo-600 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-950/40 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
                   />
                 </div>
 
@@ -282,7 +282,7 @@ export const SubmitToolView: React.FC<SubmitToolViewProps> = ({
             {currentStep === 2 && (
               <div className="space-y-5">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wider">
                     Full Description *
                   </label>
                   <textarea
@@ -290,12 +290,12 @@ export const SubmitToolView: React.FC<SubmitToolViewProps> = ({
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Provide a comprehensive summary of model capabilities, benchmarks, and target users..."
                     rows={4}
-                    className="w-full bg-white border border-slate-200 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-50 rounded-xl p-4 text-sm text-slate-900 focus:outline-none transition-all placeholder:text-slate-400"
+                    className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-indigo-600 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-950/40 rounded-xl p-4 text-sm text-slate-900 dark:text-white focus:outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wider">
                     Logo / Icon Image URL
                   </label>
                   <input
@@ -303,12 +303,12 @@ export const SubmitToolView: React.FC<SubmitToolViewProps> = ({
                     value={logoUrl}
                     onChange={(e) => setLogoUrl(e.target.value)}
                     placeholder="https://example.com/logo.png"
-                    className="w-full bg-white border border-slate-200 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-50 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none transition-all placeholder:text-slate-400"
+                    className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-indigo-600 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-950/40 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wider">
                     Key Features Tags
                   </label>
                   <div className="flex gap-2 mb-2">
@@ -323,7 +323,7 @@ export const SubmitToolView: React.FC<SubmitToolViewProps> = ({
                         }
                       }}
                       placeholder="e.g. 8K Neural Upscaling"
-                      className="flex-1 bg-white border border-slate-200 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-50 rounded-xl px-4 py-2.5 text-xs text-slate-900 focus:outline-none placeholder:text-slate-400"
+                      className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-indigo-600 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-950/40 rounded-xl px-4 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
                     />
                     <button
                       type="button"
@@ -338,7 +338,7 @@ export const SubmitToolView: React.FC<SubmitToolViewProps> = ({
                     {keyFeatures.map((f, i) => (
                       <span
                         key={i}
-                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-100 border border-slate-200 text-xs text-slate-700 font-medium"
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-300 font-medium"
                       >
                         <span>{f}</span>
                         <button
@@ -357,7 +357,7 @@ export const SubmitToolView: React.FC<SubmitToolViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setCurrentStep(1)}
-                    className="px-6 py-3 rounded-xl border border-slate-200 text-slate-600 hover:text-slate-900 text-xs font-semibold flex items-center gap-2 cursor-pointer hover:bg-slate-50"
+                    className="px-6 py-3 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-xs font-semibold flex items-center gap-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800"
                   >
                     <ArrowLeft className="w-4 h-4" />
                     <span>Back</span>
@@ -378,7 +378,7 @@ export const SubmitToolView: React.FC<SubmitToolViewProps> = ({
             {currentStep === 3 && (
               <form onSubmit={handleFinalSubmit} className="space-y-5">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wider">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2 uppercase tracking-wider">
                     Pricing Model *
                   </label>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -389,8 +389,8 @@ export const SubmitToolView: React.FC<SubmitToolViewProps> = ({
                         onClick={() => setPricingType(type)}
                         className={`p-3 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
                           pricingType === type
-                            ? 'bg-indigo-50 text-indigo-700 border-indigo-300 shadow-xs'
-                            : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                            ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-300 dark:border-indigo-700 shadow-xs'
+                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-750'
                         }`}
                       >
                         {type}
@@ -400,7 +400,7 @@ export const SubmitToolView: React.FC<SubmitToolViewProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wider">
                     Submitter / Developer Email *
                   </label>
                   <input
@@ -409,14 +409,14 @@ export const SubmitToolView: React.FC<SubmitToolViewProps> = ({
                     onChange={(e) => setSubmitterEmail(e.target.value)}
                     placeholder="developer@example.com"
                     required
-                    className="w-full bg-white border border-slate-200 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-50 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none transition-all placeholder:text-slate-400"
+                    className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-indigo-600 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-950/40 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
                   />
                 </div>
 
-                <div className="p-4 rounded-xl bg-indigo-50 border border-indigo-100 text-xs text-slate-600 flex items-start gap-3">
-                  <Sparkles className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                <div className="p-4 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-800/60 text-xs text-slate-600 dark:text-slate-300 flex items-start gap-3">
+                  <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
                   <div>
-                    <strong className="text-slate-900">Want #1 VIP Homepage Placement?</strong>
+                    <strong className="text-slate-900 dark:text-white">Want #1 VIP Homepage Placement?</strong>
                     <p className="mt-0.5">
                       You can upgrade to a Featured Subscription anytime to get top priority traffic and verified badges.
                     </p>
@@ -427,7 +427,7 @@ export const SubmitToolView: React.FC<SubmitToolViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setCurrentStep(2)}
-                    className="px-6 py-3 rounded-xl border border-slate-200 text-slate-600 hover:text-slate-900 text-xs font-semibold flex items-center gap-2 cursor-pointer hover:bg-slate-50"
+                    className="px-6 py-3 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-xs font-semibold flex items-center gap-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800"
                   >
                     <ArrowLeft className="w-4 h-4" />
                     <span>Back</span>
@@ -454,20 +454,20 @@ export const SubmitToolView: React.FC<SubmitToolViewProps> = ({
           {/* Right Live Card Preview (5 Cols) */}
           <div className="lg:col-span-5">
             <div className="sticky top-32">
-              <div className="flex items-center gap-2 mb-3 text-xs font-semibold uppercase tracking-wider text-indigo-600">
+              <div className="flex items-center gap-2 mb-3 text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
                 <Eye className="w-4 h-4" />
                 <span>Live Card Preview</span>
               </div>
 
-              <div className="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
-                <div className="relative aspect-[16/9] w-full bg-slate-100">
+              <div className="bg-white dark:bg-slate-900 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-sm">
+                <div className="relative aspect-[16/9] w-full bg-slate-100 dark:bg-slate-800">
                   <img
                     src={logoUrl}
                     alt="Preview"
                     className="w-full h-full object-cover opacity-90"
                   />
                   <div className="absolute top-3 right-3">
-                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-white/90 backdrop-blur-md text-slate-700 border border-slate-200 shadow-xs">
+                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-white/90 dark:bg-slate-900/90 backdrop-blur-md text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-xs">
                       {pricingType}
                     </span>
                   </div>
@@ -476,21 +476,21 @@ export const SubmitToolView: React.FC<SubmitToolViewProps> = ({
                 <div className="p-6">
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div>
-                      <h3 className="font-heading text-xl font-bold text-slate-900">
+                      <h3 className="font-heading text-xl font-bold text-slate-900 dark:text-white">
                         {toolName || 'Your AI Tool Name'}
                       </h3>
-                      <span className="text-xs text-indigo-600 font-medium">
+                      <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">
                         {category}
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold">
+                    <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300 text-xs font-semibold">
                       <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
                       <span>5.0</span>
                     </div>
                   </div>
 
-                  <p className="text-xs text-slate-500 line-clamp-2 mt-2 leading-relaxed font-normal">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mt-2 leading-relaxed font-normal">
                     {tagline || 'Your compelling one-line value proposition here...'}
                   </p>
 
@@ -498,7 +498,7 @@ export const SubmitToolView: React.FC<SubmitToolViewProps> = ({
                     {keyFeatures.slice(0, 3).map((f, i) => (
                       <span
                         key={i}
-                        className="text-[10px] px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-medium"
+                        className="text-[10px] px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium border border-slate-200/60 dark:border-slate-700/60"
                       >
                         {f}
                       </span>

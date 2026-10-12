@@ -81,11 +81,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-full max-w-md bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-2xl">
+      <div className="relative w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl">
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 text-slate-400 hover:text-slate-900 p-1.5 rounded-lg hover:bg-slate-100 transition-all cursor-pointer"
+          className="absolute top-5 right-5 text-slate-400 hover:text-slate-900 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
@@ -95,10 +95,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <div className="flex justify-center mb-3">
             <Logo size="lg" showText={false} />
           </div>
-          <h2 className="font-heading text-2xl font-bold text-slate-900">
+          <h2 className="font-heading text-2xl font-bold text-slate-900 dark:text-white">
             {isSignUp ? 'Create your ToolverAI Account' : 'Welcome to ToolverAI'}
           </h2>
-          <p className="text-xs text-slate-500 mt-1 font-normal">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-normal">
             Real-time authentication and directory synchronization on toolverai.com
           </p>
         </div>
@@ -108,23 +108,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           type="button"
           onClick={handleDemoLogin}
           disabled={loading}
-          className="w-full py-2.5 px-4 mb-4 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 font-semibold text-sm flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer"
+          className="w-full py-2.5 px-4 mb-4 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 font-semibold text-sm flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer"
         >
-          <Sparkles className="w-4 h-4 text-indigo-600" />
+          <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
           <span>⚡ One-Click Demo Sign-in (Ahmad Zafar)</span>
         </button>
 
         <div className="flex items-center gap-3 my-4">
-          <div className="flex-1 h-px bg-slate-200" />
-          <span className="text-xs text-slate-400 uppercase font-semibold">Or Email Sign In</span>
-          <div className="flex-1 h-px bg-slate-200" />
+          <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
+          <span className="text-xs text-slate-400 dark:text-slate-500 uppercase font-semibold">Or Email Sign In</span>
+          <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
         </div>
 
         {/* Email Password Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           {isSignUp && (
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Full Name
               </label>
               <div className="relative">
@@ -134,15 +134,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Ahmad Zafar"
                   required
-                  className="w-full bg-white border border-slate-200 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-50 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 pl-10 focus:outline-none transition-all placeholder:text-slate-400"
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-indigo-600 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-950/40 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 dark:text-white pl-10 focus:outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
                 />
-                <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                <User className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-3" />
               </div>
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
               Email Address
             </label>
             <div className="relative">
@@ -152,14 +152,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@example.com"
                 required
-                className="w-full bg-white border border-slate-200 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-50 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 pl-10 focus:outline-none transition-all placeholder:text-slate-400"
+                className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-indigo-600 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-950/40 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 dark:text-white pl-10 focus:outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
               />
-              <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+              <Mail className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-3" />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
               Password
             </label>
             <div className="relative">
@@ -169,9 +169,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
-                className="w-full bg-white border border-slate-200 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-50 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 pl-10 focus:outline-none transition-all placeholder:text-slate-400"
+                className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-indigo-600 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-950/40 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 dark:text-white pl-10 focus:outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
               />
-              <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+              <Lock className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-3" />
             </div>
           </div>
 
@@ -185,12 +185,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         </form>
 
         {/* Switch Mode */}
-        <div className="mt-6 text-center text-xs text-slate-500 font-normal">
+        <div className="mt-6 text-center text-xs text-slate-500 dark:text-slate-400 font-normal">
           {isSignUp ? 'Already have an account?' : "Don't have an account yet?"}{' '}
           <button
             type="button"
             onClick={() => setIsSignUp(!isSignUp)}
-            className="text-indigo-600 font-semibold hover:underline ml-1 cursor-pointer"
+            className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline ml-1 cursor-pointer"
           >
             {isSignUp ? 'Sign In' : 'Sign Up Free'}
           </button>

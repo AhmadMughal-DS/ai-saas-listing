@@ -135,16 +135,21 @@
     }
     </script>
 
-    <!-- ── Single Light Theme (site-wide) ──────────────────────────── -->
+    <!-- ── Theme Flash Prevention & Initial Theme Setup ──────────────── -->
     <script>
       (function() {
         try {
-          // ToolverAI uses one light theme everywhere; clear any old dark preference
-          localStorage.removeItem('toolver_theme');
+          var saved = localStorage.getItem('toolver_theme');
+          if (saved === 'dark') {
+            document.documentElement.classList.add('dark');
+            document.documentElement.setAttribute('data-theme', 'dark');
+            document.documentElement.style.colorScheme = 'dark';
+          } else {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.setAttribute('data-theme', 'light');
+            document.documentElement.style.colorScheme = 'light';
+          }
         } catch(e) {}
-        document.documentElement.classList.remove('dark');
-        document.documentElement.setAttribute('data-theme', 'light');
-        document.documentElement.style.colorScheme = 'light';
       })();
     </script>
   </head>

@@ -147,27 +147,21 @@ export const PromptsView: React.FC<PromptsViewProps> = ({ onNavigate }) => {
   };
 
   const getModelBadgeClass = (model: string) => {
-    if (model.includes('Claude')) {
-      return 'bg-amber-50 text-amber-800 border-amber-200';
+    if (model.includes('Claude') || model.includes('Cursor')) {
+      return 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800/60';
     }
     if (model.includes('ChatGPT') || model.includes('GPT')) {
-      return 'bg-emerald-50 text-emerald-800 border-emerald-200';
+      return 'bg-indigo-50/80 dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 border-indigo-200/80 dark:border-slate-700';
     }
-    if (model.includes('Midjourney')) {
-      return 'bg-purple-50 text-purple-800 border-purple-200';
-    }
-    if (model.includes('Cursor')) {
-      return 'bg-indigo-50 text-indigo-800 border-indigo-200';
-    }
-    return 'bg-slate-100 text-slate-800 border-slate-200';
+    return 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-700';
   };
 
   return (
     <div className="w-full pt-28 pb-24 px-4 sm:px-8 max-w-[1440px] mx-auto">
       {/* Header */}
       <div className="text-center max-w-4xl mx-auto mb-10">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-semibold uppercase tracking-wide mb-4 shadow-xs">
-          <Terminal className="w-4 h-4 text-indigo-600" />
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300 text-xs font-semibold uppercase tracking-wide mb-4 shadow-xs">
+          <Terminal className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
           <span>Curated AI Prompt Engineering Index & Generator</span>
         </div>
         <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-4">

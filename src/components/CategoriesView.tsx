@@ -100,7 +100,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
       <div className="w-full pt-28 pb-24 px-4 sm:px-8 max-w-[1440px] mx-auto">
         {/* Semantic Breadcrumbs */}
         <nav aria-label="Breadcrumb" className="mb-6">
-          <ol className="flex items-center gap-1.5 text-xs text-slate-500 flex-wrap">
+          <ol className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
             <li>
               <a
                 href="/"
@@ -108,12 +108,12 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                   e.preventDefault();
                   onBackToDirectory();
                 }}
-                className="hover:text-indigo-600 transition-colors"
+                className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
               >
                 Home
               </a>
             </li>
-            <li aria-hidden="true" className="text-slate-300">/</li>
+            <li aria-hidden="true" className="text-slate-300 dark:text-slate-600">/</li>
             <li>
               <a
                 href="/categories"
@@ -121,13 +121,13 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                   e.preventDefault();
                   onBackToAllCategories();
                 }}
-                className="hover:text-indigo-600 transition-colors"
+                className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
               >
                 Categories
               </a>
             </li>
-            <li aria-hidden="true" className="text-slate-300">/</li>
-            <li className="text-slate-900 font-semibold" aria-current="page">
+            <li aria-hidden="true" className="text-slate-300 dark:text-slate-600">/</li>
+            <li className="text-slate-900 dark:text-white font-semibold" aria-current="page">
               {currentCategory.name}
             </li>
           </ol>
@@ -136,7 +136,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
         {/* Back to all categories */}
         <button
           onClick={onBackToAllCategories}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-indigo-600 mb-6 transition-colors cursor-pointer group"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 mb-6 transition-colors cursor-pointer group"
         >
           <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
           <span>All AI Categories</span>
@@ -144,27 +144,27 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
 
         {/* Category Hero */}
         <header className="mb-12">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-semibold uppercase mb-4 shadow-xs">
-            <Icon className="w-4 h-4 text-indigo-600" />
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-100 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 text-xs font-semibold uppercase mb-4 shadow-xs">
+            <Icon className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
             <span>Curated Taxonomy • {categoryTools.length} Tools</span>
           </div>
 
-          <h1 className="font-heading text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight mb-4">
+          <h1 className="font-heading text-3xl sm:text-5xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-4">
             Best {currentCategory.name} Tools in 2026
           </h1>
 
-          <p className="text-base sm:text-lg text-slate-600 max-w-3xl leading-relaxed">
+          <p className="text-base sm:text-lg text-slate-600 dark:text-slate-400 max-w-3xl leading-relaxed">
             Discover and compare the top {currentCategory.name.toLowerCase()} AI tools in 2026. Explore {categoryTools.length} curated solutions benchmarked on estimated monthly web traffic, core capabilities, developer pricing plans, and authentic industry reviews on ToolverAI.
           </p>
         </header>
 
         {/* Section: Category Tools Grid */}
         <section className="mb-16">
-          <div className="flex items-center justify-between mb-6 pb-3 border-b border-slate-200">
-            <h2 className="font-heading text-xl sm:text-2xl font-bold text-slate-900">
+          <div className="flex items-center justify-between mb-6 pb-3 border-b border-slate-200 dark:border-slate-800">
+            <h2 className="font-heading text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
               {currentCategory.name} AI Directory ({categoryTools.length} Tools)
             </h2>
-            <span className="text-xs text-slate-500 font-medium">
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
               Ranked by traffic & verified reviews
             </span>
           </div>
@@ -173,7 +173,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
             {categoryTools.map((tool) => (
               <div
                 key={tool.id}
-                className="bg-white rounded-3xl overflow-hidden card-3d flex flex-col justify-between group shadow-xs transition-all border border-slate-200 hover:border-indigo-200"
+                className="bg-white dark:bg-slate-900 rounded-3xl overflow-hidden card-3d flex flex-col justify-between group shadow-xs transition-all border border-slate-200 dark:border-slate-800 hover:border-indigo-200 dark:hover:border-indigo-600"
               >
                 <div>
                   {/* Tool Brand Banner with crawlable anchor */}
@@ -183,9 +183,9 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                       e.preventDefault();
                       onSelectTool(tool);
                     }}
-                    className="relative aspect-[16/9] w-full bg-gradient-to-br from-slate-50 via-indigo-50/40 to-slate-100 flex items-center justify-center overflow-hidden group/thumb cursor-pointer border-b border-slate-100 block"
+                    className="relative aspect-[16/9] w-full bg-gradient-to-br from-slate-50 dark:from-slate-800/80 via-indigo-50/40 dark:via-indigo-950/30 to-slate-100 dark:to-slate-900 flex items-center justify-center overflow-hidden group/thumb cursor-pointer border-b border-slate-100 dark:border-slate-800 block"
                   >
-                    <div className="relative z-10 w-24 h-24 rounded-2xl bg-white p-3 shadow-md ring-1 ring-slate-200/90 flex items-center justify-center group-hover/thumb:scale-110 transition-all duration-300">
+                    <div className="relative z-10 w-24 h-24 rounded-2xl bg-white dark:bg-slate-800 p-3 shadow-md ring-1 ring-slate-200/90 dark:ring-slate-700 flex items-center justify-center group-hover/thumb:scale-110 transition-all duration-300">
                       <img
                         src={tool.logoUrl}
                         alt={`${tool.name} logo`}
@@ -214,7 +214,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
 
                     {/* Pricing Badge */}
                     <div className="absolute top-3 right-3">
-                      <span className="px-2.5 py-1 rounded-full text-xs font-semibold shadow-xs bg-indigo-50 text-indigo-700 border border-indigo-200">
+                      <span className="px-2.5 py-1 rounded-full text-xs font-semibold shadow-xs bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
                         {tool.pricingType}
                       </span>
                     </div>
@@ -224,7 +224,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                   <div className="p-6">
                     <div className="flex items-start justify-between gap-3 mb-2">
                       <div className="min-w-0">
-                        <h3 className="font-heading text-xl font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                        <h3 className="font-heading text-xl font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                           <a
                             href={`/tool/${tool.slug || tool.id}`}
                             onClick={(e) => {
@@ -235,35 +235,35 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                             {tool.name}
                           </a>
                         </h3>
-                        <span className="text-xs text-indigo-600 font-semibold block mt-0.5">
+                        <span className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold block mt-0.5">
                           {tool.category}
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 border border-amber-100 text-amber-700 text-xs font-bold">
+                      <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold">
                         <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
                         <span>{tool.rating.toFixed(1)}</span>
-                        <span className="text-slate-400 font-normal text-[10px]">
+                        <span className="text-slate-400 dark:text-slate-500 font-normal text-[10px]">
                           ({tool.reviewCount})
                         </span>
                       </div>
                     </div>
 
-                    <p className="text-sm text-slate-500 line-clamp-2 mt-2 leading-relaxed font-normal">
+                    <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2 mt-2 leading-relaxed font-normal">
                       {tool.tagline}
                     </p>
                   </div>
                 </div>
 
                 {/* Card Footer */}
-                <div className="px-6 pb-6 pt-2 border-t border-slate-100 flex items-center justify-between">
+                <div className="px-6 pb-6 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
                   <a
                     href={`/tool/${tool.slug || tool.id}`}
                     onClick={(e) => {
                       e.preventDefault();
                       onSelectTool(tool);
                     }}
-                    className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 group-hover:translate-x-1 transition-transform"
+                    className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 flex items-center gap-1 group-hover:translate-x-1 transition-transform"
                   >
                     <span>View Features & Pricing</span>
                     <ChevronRight className="w-4 h-4" />
@@ -275,8 +275,8 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
         </section>
 
         {/* Section: Related Categories */}
-        <section className="pt-8 border-t border-slate-200">
-          <h2 className="font-heading text-2xl font-bold text-slate-900 mb-6">
+        <section className="pt-8 border-t border-slate-200 dark:border-slate-800">
+          <h2 className="font-heading text-2xl font-bold text-slate-900 dark:text-white mb-6">
             Explore Related AI Categories
           </h2>
 
@@ -291,12 +291,12 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                     e.preventDefault();
                     onSelectCategory(rc.slug);
                   }}
-                  className="bg-white border border-slate-200 hover:border-indigo-300 rounded-2xl p-4 text-center group transition-all shadow-xs hover:shadow-sm"
+                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-600 rounded-2xl p-4 text-center group transition-all shadow-xs hover:shadow-sm"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center mx-auto mb-2.5 group-hover:scale-110 transition-transform">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mx-auto mb-2.5 group-hover:scale-110 transition-transform">
                     <RelIcon className="w-5 h-5" />
                   </div>
-                  <h3 className="text-xs font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">
+                  <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                     {rc.name}
                   </h3>
                 </a>
@@ -315,7 +315,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
     <div className="w-full pt-32 pb-24 px-4 sm:px-8 max-w-[1440px] mx-auto">
       {/* Semantic Breadcrumbs */}
       <nav aria-label="Breadcrumb" className="mb-6">
-        <ol className="flex items-center gap-1.5 text-xs text-slate-500 flex-wrap">
+        <ol className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
           <li>
             <a
               href="/"
@@ -323,13 +323,13 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                 e.preventDefault();
                 onBackToDirectory();
               }}
-              className="hover:text-indigo-600 transition-colors"
+              className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
             >
               Home
             </a>
           </li>
-          <li aria-hidden="true" className="text-slate-300">/</li>
-          <li className="text-slate-900 font-semibold" aria-current="page">
+          <li aria-hidden="true" className="text-slate-300 dark:text-slate-600">/</li>
+          <li className="text-slate-900 dark:text-white font-semibold" aria-current="page">
             Categories
           </li>
         </ol>
@@ -337,19 +337,19 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
 
       {/* Header */}
       <header className="text-center max-w-3xl mx-auto mb-16">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-semibold uppercase mb-4 shadow-xs">
-          <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-100 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 text-xs font-semibold uppercase mb-4 shadow-xs">
+          <Sparkles className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
           <span>Curated Ecosystem Taxonomy</span>
         </div>
 
-        <h1 className="font-heading text-4xl sm:text-6xl font-extrabold text-slate-900 tracking-tight mb-4">
+        <h1 className="font-heading text-4xl sm:text-6xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-4">
           Browse AI Tools by{' '}
-          <span className="text-indigo-600">
+          <span className="text-indigo-600 dark:text-indigo-400">
             Category
           </span>
         </h1>
 
-        <p className="text-base sm:text-lg text-slate-600 font-normal leading-relaxed">
+        <p className="text-base sm:text-lg text-slate-600 dark:text-slate-400 font-normal leading-relaxed">
           Navigate the complete landscape of verified artificial intelligence models, developer frameworks, and generative AI apps in 2026.
         </p>
       </header>
@@ -374,28 +374,28 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                   e.preventDefault();
                   onSelectCategory(cat.slug);
                 }}
-                className="bg-white rounded-2xl p-6 flex flex-col justify-between card-3d group cursor-pointer border border-slate-200 hover:border-indigo-200 shadow-xs hover:shadow-sm transition-all block text-left"
+                className="bg-white dark:bg-slate-900 rounded-2xl p-6 flex flex-col justify-between card-3d group cursor-pointer border border-slate-200 dark:border-slate-800 hover:border-indigo-200 dark:hover:border-indigo-600 shadow-xs hover:shadow-sm transition-all block text-left"
               >
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-indigo-50 border border-indigo-100 text-indigo-600 transition-all group-hover:scale-105">
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 transition-all group-hover:scale-105">
                       <Icon className="w-6 h-6" />
                     </div>
-                    <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-slate-100 text-slate-600">
+                    <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/50 dark:border-slate-700">
                       {count} {count === 1 ? 'Tool' : 'Tools'}
                     </span>
                   </div>
 
-                  <h3 className="font-heading text-xl font-bold text-slate-900 group-hover:text-indigo-600 transition-colors mb-2">
+                  <h3 className="font-heading text-xl font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors mb-2">
                     {cat.name}
                   </h3>
 
-                  <p className="text-xs text-slate-500 leading-relaxed mb-6 font-normal">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-6 font-normal">
                     {cat.description}
                   </p>
                 </div>
 
-                <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-indigo-600">
+                <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs font-semibold text-indigo-600 dark:text-indigo-400">
                   <span>Explore {cat.name} Tools</span>
                   <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </div>

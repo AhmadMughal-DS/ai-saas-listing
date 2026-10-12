@@ -79,33 +79,34 @@ export const applyThemeCssVariables = (theme: Theme) => {
   window.dispatchEvent(new CustomEvent('toolver-theme-change', { detail: { theme, isDark } }));
 };
 
-// ToolverAI uses ONE theme (light) across the entire website.
-// Dark mode was removed because most pages only had light styling, which made
-// content unreadable in dark mode. The context API is kept for compatibility.
-const SITE_THEME: Theme = 'light';
-
 const getInitialTheme = (): Theme => {
-  if (typeof window !== 'undefined') {
-    try {
-      // Clear any previously saved dark preference so returning visitors get the light theme
-      localStorage.removeItem('toolver_theme');
-    } catch {
-      // ignore storage errors (private mode etc.)
-    }
+  if (typeof window === 'undefined') return 'light';
+  try {
+    const saved = localStorage.getItem('toolver_theme');
+    if (saved === 'dark') return 'dark';
+    if (saved === 'light') return 'light';
+    return 'light';
+  } catch {
+    return 'light';
   }
-  return SITE_THEME;
 };
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [theme] = useState<Theme>(getInitialTheme);
+  const [theme, setThemeState] = useState<Theme>(getInitialTheme);
 
-  // Single-theme site: these are intentionally no-ops
-  const setTheme = (_newTheme: Theme) => {
-    applyThemeCssVariables(SITE_THEME);
+  const setTheme = (newTheme: Theme) => {
+    setThemeState(newTheme);
+    try {
+      localStorage.setItem('toolver_theme', newTheme);
+    } catch (e) {
+      console.warn('Unable to persist theme to localStorage:', e);
+    }
+    applyThemeCssVariables(newTheme);
   };
 
   const toggleTheme = () => {
-    applyThemeCssVariables(SITE_THEME);
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(nextTheme);
   };
 
   useEffect(() => {

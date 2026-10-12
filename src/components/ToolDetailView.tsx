@@ -191,12 +191,11 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
       </button>
 
       {/* Main Tool Header Card */}
-
-      <div className="bg-white rounded-3xl p-6 sm:p-10 mb-10 border border-slate-200 shadow-sm relative overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-10 mb-10 border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
             {/* Logo */}
-            <div className="w-24 h-24 rounded-2xl bg-slate-50 border border-slate-200 p-3 flex items-center justify-center shrink-0">
+            <div className="w-24 h-24 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 flex items-center justify-center shrink-0">
               <img
                 src={tool.logoUrl}
                 alt={tool.name}
@@ -210,7 +209,7 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
             {/* Title & Ratings */}
             <div>
               <div className="flex items-center flex-wrap gap-2.5 mb-1.5">
-                <h1 className="font-heading text-3xl sm:text-4xl font-extrabold text-slate-900">
+                <h1 className="font-heading text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white">
                   {tool.name} Review 2026: Features, Pricing & Alternatives
                 </h1>
                 <a
@@ -220,29 +219,29 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
                     window.history.pushState({}, '', `/categories/${categorySlug}`);
                     window.dispatchEvent(new PopStateEvent('popstate'));
                   }}
-                  className="px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100 hover:bg-indigo-100 transition-colors"
+                  className="px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800 hover:bg-indigo-100 dark:hover:bg-indigo-900 transition-colors"
                 >
                   {tool.category}
                 </a>
                 {tool.isFeatured && (
-                  <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1 shadow-xs">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-600 fill-amber-500" />
+                  <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 flex items-center gap-1 shadow-xs">
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 fill-indigo-400/30" />
                     <span>Featured Partner</span>
                   </span>
                 )}
                 {tool.isVerified && (
-                  <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1 shadow-xs">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                  <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center gap-1 shadow-xs">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
                     <span>Verified AI Tool</span>
                   </span>
                 )}
                 {tool.hasApi && (
-                  <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                  <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800">
                     API Available
                   </span>
                 )}
                 {tool.isOpenSource && (
-                  <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                  <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                     Open Source
                   </span>
                 )}
@@ -257,20 +256,20 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
                       className={`w-4 h-4 ${
                         i < Math.floor(tool.rating)
                           ? 'fill-amber-500 text-amber-500'
-                          : 'text-amber-200'
+                          : 'text-amber-200 dark:text-amber-900'
                       }`}
                     />
                   ))}
                 </div>
-                <span className="text-sm font-bold text-slate-900">
+                <span className="text-sm font-bold text-slate-900 dark:text-white">
                   {tool.rating.toFixed(1)}
                 </span>
-                <span className="text-xs text-slate-400">
+                <span className="text-xs text-slate-400 dark:text-slate-500">
                   ({tool.reviewCount.toLocaleString()} Verified Reviews)
                 </span>
               </div>
 
-              <p className="text-sm sm:text-base text-slate-500 max-w-2xl font-normal leading-relaxed">
+              <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 max-w-2xl font-normal leading-relaxed">
                 {tool.tagline}
               </p>
             </div>
@@ -295,41 +294,41 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
         {/* Left 2 Cols: Traffic Analytics, Deal Widget, Overview, Specs, Pricing Plans, Reviews */}
         <div className="lg:col-span-2 space-y-10">
           {/* Traffic Analytics Summary (Toolify Competitor Feature) */}
-          <section className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs">
-            <h2 className="font-heading text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+          <section className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-xs">
+            <h2 className="font-heading text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
               <Flame className="w-5 h-5 text-orange-500" />
               <span>Traffic & Popularity Benchmarks</span>
             </h2>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
-                <div className="text-xs text-slate-500 font-medium mb-1">Monthly Visitors</div>
-                <div className="text-2xl font-extrabold text-slate-900 font-heading">
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                <div className="text-xs text-slate-500 dark:text-slate-400 font-medium mb-1">Monthly Visitors</div>
+                <div className="text-2xl font-extrabold text-slate-900 dark:text-white font-heading">
                   {tool.monthlyVisitsFormatted || `${((tool.monthlyVisits || 10000000) / 1000000).toFixed(1)}M`}
                 </div>
                 <div className="text-[10px] text-slate-400 mt-0.5">Estimated web traffic</div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-100">
-                <div className="text-xs text-emerald-800 font-medium mb-1">Traffic Growth (MoM)</div>
-                <div className="text-2xl font-extrabold text-emerald-700 font-heading flex items-center gap-1">
+              <div className="p-4 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-800/60">
+                <div className="text-xs text-emerald-800 dark:text-emerald-300 font-medium mb-1">Traffic Growth (MoM)</div>
+                <div className="text-2xl font-extrabold text-emerald-700 dark:text-emerald-400 font-heading flex items-center gap-1">
                   <TrendingUp className="w-4 h-4" />
                   <span>+{tool.trafficGrowth || 35.4}%</span>
                 </div>
-                <div className="text-[10px] text-emerald-600 mt-0.5">High growth index</div>
+                <div className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-0.5">High growth index</div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-100">
-                <div className="text-xs text-indigo-800 font-medium mb-1">Global Traffic Rank</div>
-                <div className="text-2xl font-extrabold text-indigo-700 font-heading">
+              <div className="p-4 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-800/60">
+                <div className="text-xs text-indigo-800 dark:text-indigo-300 font-medium mb-1">Global Traffic Rank</div>
+                <div className="text-2xl font-extrabold text-indigo-700 dark:text-indigo-400 font-heading">
                   #{tool.globalRank || 8}
                 </div>
-                <div className="text-[10px] text-indigo-600 mt-0.5">Among all AI websites</div>
+                <div className="text-[10px] text-indigo-600 dark:text-indigo-400 mt-0.5">Among all AI websites</div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
-                <div className="text-xs text-slate-500 font-medium mb-1">Category Position</div>
-                <div className="text-2xl font-extrabold text-slate-900 font-heading">
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                <div className="text-xs text-slate-500 dark:text-slate-400 font-medium mb-1">Category Position</div>
+                <div className="text-2xl font-extrabold text-slate-900 dark:text-white font-heading">
                   #{tool.categoryRank || 1}
                 </div>
                 <div className="text-[10px] text-slate-400 mt-0.5">in {tool.category}</div>
@@ -337,7 +336,7 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
             </div>
 
             {/* Demographics & Duration */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-700">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-300">
               <div className="flex items-center gap-2">
                 <Globe className="w-4 h-4 text-slate-400" />
                 <span className="font-semibold">Top Visitor Source:</span>
@@ -353,24 +352,24 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
 
           {/* Exclusive Deal Widget (AIChief Competitor Feature) */}
           {tool.deal && (
-            <section className="bg-emerald-50/60 border border-emerald-200 rounded-3xl p-6 sm:p-8 relative overflow-hidden shadow-xs">
+            <section className="bg-emerald-50/60 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-3xl p-6 sm:p-8 relative overflow-hidden shadow-xs">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
                 <div>
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold uppercase tracking-wide mb-2">
-                    <Tag className="w-3.5 h-3.5 text-emerald-700" />
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 text-xs font-bold uppercase tracking-wide mb-2">
+                    <Tag className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
                     <span>Exclusive Verified Discount</span>
                   </div>
-                  <h3 className="font-heading text-2xl font-extrabold text-emerald-950 mb-1">
+                  <h3 className="font-heading text-2xl font-extrabold text-emerald-950 dark:text-white mb-1">
                     {tool.deal.discount}
                   </h3>
-                  <p className="text-xs sm:text-sm text-emerald-800 leading-relaxed max-w-xl">
+                  <p className="text-xs sm:text-sm text-emerald-800 dark:text-emerald-300 leading-relaxed max-w-xl">
                     {tool.deal.description}
                   </p>
                 </div>
 
                 <div className="flex flex-col items-end gap-2 shrink-0">
-                  <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-emerald-200 shadow-xs">
-                    <span className="font-mono text-sm font-extrabold text-emerald-900 tracking-wider">
+                  <div className="flex items-center gap-2 bg-white dark:bg-slate-800 px-3 py-2 rounded-xl border border-emerald-200 dark:border-emerald-700 shadow-xs">
+                    <span className="font-mono text-sm font-extrabold text-emerald-900 dark:text-emerald-300 tracking-wider">
                       {tool.deal.code}
                     </span>
                     <button
@@ -378,7 +377,7 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
                       className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
                         copiedCode
                           ? 'bg-emerald-700 text-white'
-                          : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+                          : 'bg-emerald-50 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60'
                       }`}
                     >
                       {copiedCode ? (
@@ -400,27 +399,27 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
           )}
 
           {/* Overview */}
-          <section className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs">
-            <h2 className="font-heading text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-indigo-600" />
+          <section className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-xs">
+            <h2 className="font-heading text-xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
               <span>Overview & Description</span>
             </h2>
-            <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
+            <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
               {tool.description}
             </p>
           </section>
 
           {/* Pros & Cons (AIChief Competitor Feature) */}
-          <section className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs">
-            <h2 className="font-heading text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-              <ShieldCheck className="w-5 h-5 text-indigo-600" />
+          <section className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-xs">
+            <h2 className="font-heading text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
               <span>Pros & Cons Editorial Breakdown</span>
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {/* Pros */}
-              <div className="p-5 rounded-2xl bg-emerald-50/50 border border-emerald-100 space-y-3">
-                <span className="text-xs font-bold text-emerald-800 uppercase tracking-wide flex items-center gap-1.5">
-                  <CheckCircle className="w-4 h-4 text-emerald-600" /> What Users Love (Pros)
+              <div className="p-5 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/50 space-y-3">
+                <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wide flex items-center gap-1.5">
+                  <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> What Users Love (Pros)
                 </span>
                 <ul className="space-y-2">
                   {(tool.pros || [
@@ -428,7 +427,7 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
                     'Generous free usage tier',
                     'Active developer community and documentation'
                   ]).map((pro, idx) => (
-                    <li key={idx} className="text-xs text-emerald-900 flex items-start gap-2">
+                    <li key={idx} className="text-xs text-emerald-900 dark:text-emerald-200 flex items-start gap-2">
                       <span className="text-emerald-500 font-bold">•</span>
                       <span>{pro}</span>
                     </li>
@@ -437,15 +436,15 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
               </div>
 
               {/* Cons */}
-              <div className="p-5 rounded-2xl bg-rose-50/50 border border-rose-100 space-y-3">
-                <span className="text-xs font-bold text-rose-800 uppercase tracking-wide flex items-center gap-1.5">
-                  <X className="w-4 h-4 text-rose-600" /> Potential Limitations (Cons)
+              <div className="p-5 rounded-2xl bg-rose-50/50 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/50 space-y-3">
+                <span className="text-xs font-bold text-rose-800 dark:text-rose-300 uppercase tracking-wide flex items-center gap-1.5">
+                  <X className="w-4 h-4 text-rose-600 dark:text-rose-400" /> Potential Limitations (Cons)
                 </span>
                 <ul className="space-y-2">
                   {(tool.cons || [
                     'Advanced features locked behind commercial tier'
                   ]).map((con, idx) => (
-                    <li key={idx} className="text-xs text-rose-900 flex items-start gap-2">
+                    <li key={idx} className="text-xs text-rose-900 dark:text-rose-200 flex items-start gap-2">
                       <span className="text-rose-500 font-bold">•</span>
                       <span>{con}</span>
                     </li>
@@ -456,19 +455,19 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
           </section>
 
           {/* Key Features */}
-          <section className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs">
-            <h2 className="font-heading text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-indigo-600" />
+          <section className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-xs">
+            <h2 className="font-heading text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
               <span>Core Capabilities</span>
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               {tool.keyFeatures.map((feature, idx) => (
                 <div
                   key={idx}
-                  className="flex items-center gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200"
+                  className="flex items-center gap-3 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700"
                 >
-                  <CheckCircle className="w-4 h-4 text-indigo-600 shrink-0" />
-                  <span className="text-xs sm:text-sm font-medium text-slate-800">{feature}</span>
+                  <CheckCircle className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                  <span className="text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200">{feature}</span>
                 </div>
               ))}
             </div>
@@ -476,44 +475,44 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
 
           {/* Pricing Plans */}
           <section>
-            <h2 className="font-heading text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-indigo-600" />
+            <h2 className="font-heading text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
               <span>Official Pricing Tiers</span>
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {tool.pricingPlans.map((plan) => (
                 <div
                   key={plan.id}
-                  className={`bg-white rounded-3xl p-6 flex flex-col justify-between transition-all ${
+                  className={`bg-white dark:bg-slate-900 rounded-3xl p-6 flex flex-col justify-between transition-all ${
                     plan.isPopular
-                      ? 'border-2 border-indigo-600 shadow-md ring-4 ring-indigo-50/80'
-                      : 'border border-slate-200 shadow-xs'
+                      ? 'border-2 border-indigo-600 dark:border-indigo-500 shadow-md ring-4 ring-indigo-50/80 dark:ring-indigo-950/40'
+                      : 'border border-slate-200 dark:border-slate-800 shadow-xs'
                   }`}
                 >
                   <div>
                     {plan.isPopular && (
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold bg-indigo-50 text-indigo-700 border border-indigo-100 mb-3 inline-block">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800 mb-3 inline-block">
                         RECOMMENDED
                       </span>
                     )}
-                    <h3 className="font-heading text-xl font-bold text-slate-900 mb-1">
+                    <h3 className="font-heading text-xl font-bold text-slate-900 dark:text-white mb-1">
                       {plan.name}
                     </h3>
                     <div className="flex items-baseline gap-1 my-3">
-                      <span className="text-3xl font-extrabold text-slate-900 font-heading">
+                      <span className="text-3xl font-extrabold text-slate-900 dark:text-white font-heading">
                         {plan.price}
                       </span>
-                      <span className="text-xs text-slate-500">
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
                         {plan.billingPeriod}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500 mb-4">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
                       {plan.description}
                     </p>
                     <ul className="space-y-2 mb-6">
                       {plan.features.map((f, i) => (
-                        <li key={i} className="text-xs text-slate-600 flex items-center gap-2">
-                          <CheckCircle className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                        <li key={i} className="text-xs text-slate-600 dark:text-slate-300 flex items-center gap-2">
+                          <CheckCircle className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
                           <span>{f}</span>
                         </li>
                       ))}
@@ -536,11 +535,11 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
           </section>
 
           {/* User Reviews */}
-          <section className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs">
-            <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-100">
+          <section className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-xs">
+            <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-100 dark:border-slate-800">
               <div>
-                <h2 className="font-heading text-xl font-bold text-slate-900 flex items-center gap-2">
-                  <MessageSquare className="w-5 h-5 text-indigo-600" />
+                <h2 className="font-heading text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <MessageSquare className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                   <span>Verified User Reviews</span>
                 </h2>
                 <p className="text-xs text-slate-400 mt-0.5">
@@ -569,7 +568,7 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
                 return (
                   <div
                     key={rev.id}
-                    className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 hover:border-slate-300 transition-colors"
+                    className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/80 space-y-3 hover:border-slate-300 dark:hover:border-slate-600 transition-colors"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3">
@@ -580,24 +579,24 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
                           height={40}
                           loading="lazy"
                           decoding="async"
-                          className="w-10 h-10 rounded-full object-cover border border-slate-200 shrink-0"
+                          className="w-10 h-10 rounded-full object-cover border border-slate-200 dark:border-slate-700 shrink-0"
                         />
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-bold text-slate-900 text-sm">
+                            <span className="font-bold text-slate-900 dark:text-white text-sm">
                               {rev.authorName}
                             </span>
                             {rev.verified && (
-                              <span className="flex items-center gap-0.5 text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-200 font-semibold">
+                              <span className="flex items-center gap-0.5 text-[10px] text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800 font-semibold">
                                 <ShieldCheck className="w-3 h-3" /> Verified Buyer
                               </span>
                             )}
                           </div>
                           {(rev.authorRole || rev.authorCompany) && (
-                            <div className="flex items-center gap-1 text-[11px] text-slate-500 font-medium">
+                            <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 font-medium">
                               {rev.authorRole && <span>{rev.authorRole}</span>}
                               {rev.authorRole && rev.authorCompany && <span>•</span>}
-                              {rev.authorCompany && <span className="text-indigo-600 font-semibold">{rev.authorCompany}</span>}
+                              {rev.authorCompany && <span className="text-indigo-600 dark:text-indigo-400 font-semibold">{rev.authorCompany}</span>}
                             </div>
                           )}
                           <span className="text-[11px] text-slate-400">{rev.date}</span>
@@ -611,31 +610,31 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
                             className={`w-3.5 h-3.5 ${
                               i < rev.rating
                                 ? 'fill-amber-500 text-amber-500'
-                                : 'text-amber-200'
+                                : 'text-slate-200 dark:text-slate-700'
                             }`}
                           />
                         ))}
                       </div>
                     </div>
 
-                    <p className="text-sm text-slate-700 leading-relaxed pl-0.5">
+                    <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed pl-0.5">
                       {rev.comment}
                     </p>
 
-                    <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between">
+                    <div className="pt-2 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between">
                       <button
                         type="button"
                         onClick={() => handleToggleHelpful(rev.id, rev.helpfulCount ?? 20)}
                         className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                           currentHelpful.voted
-                            ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
-                            : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100/80 hover:text-slate-900'
+                            ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800'
+                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100/80 dark:hover:bg-slate-700/80 hover:text-slate-900 dark:hover:text-white'
                         }`}
                       >
                         <ThumbsUp className={`w-3.5 h-3.5 ${currentHelpful.voted ? 'fill-indigo-600 text-indigo-600' : ''}`} />
                         <span>Helpful ({currentHelpful.count})</span>
                       </button>
-                      <span className="text-[11px] text-slate-400">Authentic Review</span>
+                      <span className="text-[11px] text-slate-400 dark:text-slate-500">Authentic Review</span>
                     </div>
                   </div>
                 );
@@ -643,15 +642,15 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
             </div>
 
             {/* Submit Review Form */}
-            <form onSubmit={handleReviewSubmit} className="p-6 rounded-2xl bg-slate-50 border border-slate-200">
-              <h3 className="font-heading text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-indigo-600" />
+            <form onSubmit={handleReviewSubmit} className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+              <h3 className="font-heading text-base font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                 <span>Leave a Verified Industry Review</span>
               </h3>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Your Full Name
                   </label>
                   <input
@@ -660,11 +659,11 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
                     onChange={(e) => setAuthorName(e.target.value)}
                     placeholder="e.g. Sarah Jenkins"
                     required
-                    className="w-full bg-white border border-slate-200 focus:border-indigo-600 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none"
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-indigo-600 dark:focus:border-indigo-500 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Job Title / Role
                   </label>
                   <input
@@ -672,11 +671,11 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
                     value={authorRole}
                     onChange={(e) => setAuthorRole(e.target.value)}
                     placeholder="e.g. Senior ML Engineer"
-                    className="w-full bg-white border border-slate-200 focus:border-indigo-600 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none"
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-indigo-600 dark:focus:border-indigo-500 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Company / Organization
                   </label>
                   <input
@@ -684,13 +683,13 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
                     value={authorCompany}
                     onChange={(e) => setAuthorCompany(e.target.value)}
                     placeholder="e.g. DeepScale Labs"
-                    className="w-full bg-white border border-slate-200 focus:border-indigo-600 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none"
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-indigo-600 dark:focus:border-indigo-500 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none"
                   />
                 </div>
               </div>
 
               <div className="mb-4">
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Overall Rating (1-5 Stars)
                 </label>
                 <div className="flex items-center gap-2 pt-1">
@@ -705,19 +704,19 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
                         className={`w-5 h-5 ${
                           star <= newRating
                             ? 'fill-amber-500 text-amber-500'
-                            : 'text-slate-200'
+                            : 'text-slate-200 dark:text-slate-700'
                         }`}
                       />
                     </button>
                   ))}
-                  <span className="text-xs font-bold text-amber-600 ml-2">
+                  <span className="text-xs font-bold text-amber-600 dark:text-amber-400 ml-2">
                     {newRating} / 5 Stars
                   </span>
                 </div>
               </div>
 
               <div className="mb-4">
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Your Detailed Review
                 </label>
                 <textarea
@@ -726,7 +725,7 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
                   placeholder="Share your practical benchmarks, token efficiency, feature highlights, and ROI experience..."
                   rows={3}
                   required
-                  className="w-full bg-white border border-slate-200 focus:border-indigo-600 rounded-xl p-3 text-xs text-slate-900 focus:outline-none"
+                  className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-indigo-600 dark:focus:border-indigo-500 rounded-xl p-3 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none"
                 />
               </div>
 
@@ -745,16 +744,16 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
         {/* Right Sidebar: Platforms, Alternatives, Quick Spec Card */}
         <div className="space-y-6">
           {/* Supported Platforms */}
-          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs">
-            <h3 className="font-heading text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
-              <Laptop className="w-4 h-4 text-indigo-600" />
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-xs">
+            <h3 className="font-heading text-base font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+              <Laptop className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
               <span>Supported Platforms</span>
             </h3>
             <div className="flex flex-wrap gap-1.5">
               {(tool.platforms || ['Web', 'API']).map((p, idx) => (
                 <span
                   key={idx}
-                  className="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700"
+                  className="px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300"
                 >
                   {p}
                 </span>
@@ -763,10 +762,10 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
           </div>
 
           {/* Direct Alternatives */}
-          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-xs">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-heading text-base font-bold text-slate-900 flex items-center gap-2">
-                <GitCompare className="w-4 h-4 text-indigo-600" />
+              <h3 className="font-heading text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <GitCompare className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                 <span>Direct Alternatives</span>
               </h3>
               <a
@@ -777,7 +776,7 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
                   window.history.pushState({}, '', targetPath);
                   window.dispatchEvent(new PopStateEvent('popstate'));
                 }}
-                className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
+                className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors"
               >
                 View All →
               </a>
@@ -794,7 +793,7 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
                       e.preventDefault();
                       onSelectTool(rel);
                     }}
-                    className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 hover:border-indigo-200 hover:bg-slate-100/60 transition-all cursor-pointer group flex items-center justify-between block"
+                    className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 hover:border-indigo-200 dark:hover:border-indigo-500/50 hover:bg-slate-100/60 dark:hover:bg-slate-800 transition-all cursor-pointer group flex items-center justify-between block"
                   >
                     <div className="flex items-center gap-3">
                       <img
@@ -804,10 +803,10 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
                         height={40}
                         loading="lazy"
                         decoding="async"
-                        className="w-10 h-10 rounded-xl object-contain bg-white border border-slate-200 p-1"
+                        className="w-10 h-10 rounded-xl object-contain bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-1"
                       />
                       <div>
-                        <h4 className="font-heading font-bold text-slate-900 text-sm group-hover:text-indigo-600 transition-colors">
+                        <h4 className="font-heading font-bold text-slate-900 dark:text-white text-sm group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                           {rel.name}
                         </h4>
                         <span className="text-[11px] text-slate-400">
@@ -816,7 +815,7 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
                       </div>
                     </div>
 
-                    <span className="text-xs font-bold text-indigo-600 group-hover:translate-x-0.5 transition-transform">
+                    <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 group-hover:translate-x-0.5 transition-transform">
                       Compare →
                     </span>
                   </a>
@@ -826,8 +825,8 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
           </div>
 
           {/* Quick Hub Navigation Links for SEO */}
-          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-3">
-            <h3 className="font-heading text-sm font-bold text-slate-900">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
+            <h3 className="font-heading text-sm font-bold text-slate-900 dark:text-white">
               Related Research & Comparisons
             </h3>
             <a
@@ -838,7 +837,7 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
                 window.history.pushState({}, '', targetPath);
                 window.dispatchEvent(new PopStateEvent('popstate'));
               }}
-              className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center justify-between p-2.5 rounded-xl bg-indigo-50/50 border border-indigo-100 transition-colors"
+              className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 flex items-center justify-between p-2.5 rounded-xl bg-indigo-50/50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-800/60 transition-colors"
             >
               <span>Explore Top {tool.name} Alternatives</span>
               <ChevronRight className="w-3.5 h-3.5" />
@@ -858,7 +857,7 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
                     window.history.pushState({}, '', `/compare/${comp.canonicalSlug}`);
                     window.dispatchEvent(new PopStateEvent('popstate'));
                   }}
-                  className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100 transition-colors"
+                  className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700 transition-colors"
                 >
                   <span>Compare {tool.name} vs {otherName}</span>
                   <ChevronRight className="w-3.5 h-3.5" />
@@ -873,7 +872,7 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
                 window.history.pushState({}, '', '/compare');
                 window.dispatchEvent(new PopStateEvent('popstate'));
               }}
-              className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100 transition-colors"
+              className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700 transition-colors"
             >
               <span>Compare All AI Tools Side-by-Side</span>
               <ChevronRight className="w-3.5 h-3.5" />
@@ -885,7 +884,7 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
                 window.history.pushState({}, '', '/deals');
                 window.dispatchEvent(new PopStateEvent('popstate'));
               }}
-              className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 flex items-center justify-between p-2.5 rounded-xl bg-emerald-50/50 border border-emerald-100 transition-colors"
+              className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 flex items-center justify-between p-2.5 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-800/60 transition-colors"
             >
               <span>Verified Deals & Promo Codes</span>
               <ChevronRight className="w-3.5 h-3.5" />

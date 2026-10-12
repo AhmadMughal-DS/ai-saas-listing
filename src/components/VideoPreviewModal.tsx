@@ -22,25 +22,25 @@ export const VideoPreviewModal: React.FC<VideoPreviewModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-full max-w-3xl bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-2xl">
+      <div className="relative w-full max-w-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
         {/* Top Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-white">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
           <div className="flex items-center gap-3">
             <img
               src={tool.logoUrl}
               alt={tool.name}
-              className="w-8 h-8 rounded-lg object-cover border border-slate-200"
+              className="w-8 h-8 rounded-lg object-cover border border-slate-200 dark:border-slate-700"
             />
             <div>
-              <h3 className="font-heading text-base font-bold text-slate-900 flex items-center gap-2">
-                {tool.name} <span className="text-xs text-indigo-600 px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-100 font-semibold">Video Breakdown</span>
+              <h3 className="font-heading text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                {tool.name} <span className="text-xs text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-800/60 font-semibold">Video Breakdown</span>
               </h3>
-              <p className="text-xs text-slate-500">{tool.tagline}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{tool.tagline}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-all cursor-pointer"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -99,9 +99,9 @@ export const VideoPreviewModal: React.FC<VideoPreviewModalProps> = ({
         </div>
 
         {/* Footer info */}
-        <div className="p-4 bg-white flex items-center justify-between text-xs text-slate-600 border-t border-slate-100">
+        <div className="p-4 bg-white dark:bg-slate-900 flex items-center justify-between text-xs text-slate-600 dark:text-slate-300 border-t border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-indigo-600" />
+            <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
             <span>Demonstrating real-time model outputs and feature workflows.</span>
           </div>
           <button
@@ -109,7 +109,7 @@ export const VideoPreviewModal: React.FC<VideoPreviewModalProps> = ({
               onClose();
               onSelectTool(tool);
             }}
-            className="text-indigo-600 hover:underline font-semibold cursor-pointer"
+            className="text-indigo-600 dark:text-indigo-400 hover:underline font-semibold cursor-pointer"
           >
             Explore Pricing & Reviews →
           </button>

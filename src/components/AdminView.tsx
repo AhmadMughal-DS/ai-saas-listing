@@ -698,36 +698,36 @@ export const AdminView: React.FC<AdminViewProps> = ({
   if (!isAuthenticated) {
     return (
       <div className="w-full min-h-[80vh] pt-28 pb-20 px-4 sm:px-6 flex items-center justify-center">
-        <div className="w-full max-w-md bg-white border border-slate-200/90 rounded-3xl p-8 sm:p-10 shadow-xl relative overflow-hidden">
+        <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-8 sm:p-10 shadow-xl relative overflow-hidden">
           {/* Top Decorative Indigo Glow */}
           <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600" />
           
           <div className="text-center mb-8">
-            <div className="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center mx-auto mb-4 text-indigo-600 shadow-xs">
+            <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-800/60 flex items-center justify-center mx-auto mb-4 text-indigo-600 dark:text-indigo-400 shadow-xs">
               <Shield className="w-7 h-7" />
             </div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-bold uppercase tracking-wider mb-2">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-bold uppercase tracking-wider mb-2">
               <Lock className="w-3 h-3 text-slate-500" />
               <span>Restricted Access</span>
             </div>
-            <h1 className="font-heading text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+            <h1 className="font-heading text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
               Admin Portal
             </h1>
-            <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
               Sign in with authorized administrator credentials to manage MongoDB collections, curate AI tools, and update live metrics.
             </p>
           </div>
 
           {authError && (
-            <div className="mb-6 p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-start gap-2.5">
-              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
+            <div className="mb-6 p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 text-xs font-semibold flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400 mt-0.5" />
               <span>{authError}</span>
             </div>
           )}
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                 Admin Username
               </label>
               <div className="relative">
@@ -738,14 +738,14 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   placeholder="e.g. admin"
                   required
                   autoFocus
-                  className="w-full bg-slate-50 focus:bg-white border border-slate-200 focus:border-indigo-600 rounded-xl px-3.5 py-2.5 pl-10 text-xs text-slate-900 focus:outline-none transition-all"
+                  className="w-full bg-slate-50 dark:bg-slate-800 focus:bg-white dark:focus:bg-slate-850 border border-slate-200 dark:border-slate-700 focus:border-indigo-600 dark:focus:border-indigo-400 rounded-xl px-3.5 py-2.5 pl-10 text-xs text-slate-900 dark:text-white focus:outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
                 />
-                <KeyRound className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                <KeyRound className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-3" />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                 Admin Password
               </label>
               <div className="relative">
@@ -755,13 +755,13 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   onChange={(e) => setPasswordInput(e.target.value)}
                   placeholder="••••••••••••"
                   required
-                  className="w-full bg-slate-50 focus:bg-white border border-slate-200 focus:border-indigo-600 rounded-xl px-3.5 py-2.5 pl-10 pr-10 text-xs text-slate-900 focus:outline-none transition-all"
+                  className="w-full bg-slate-50 dark:bg-slate-800 focus:bg-white dark:focus:bg-slate-850 border border-slate-200 dark:border-slate-700 focus:border-indigo-600 dark:focus:border-indigo-400 rounded-xl px-3.5 py-2.5 pl-10 pr-10 text-xs text-slate-900 dark:text-white focus:outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
                 />
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                <Lock className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-3" />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+                  className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 cursor-pointer"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -769,12 +769,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
             </div>
 
             <div className="flex items-center justify-between text-xs pt-1">
-              <label className="flex items-center gap-2 cursor-pointer text-slate-600 font-medium">
+              <label className="flex items-center gap-2 cursor-pointer text-slate-600 dark:text-slate-300 font-medium">
                 <input
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300"
+                  className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 dark:border-slate-700"
                 />
                 <span>Remember session</span>
               </label>
@@ -800,21 +800,21 @@ export const AdminView: React.FC<AdminViewProps> = ({
           </form>
 
           {/* Quick demo credentials helper pill */}
-          <div className="mt-6 pt-5 border-t border-slate-100 text-center">
-            <div className="inline-block p-3 rounded-xl bg-slate-50 border border-slate-200 text-left w-full">
-              <div className="text-[11px] font-bold text-slate-700 mb-1 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+          <div className="mt-6 pt-5 border-t border-slate-100 dark:border-slate-800 text-center">
+            <div className="inline-block p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-left w-full">
+              <div className="text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                 <span>Authorized Credentials Hint:</span>
               </div>
-              <div className="text-[11px] font-mono text-slate-600 flex items-center justify-between">
-                <span>User: <strong className="text-indigo-600">admin</strong></span>
-                <span>Pass: <strong className="text-indigo-600">toolver2026</strong></span>
+              <div className="text-[11px] font-mono text-slate-600 dark:text-slate-400 flex items-center justify-between">
+                <span>User: <strong className="text-indigo-600 dark:text-indigo-400">admin</strong></span>
+                <span>Pass: <strong className="text-indigo-600 dark:text-indigo-400">toolver2026</strong></span>
               </div>
             </div>
             
             <button
               onClick={() => onNavigate('directory')}
-              className="mt-4 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors inline-flex items-center gap-1 cursor-pointer"
+              className="mt-4 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors inline-flex items-center gap-1 cursor-pointer"
             >
               <span>← Return to Public AI Directory</span>
             </button>
@@ -830,19 +830,19 @@ export const AdminView: React.FC<AdminViewProps> = ({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
           <div className="flex items-center gap-2 mb-3 flex-wrap">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-semibold uppercase tracking-wide shadow-xs">
-              <Database className="w-3.5 h-3.5 text-indigo-600" />
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300 text-xs font-semibold uppercase tracking-wide shadow-xs">
+              <Database className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
               <span>ToolverAI Database Administration</span>
             </div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs font-bold">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               <span>Authenticated as Superadmin</span>
             </div>
           </div>
-          <h1 className="font-heading text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+          <h1 className="font-heading text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             AI Directory Control Center
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             Add, edit, calibrate Toolify traffic metrics, and publish verified AI tools directly into MongoDB.
           </p>
         </div>
@@ -850,9 +850,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
         <div className="flex items-center gap-2.5 flex-wrap">
           <button
             onClick={() => onNavigate('directory')}
-            className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-50 text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+            className="px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-750 text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
           >
-            <Eye className="w-4 h-4 text-slate-500" />
+            <Eye className="w-4 h-4 text-slate-500 dark:text-slate-400" />
             <span>View Live Site</span>
           </button>
           <button
@@ -865,39 +865,39 @@ export const AdminView: React.FC<AdminViewProps> = ({
           </button>
           <button
             onClick={handleLogout}
-            className="px-4 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+            className="px-4 py-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
             title="Log out from admin session"
           >
-            <LogOut className="w-4 h-4 text-rose-600" />
+            <LogOut className="w-4 h-4 text-rose-600 dark:text-rose-400" />
             <span>Log Out</span>
           </button>
         </div>
       </div>
 
       {/* MongoDB Live Status Banner */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-6 mb-8 shadow-xs">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 mb-8 shadow-xs">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
-              dbStatus?.status === 'connected' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-indigo-50 text-indigo-600 border border-indigo-200'
+              dbStatus?.status === 'connected' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800' : 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800'
             }`}>
               <Database className="w-6 h-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-heading font-extrabold text-slate-900 text-lg">
+                <span className="font-heading font-extrabold text-slate-900 dark:text-white text-lg">
                   {dbStatus?.provider || 'MongoDB Pipeline'}
                 </span>
                 <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
                   dbStatus?.status === 'connected'
-                    ? 'bg-emerald-100 text-emerald-800'
-                    : 'bg-indigo-100 text-indigo-800'
+                    ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300'
+                    : 'bg-indigo-100 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300'
                 }`}>
                   {dbStatus?.status === 'connected' ? 'Active MongoDB Connection' : 'Live In-Memory / Ready'}
                 </span>
               </div>
-              <p className="text-xs text-slate-500 mt-1">
-                Database: <code className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-800 font-mono font-bold">{dbStatus?.database || 'toolver_db'}</code> • Collection: <code className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-800 font-mono font-bold">tools</code> • Total Live Records: <span className="font-bold text-indigo-600">{tools.length}</span>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Database: <code className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-slate-800 dark:text-slate-200 font-mono font-bold">{dbStatus?.database || 'toolver_db'}</code> • Collection: <code className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-slate-800 dark:text-slate-200 font-mono font-bold">tools</code> • Total Live Records: <span className="font-bold text-indigo-600 dark:text-indigo-400">{tools.length}</span>
               </p>
             </div>
           </div>
@@ -905,10 +905,10 @@ export const AdminView: React.FC<AdminViewProps> = ({
           <div className="flex items-center flex-wrap gap-2.5">
             <button
               onClick={handleSeedDatabase}
-              className="px-3.5 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 transition-all cursor-pointer flex items-center gap-1.5"
+              className="px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 transition-all cursor-pointer flex items-center gap-1.5"
               title="Seeds 15+ curated industry tools with traffic statistics into MongoDB"
             >
-              <UploadCloud className="w-4 h-4 text-indigo-600" />
+              <UploadCloud className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
               <span>Seed Initial AI Tools</span>
             </button>
           </div>
@@ -917,26 +917,26 @@ export const AdminView: React.FC<AdminViewProps> = ({
         {statusMessage && (
           <div className={`mt-4 p-4 rounded-2xl flex items-center justify-between text-xs font-semibold ${
             statusMessage.type === 'success'
-              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-              : 'bg-rose-50 text-rose-800 border border-rose-200'
+              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+              : 'bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
           }`}>
             <div className="flex items-center gap-2">
-              {statusMessage.type === 'success' ? <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" /> : <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />}
+              {statusMessage.type === 'success' ? <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" /> : <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />}
               <span>{statusMessage.text}</span>
             </div>
-            <button onClick={() => setStatusMessage(null)} className="text-slate-400 hover:text-slate-700">✕</button>
+            <button onClick={() => setStatusMessage(null)} className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">✕</button>
           </div>
         )}
       </div>
 
       {/* Admin Sub-Tabs Navigation */}
-      <div className="flex items-center gap-3 mb-8 border-b border-slate-200 pb-4 flex-wrap">
+      <div className="flex items-center gap-3 mb-8 border-b border-slate-200 dark:border-slate-800 pb-4 flex-wrap">
         <button
           onClick={() => setAdminSection('tools')}
           className={`px-5 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
             adminSection === 'tools'
               ? 'bg-indigo-600 text-white shadow-md'
-              : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+              : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-750'
           }`}
         >
           <Database className="w-4 h-4" />
@@ -951,7 +951,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
           className={`px-5 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 relative ${
             adminSection === 'submissions'
               ? 'bg-indigo-600 text-white shadow-md'
-              : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+              : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-750'
           }`}
         >
           <Sparkles className="w-4 h-4 text-amber-400" />
@@ -971,7 +971,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
           className={`px-5 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
             adminSection === 'subscribers'
               ? 'bg-indigo-600 text-white shadow-md'
-              : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+              : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-750'
           }`}
         >
           <Mail className="w-4 h-4" />
