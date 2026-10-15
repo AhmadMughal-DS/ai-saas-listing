@@ -1,0 +1,12 @@
+# Secrets & runtime state — never commit
+.env
+outreach-log.json
+outreach-log.json.tmp
+outreach.lock
+previews/
+drafts/
+__pycache__/
+*.pyc
+# GA4 proof screenshot may contain private analytics — keep local
+assets/*.png
+assets/*.jpg
