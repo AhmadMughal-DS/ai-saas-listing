@@ -1,0 +1,13 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "start",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "scripts/preview-prod.cjs"
+      ],
+      "port": 3000
+    }
+  ]
+}

@@ -39,9 +39,11 @@
     <meta name="twitter:image" content="https://toolverai.com/og-banner.png" />
     <meta name="twitter:image:alt" content="ToolverAI — AI Tools Directory" />
 
-    <!-- ── Favicon / PWA ────────────────────────────────────── -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 44'%3E%3Crect width='44' height='44' rx='11' fill='%234F46E5'/%3E%3Cpath d='M10 13h24v3.5H10z' fill='%23fff'/%3E%3Cpath d='M16 17.5l6 14 6-14h-4l-2 6-2-6h-4z' fill='%23fff'/%3E%3Ccircle cx='22' cy='18' r='2.5' fill='%2338BDF8'/%3E%3Cpath d='M33 9l1.2 3.2 3.2 1.2-3.2 1.2L33 17.8l-1.2-3.2-3.2-1.2 3.2-1.2L33 9z' fill='%23FACC15'/%3E%3C/svg%3E" />
-    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 44'%3E%3Crect width='44' height='44' rx='11' fill='%234F46E5'/%3E%3Cpath d='M10 13h24v3.5H10z' fill='%23fff'/%3E%3Cpath d='M16 17.5l6 14 6-14h-4l-2 6-2-6h-4z' fill='%23fff'/%3E%3Ccircle cx='22' cy='18' r='2.5' fill='%2338BDF8'/%3E%3Cpath d='M33 9l1.2 3.2 3.2 1.2-3.2 1.2L33 17.8l-1.2-3.2-3.2-1.2 3.2-1.2L33 9z' fill='%23FACC15'/%3E%3C/svg%3E" />
+    <!-- ── Favicon / PWA (real crawlable files — required for Google SERP icon) ── -->
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="theme-color" content="#4F46E5" />
     <meta name="application-name" content="ToolverAI" />
     <meta name="apple-mobile-web-app-title" content="ToolverAI" />
@@ -154,6 +156,36 @@
     </script>
   </head>
   <body class="bg-[var(--color-bg-base,#F8FAFC)] text-[var(--color-text-main,#0F172A)] antialiased selection:bg-indigo-500 selection:text-white overflow-x-hidden">
+    <!-- ── Branded boot splash: paints instantly with inline styles and covers the ──
+         ── crawler-only SSR markup inside #root until React renders the styled app, ──
+         ── eliminating the flash of unstyled text on first load.                     -->
+    <style>
+      @keyframes tv-spin { to { transform: rotate(360deg); } }
+      #app-splash { position: fixed; inset: 0; z-index: 2147483647; display: flex;
+        align-items: center; justify-content: center;
+        background: #F8FAFC; transition: opacity .35s ease; }
+      html.dark #app-splash, html[data-theme="dark"] #app-splash { background: #090d16; }
+      #app-splash.tv-hide { opacity: 0; pointer-events: none; }
+      #app-splash .tv-mark { width: 60px; height: 60px; border-radius: 15px;
+        box-shadow: 0 12px 34px -10px rgba(79,70,229,.5); }
+      #app-splash .tv-spin { margin-top: 20px; width: 30px; height: 30px;
+        border: 3px solid rgba(100,116,139,.25); border-top-color: #4F46E5;
+        border-radius: 50%; animation: tv-spin .7s linear infinite; }
+    </style>
+    <div id="app-splash" aria-hidden="true">
+      <div style="display:flex;flex-direction:column;align-items:center;">
+        <img class="tv-mark" src="/favicon.svg" width="60" height="60" alt="ToolverAI" />
+        <div class="tv-spin"></div>
+      </div>
+    </div>
+    <script>
+      /* Safety net: never let the splash trap the user if the bundle fails to load. */
+      setTimeout(function () {
+        var s = document.getElementById('app-splash');
+        if (s) { s.classList.add('tv-hide'); setTimeout(function () { if (s.parentNode) s.remove(); }, 400); }
+      }, 10000);
+    </script>
+
     <!-- ── Accessible No-JS Fallback ─────────────────────────── -->
     <noscript>
       <div style="padding:20px;text-align:center;font-family:sans-serif;">
