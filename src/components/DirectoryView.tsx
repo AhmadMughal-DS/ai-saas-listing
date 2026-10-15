@@ -63,9 +63,19 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
   const [visibleCount, setVisibleCount] = useState(9);
   const [shouldLoad3D, setShouldLoad3D] = useState(false);
 
-  // Defer downloading the ~510KB Three.js chunk until after critical content is painted & interactive
+  // Defer downloading the ~510KB Three.js chunk until after critical content is painted.
+  // Skip it entirely where it is pure decorative cost: phones (mobile-first indexing /
+  // Core Web Vitals), reduced-motion users, and data-saver or very slow connections.
   useEffect(() => {
     if (typeof window === 'undefined') return;
+
+    const isSmallScreen = window.matchMedia('(max-width: 767px)').matches;
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const conn = (navigator as any).connection;
+    const saveData = Boolean(conn?.saveData);
+    const slowNetwork = typeof conn?.effectiveType === 'string' && /(^|\b)(2g)\b/.test(conn.effectiveType);
+    if (isSmallScreen || prefersReducedMotion || saveData || slowNetwork) return;
+
     if ('requestIdleCallback' in window) {
       const handle = (window as any).requestIdleCallback(() => {
         setShouldLoad3D(true);
