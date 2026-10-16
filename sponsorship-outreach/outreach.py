@@ -197,6 +197,8 @@ class App:
         return True
 
     def due_followups(self) -> list[str]:
+        if not getattr(self.s, "send_followups", False):
+            return []  # follow-ups disabled: each tool gets exactly one email
         due = []
         for key, rec in self.store.tools.items():
             if rec["status"] != st.SENT or rec.get("replies"):
