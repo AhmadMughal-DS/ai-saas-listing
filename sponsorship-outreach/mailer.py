@@ -69,7 +69,9 @@ class Mailer:
 
     # ── IMAP ─────────────────────────────────────────────────────────────────
     def imap(self) -> imaplib.IMAP4_SSL:
-        conn = imaplib.IMAP4_SSL(self.s.imap_host, self.s.imap_port, ssl_context=self.ctx)
+        # timeout is essential: without it a stalled IMAP socket (e.g. saving the Sent copy)
+        # can block the whole send run indefinitely.
+        conn = imaplib.IMAP4_SSL(self.s.imap_host, self.s.imap_port, ssl_context=self.ctx, timeout=30)
         conn.login(self.s.sender_email, self.s.app_password)
         return conn
 

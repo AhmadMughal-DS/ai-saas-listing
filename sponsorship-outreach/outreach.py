@@ -246,7 +246,16 @@ class App:
                 break
             if self.live and sent_any:
                 self._pause()
-            ok = self.send_followup(key) if kind == "followup" else self.send_initial(key)
+            try:
+                ok = self.send_followup(key) if kind == "followup" else self.send_initial(key)
+            except Exception as exc:
+                # One email failing (timeout, SMTP/IMAP error, bad data) must never stop the run.
+                print(f"  ⚠ {kind} for {key} failed — skipping, run continues: {exc}")
+                try:
+                    self.store.save()
+                except Exception:
+                    pass
+                ok = False
             sent_any = sent_any or ok
         if self.live and sent_any:
             self.sync_crm()
