@@ -3,12 +3,14 @@
 Order (per tool):
   1. Previously verified contact in outreach-log.json
   2. Stored lead emails (MongoDB ``sponsorship_leads.emails``) on the tool's domain
-  3. Live scrape of the official website (home, /about, /contact, /press, footer)
-  4. Role fallbacks — partnerships@, founders@, marketing@, hello@
+  3. Live scrape of the official website (home, /about, /team, /contact, /press, /privacy…)
+  4. Role fallbacks — partnerships@, partner@, bd@, founders@, hello@, marketing@, growth@,
+     press@, media@, team@, contact@ (first SMTP/API-verified one wins)
 
-Every candidate must pass syntax + MX checks. When ``SMTP_PROBE`` is on, an
-RCPT-TO probe (no message is sent) confirms the mailbox and detects catch-all
-domains. Unverifiable role guesses are rejected unless ALLOW_UNVERIFIED_FALLBACK.
+Every candidate must pass syntax + MX checks. Verification is done by a 3rd-party API
+(ZeroBounce) when EMAIL_VERIFY_API_KEY is set — this works even when outbound port 25 is
+blocked — otherwise by an RCPT-TO SMTP probe (no message is sent). Guessed role addresses
+on catch-all domains and unverifiable guesses are rejected unless ALLOW_UNVERIFIED_FALLBACK.
 """
 from __future__ import annotations
 
@@ -32,8 +34,11 @@ UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.3
                     "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"}
 EMAIL_RE = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,24}")
 STRICT_RE = re.compile(r"^[A-Za-z0-9._%+\-]{1,64}@[A-Za-z0-9\-]+(\.[A-Za-z0-9\-]+)*\.[A-Za-z]{2,24}$")
-SCRAPE_PATHS = ["", "/contact", "/contact-us", "/about", "/about-us", "/press", "/company", "/partners"]
-FALLBACK_ROLES = ["partnerships", "founders", "marketing", "hello"]
+SCRAPE_PATHS = ["", "/contact", "/contact-us", "/about", "/about-us", "/about/team", "/team",
+                "/press", "/company", "/partners", "/privacy", "/privacy-policy", "/legal/privacy"]
+# Role guesses, best outreach target first. Probed one by one; first verified wins.
+FALLBACK_ROLES = ["partnerships", "partner", "bd", "founders", "hello", "hi",
+                  "marketing", "growth", "press", "media", "team", "contact"]
 
 # Lower number = better outreach target
 LOCAL_PRIORITY = [
@@ -217,8 +222,33 @@ class ContactFinder:
                 codes.append(code)
         return codes
 
+    def _api_verify(self, email: str) -> str | None:
+        """Verify via ZeroBounce over HTTPS when EMAIL_VERIFY_API_KEY is set. Returns
+        valid | invalid | catch_all | unknown, or None when no key / API error (so the
+        caller falls back to the SMTP probe). Works even when port 25 is blocked."""
+        key = getattr(self.s, "email_verify_api_key", "")
+        if not key:
+            return None
+        try:
+            r = requests.get("https://api.zerobounce.net/v2/validate",
+                             params={"api_key": key, "email": email}, timeout=15)
+            status = str(r.json().get("status") or "").lower()
+        except Exception as exc:
+            self.log(f"(email verify API error: {exc})")
+            return None
+        return {
+            "valid": "valid", "invalid": "invalid",
+            "catch-all": "catch_all", "catch_all": "catch_all",
+            "spamtrap": "invalid", "abuse": "invalid", "do_not_mail": "invalid",
+            "unknown": "unknown",
+        }.get(status, "unknown")
+
     def probe(self, email: str) -> str:
         """Return valid | invalid | catch_all | unknown (never sends a message)."""
+        api = self._api_verify(email)
+        if api is not None:
+            self.log(f"{email} → {api} (API verify)")
+            return api
         domain = email.split("@", 1)[1]
         mxs = self.mx_hosts(domain)
         if not mxs:
@@ -377,8 +407,10 @@ class ContactFinder:
             self.log(f"{email} → {result}")
             if result == "valid":
                 return Contact(email, "role_fallback", "valid", "medium"), "role fallback (SMTP verified)"
-            if result == "catch_all":
-                return Contact(email, "role_fallback", "catch_all", "low"), "role fallback (catch-all domain)"
+            # Catch-all domains accept every address at RCPT, so a *guessed* role on one
+            # is a top bounce source — only use it when unverified fallback is explicitly on.
+            if result == "catch_all" and self.s.allow_unverified_fallback:
+                return Contact(email, "role_fallback", "catch_all", "low"), "role fallback (catch-all, unverified)"
             if result == "unknown" and self.s.allow_unverified_fallback:
                 return Contact(email, "role_fallback", "mx_only", "low"), "role fallback (MX only, unverified)"
         return None, "no verifiable contact — manual review"

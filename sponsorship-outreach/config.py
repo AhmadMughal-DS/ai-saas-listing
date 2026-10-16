@@ -48,7 +48,7 @@ def _env() -> dict:
             "SPREADSHEET_ID", "SHEET_TAB", "WEBSITE_URL", "DAILY_SEND_LIMIT", "MIN_DELAY_SECONDS",
             "MAX_DELAY_SECONDS", "FOLLOWUP_AFTER_BUSINESS_DAYS", "SMTP_PROBE",
             "ALLOW_UNVERIFIED_FALLBACK", "EXCLUDE_DOMAINS", "YOUTUBE_CHANNEL_ID", "IMAP_POLL_MINUTES",
-            "HUNTING_SPREADSHEET_ID", "EXCEL_LEADS_PATH", "HUNTING_LOG_SPREADSHEET_ID",
+            "HUNTING_SPREADSHEET_ID", "EXCEL_LEADS_PATH", "HUNTING_LOG_SPREADSHEET_ID", "EMAIL_VERIFY_API_KEY",
         ):
             values[k] = v
     return values
@@ -104,6 +104,9 @@ class Settings:
     allow_unverified_fallback: bool
     exclude_domains: set = field(default_factory=set)
     imap_poll_minutes: int = 5
+    # Optional 3rd-party email verifier (ZeroBounce). When set, candidates are verified
+    # over HTTPS — works even when outbound port 25 (SMTP RCPT probe) is blocked.
+    email_verify_api_key: str = ""
     hunting_spreadsheet_id: str = "1hk3SXmXnvtD4ZJlux9a36NuaMaeo_5rA4KTx0R5Qlac"
     excel_leads_path: str = "D:/company page/client data/all_ai_tools_leads_combined.xlsx"
     hunting_log_spreadsheet_id: str = "1PJST6oHU0x2qhUsdQp2dCSHb7DkUH2GdFZtwMKc5XDc"
@@ -151,4 +154,5 @@ def load_settings() -> Settings:
         hunting_spreadsheet_id=e.get("HUNTING_SPREADSHEET_ID", "1hk3SXmXnvtD4ZJlux9a36NuaMaeo_5rA4KTx0R5Qlac"),
         excel_leads_path=e.get("EXCEL_LEADS_PATH", "D:/company page/client data/all_ai_tools_leads_combined.xlsx"),
         hunting_log_spreadsheet_id=e.get("HUNTING_LOG_SPREADSHEET_ID", "1PJST6oHU0x2qhUsdQp2dCSHb7DkUH2GdFZtwMKc5XDc"),
+        email_verify_api_key=e.get("EMAIL_VERIFY_API_KEY", ""),
     )
