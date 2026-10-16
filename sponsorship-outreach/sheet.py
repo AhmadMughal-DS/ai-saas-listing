@@ -326,7 +326,7 @@ class Sheet:
         try:
             ws = self.ss_source.worksheet(tab_name)
         except gspread.WorksheetNotFound:
-            ws = self.ss_source.add_worksheet(title=tab_name, rows=len(store_tools) + 20, cols=13)
+            ws = self.ss_source.add_worksheet(title=tab_name, rows=len(store_tools) + 20, cols=16)
 
         status_text = {
             "pending": "Pending (no contact yet)",
@@ -344,7 +344,8 @@ class Sheet:
 
         headers = [
             "Tool Name", "Category", "Official Website",
-            "Email Found?", "Contact Email", "Email Source", "Email Confirmed?",
+            "Email Found?", "Contact Email", "Contact Person", "Title (Role)", "Email Source",
+            "Confidence %", "Email Confirmed?",
             "Outreach Status", "Emailed Address", "Email #1 Sent At", "Follow-up Sent At",
             "Bounced / Address Not Found", "Last Update / Note",
         ]
@@ -383,7 +384,10 @@ class Sheet:
                 rec.get("website", ""),
                 email_found,
                 email,
+                c.get("person", ""),
+                c.get("title", ""),
                 c.get("source", ""),
+                c.get("confidence_score", ""),
                 confirmed,
                 status_text.get(status_raw, status_raw),
                 emailed_to,
@@ -396,7 +400,7 @@ class Sheet:
         ws.clear()
         ws.append_rows(rows, value_input_option="USER_ENTERED")
         try:
-            ws.format("A1:M1", {
+            ws.format("A1:P1", {
                 "backgroundColor": {"red": 0.05, "green": 0.11, "blue": 0.24},
                 "textFormat": {"bold": True, "foregroundColor": {"red": 1, "green": 1, "blue": 1}, "fontSize": 10},
                 "horizontalAlignment": "CENTER",
@@ -404,7 +408,7 @@ class Sheet:
             })
             ws.freeze(rows=1, cols=1)
             ws.format(f"D2:D{len(rows)}", {"horizontalAlignment": "CENTER"})
-            ws.format(f"M2:M{len(rows)}", {"wrapStrategy": "WRAP", "textFormat": {"fontSize": 9}})
+            ws.format(f"P2:P{len(rows)}", {"wrapStrategy": "WRAP", "textFormat": {"fontSize": 9}})
         except Exception:
             pass
         return tab_name

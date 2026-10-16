@@ -49,6 +49,7 @@ def _env() -> dict:
             "MAX_DELAY_SECONDS", "FOLLOWUP_AFTER_BUSINESS_DAYS", "SMTP_PROBE",
             "ALLOW_UNVERIFIED_FALLBACK", "EXCLUDE_DOMAINS", "YOUTUBE_CHANNEL_ID", "IMAP_POLL_MINUTES",
             "HUNTING_SPREADSHEET_ID", "EXCEL_LEADS_PATH", "HUNTING_LOG_SPREADSHEET_ID", "EMAIL_VERIFY_API_KEY",
+            "HUNTER_API_KEY", "APOLLO_API_KEY", "SNOV_CLIENT_ID", "SNOV_CLIENT_SECRET",
         ):
             values[k] = v
     return values
@@ -107,6 +108,11 @@ class Settings:
     # Optional 3rd-party email verifier (ZeroBounce). When set, candidates are verified
     # over HTTPS — works even when outbound port 25 (SMTP RCPT probe) is blocked.
     email_verify_api_key: str = ""
+    # Optional email-finder providers (waterfall). Each runs only if its key is set.
+    hunter_api_key: str = ""
+    apollo_api_key: str = ""
+    snov_client_id: str = ""
+    snov_client_secret: str = ""
     hunting_spreadsheet_id: str = "1hk3SXmXnvtD4ZJlux9a36NuaMaeo_5rA4KTx0R5Qlac"
     excel_leads_path: str = "D:/company page/client data/all_ai_tools_leads_combined.xlsx"
     hunting_log_spreadsheet_id: str = "1PJST6oHU0x2qhUsdQp2dCSHb7DkUH2GdFZtwMKc5XDc"
@@ -155,4 +161,8 @@ def load_settings() -> Settings:
         excel_leads_path=e.get("EXCEL_LEADS_PATH", "D:/company page/client data/all_ai_tools_leads_combined.xlsx"),
         hunting_log_spreadsheet_id=e.get("HUNTING_LOG_SPREADSHEET_ID", "1PJST6oHU0x2qhUsdQp2dCSHb7DkUH2GdFZtwMKc5XDc"),
         email_verify_api_key=e.get("EMAIL_VERIFY_API_KEY", ""),
+        hunter_api_key=e.get("HUNTER_API_KEY", ""),
+        apollo_api_key=e.get("APOLLO_API_KEY", ""),
+        snov_client_id=e.get("SNOV_CLIENT_ID", ""),
+        snov_client_secret=e.get("SNOV_CLIENT_SECRET", ""),
     )

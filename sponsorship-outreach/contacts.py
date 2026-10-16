@@ -92,9 +92,12 @@ def norm_name(name: str) -> str:
 @dataclass
 class Contact:
     email: str
-    source: str        # log | stored_lead | scraped | role_fallback
-    verification: str  # valid | catch_all | unknown | mx_only
-    confidence: str    # high | medium | low
+    source: str            # log | stored_lead | scraped | role_fallback | Hunter.io | Apollo | Snov.io
+    verification: str      # valid | catch_all | unknown | mx_only
+    confidence: str        # high | medium | low
+    person: str = ""       # decision-maker name, when a finder provides it
+    title: str = ""        # CEO / CTO / Marketing Head, when known
+    confidence_score: str = ""  # finder's own numeric score, e.g. "95%"
 
     def to_dict(self) -> dict:
         return self.__dict__.copy()
@@ -347,6 +350,112 @@ class ContactFinder:
         # Looks like a person (first.last / first) — good for founders
         return 4 if re.match(r"^[a-z]+(\.[a-z]+)?$", local) else 5
 
+    # ── external email-finder providers (waterfall; each no-ops without its key) ──
+    def _hunter_find(self, domain: str, tool_name: str) -> list[dict]:
+        key = getattr(self.s, "hunter_api_key", "")
+        if not key:
+            return []
+        r = requests.get("https://api.hunter.io/v2/domain-search",
+                         params={"domain": domain, "api_key": key, "limit": 10}, timeout=20)
+        out: list[dict] = []
+        for em in (r.json().get("data") or {}).get("emails", []):
+            email = str(em.get("value") or "").strip()
+            if not email:
+                continue
+            person = " ".join(x for x in (em.get("first_name"), em.get("last_name")) if x).strip()
+            score = em.get("confidence")
+            out.append({"email": email, "source": "Hunter.io", "person": person,
+                        "title": em.get("position") or "", "score": f"{score}%" if score is not None else ""})
+        self.log(f"Hunter.io → {len(out)} candidate(s) for {domain}")
+        return out
+
+    def _apollo_find(self, domain: str, tool_name: str) -> list[dict]:
+        key = getattr(self.s, "apollo_api_key", "")
+        if not key:
+            return []
+        r = requests.post(
+            "https://api.apollo.io/v1/mixed_people/search",
+            headers={"Content-Type": "application/json", "Cache-Control": "no-cache", "X-Api-Key": key},
+            json={"q_organization_domains": domain, "page": 1, "per_page": 10,
+                  "person_titles": ["Founder", "Co-Founder", "CEO", "CTO", "Chief Marketing Officer",
+                                    "Head of Marketing", "VP Marketing", "Marketing Director",
+                                    "Head of Partnerships", "Head of Growth"]},
+            timeout=25)
+        out: list[dict] = []
+        for p in r.json().get("people", []):
+            email = str(p.get("email") or "").strip()
+            if not email or "email_not_unlocked" in email or email.endswith("@domain.com"):
+                continue
+            out.append({"email": email, "source": "Apollo", "person": (p.get("name") or "").strip(),
+                        "title": p.get("title") or "", "score": ""})
+        self.log(f"Apollo → {len(out)} candidate(s) for {domain}")
+        return out
+
+    def _snov_find(self, domain: str, tool_name: str) -> list[dict]:
+        cid = getattr(self.s, "snov_client_id", "")
+        secret = getattr(self.s, "snov_client_secret", "")
+        if not (cid and secret):
+            return []
+        tok = requests.post("https://api.snov.io/v1/oauth/access_token",
+                            data={"grant_type": "client_credentials", "client_id": cid,
+                                  "client_secret": secret}, timeout=20).json().get("access_token")
+        if not tok:
+            return []
+        r = requests.get("https://api.snov.io/v2/domain-emails-with-info",
+                         params={"domain": domain, "type": "all", "limit": 10, "access_token": tok}, timeout=25)
+        out: list[dict] = []
+        for em in r.json().get("emails", []):
+            email = str(em.get("email") or "").strip()
+            if not email:
+                continue
+            person = " ".join(x for x in (em.get("firstName"), em.get("lastName")) if x).strip()
+            out.append({"email": email, "source": "Snov.io", "person": person,
+                        "title": em.get("position") or "", "score": ""})
+        self.log(f"Snov.io → {len(out)} candidate(s) for {domain}")
+        return out
+
+    def _run_finders(self, domain: str, tool_name: str) -> list[dict]:
+        """Query external finders in order; combine their decision-maker candidates.
+        Only providers whose API key is set actually run; all errors are swallowed."""
+        if not domain:
+            return []
+        items: list[dict] = []
+        for fn in (self._hunter_find, self._apollo_find, self._snov_find):
+            try:
+                items.extend(fn(domain, tool_name))
+            except Exception as exc:
+                self.log(f"({fn.__name__} error: {exc})")
+        return items
+
+    def _try_candidates(self, items: list[dict], domains: set[str], max_try: int = 6) -> tuple[Contact | None, str]:
+        """Clean, filter, rank and SMTP/API-verify a pool of candidate dicts.
+        Returns the first deliverable Contact (carrying person/title/score) or (None, '')."""
+        cands: list[tuple[int, dict, str]] = []
+        seen: set[str] = set()
+        for it in items:
+            e = self.clean(it.get("email", ""))
+            if not e or e in seen or not self._acceptable(e, domains):
+                continue
+            seen.add(e)
+            cands.append((self._rank(e), it, e))
+        cands.sort(key=lambda c: (
+            0 if "Hunting" in c[1]["source"] else (1 if "Excel" in c[1]["source"] else (2 if c[1].get("title") else 3)),
+            c[0],
+            c[1]["source"] == "scraped",
+        ))
+        self.log(f"candidates: {[c[2] for c in cands][:6] or 'none'}")
+        for _, it, email in cands[:max_try]:
+            result = self.probe(email)
+            self.log(f"{email} → {result}")
+            if result == "invalid":
+                continue
+            verification = "mx_only" if result == "unknown" else result
+            strong = result == "valid" or "Hunting" in it["source"] or "Excel" in it["source"] or bool(it.get("title"))
+            contact = Contact(email, it["source"], verification, "high" if strong else "medium",
+                              it.get("person", ""), it.get("title", ""), str(it.get("score", "")))
+            return contact, f"{it['source']} ({result})"
+        return None, ""
+
     # ── main entry ───────────────────────────────────────────────────────────
     def find(self, tool_domain: str, website: str, previous: dict | None, tool_name: str = "") -> tuple[Contact | None, str]:
         if previous and previous.get("email") and previous.get("verification") in ("valid", "catch_all", "mx_only"):
@@ -358,47 +467,37 @@ class ContactFinder:
         n_key = norm_name(tool_name)
         domains = {clean_dom} if clean_dom else set()
 
-        # 1. Gather stored candidates from all sheets / DB
-        stored_items: list[tuple[str, str]] = []
+        # 1. Free sources first: stored verified leads (sheets / Excel / Mongo) + live site scrape
+        stored_raw: list[tuple[str, str]] = []
         if clean_dom and self._stored and clean_dom in self._stored:
-            stored_items.extend(self._stored[clean_dom])
+            stored_raw.extend(self._stored[clean_dom])
         if n_key and self._stored_by_name and n_key in self._stored_by_name:
-            stored_items.extend(self._stored_by_name[n_key])
+            stored_raw.extend(self._stored_by_name[n_key])
 
-        # 2. Live scrape website
         scraped_raw, site_domains = self.scrape(website)
         domains |= site_domains
-        scraped_items: list[tuple[str, str]] = [(e, "scraped") for e in scraped_raw]
 
-        candidates: list[tuple[int, str, str]] = []
-        seen: set[str] = set()
+        free_items = (
+            [{"email": e, "source": s, "person": "", "title": "", "score": ""} for e, s in stored_raw]
+            + [{"email": e, "source": "scraped", "person": "", "title": "", "score": ""} for e in scraped_raw]
+        )
+        contact, note = self._try_candidates(free_items, domains)
+        if contact:
+            return contact, note
 
-        for raw_email, source_desc in (stored_items + scraped_items):
-            e = self.clean(raw_email)
-            if not e or e in seen or not self._acceptable(e, domains):
-                continue
-            seen.add(e)
-            candidates.append((self._rank(e), source_desc, e))
-
-        # Prioritize verified hunting sheet and excel leads, then rank
-        candidates.sort(key=lambda c: (
-            0 if "Hunting" in c[1] else (1 if "Excel" in c[1] else 2),
-            c[0],
-            c[1] != "scraped"
-        ))
-        self.log(f"candidates: {[c[2] for c in candidates][:6] or 'none'}")
-
-        for _, source, email in candidates[:5]:
-            result = self.probe(email)
-            self.log(f"{email} → {result}")
-            if result == "invalid":
-                continue
-            verification = "mx_only" if result == "unknown" else result
-            confidence = "high" if (result == "valid" or "Hunting" in source or "Excel" in source) else "medium"
-            return Contact(email, source, verification, confidence), f"{source} ({result})"
-
-        # 3. Role fallbacks on the primary mail domain
+        # 2. External finders (Hunter → Apollo → Snov) — run only when the free sources came up
+        #    empty, to conserve limited API credits. They target named decision-makers
+        #    (founder / CTO / marketing head) and carry person + title + source + confidence.
         mail_domain = clean_dom or safe_domain(tool_domain)
+        finder_items = self._run_finders(mail_domain, tool_name)
+        if finder_items:
+            if mail_domain:
+                domains.add(mail_domain)
+            contact, note = self._try_candidates(finder_items, domains)
+            if contact:
+                return contact, note
+
+        # 3. Role fallbacks on the primary mail domain (last resort)
         if not mail_domain or not self.mx_hosts(mail_domain):
             return None, f"no MX records for {mail_domain or tool_domain}"
         for role in FALLBACK_ROLES:
