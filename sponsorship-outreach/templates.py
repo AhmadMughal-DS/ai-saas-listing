@@ -89,7 +89,7 @@ def hot_lead_reply(tool_name: str, live_page: str, s: Settings, original_subject
     hi = f"Hi {greeting_name}," if greeting_name else f"Hi {tool_name} team,"
     proof = ("I've attached a snapshot of our live GA4 traffic for toolverai.com."
              if has_attachment else
-             "[ADD GA4 SCREENSHOT: place assets/ga4-traffic-proof.png and re-run, or attach it manually]")
+             "I'm happy to share our live GA4 traffic figures for toolverai.com on request.")
     tiers = "\n".join(
         f"  {i}. {t.name} · {t.price}\n     {t.includes}" for i, t in enumerate(SPONSOR_TIERS, 1)
     )

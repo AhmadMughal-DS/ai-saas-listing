@@ -49,7 +49,7 @@ def _env() -> dict:
             "MAX_DELAY_SECONDS", "FOLLOWUP_AFTER_BUSINESS_DAYS", "SMTP_PROBE",
             "ALLOW_UNVERIFIED_FALLBACK", "EXCLUDE_DOMAINS", "YOUTUBE_CHANNEL_ID", "IMAP_POLL_MINUTES",
             "HUNTING_SPREADSHEET_ID", "EXCEL_LEADS_PATH", "HUNTING_LOG_SPREADSHEET_ID", "EMAIL_VERIFY_API_KEY",
-            "HUNTER_API_KEY", "APOLLO_API_KEY", "SNOV_CLIENT_ID", "SNOV_CLIENT_SECRET",
+            "HUNTER_API_KEY", "APOLLO_API_KEY", "SNOV_CLIENT_ID", "SNOV_CLIENT_SECRET", "AUTO_DRAFT_HOT_REPLIES",
         ):
             values[k] = v
     return values
@@ -103,6 +103,9 @@ class Settings:
     followup_business_days: int
     smtp_probe: bool
     allow_unverified_fallback: bool
+    # When False (default), a positive "hot lead" reply is only flagged for manual handling —
+    # the agent does NOT draft or send any reply. Set True to auto-draft (to Drafts, never auto-sent).
+    auto_draft_hot_replies: bool = False
     exclude_domains: set = field(default_factory=set)
     imap_poll_minutes: int = 5
     # Optional 3rd-party email verifier (ZeroBounce). When set, candidates are verified
@@ -155,6 +158,7 @@ def load_settings() -> Settings:
         followup_business_days=int(e.get("FOLLOWUP_AFTER_BUSINESS_DAYS", 3)),
         smtp_probe=_bool(e.get("SMTP_PROBE"), True),
         allow_unverified_fallback=_bool(e.get("ALLOW_UNVERIFIED_FALLBACK"), False),
+        auto_draft_hot_replies=_bool(e.get("AUTO_DRAFT_HOT_REPLIES"), False),
         exclude_domains={d.strip().lower() for d in e.get("EXCLUDE_DOMAINS", "").split(",") if d.strip()},
         imap_poll_minutes=int(e.get("IMAP_POLL_MINUTES", 5)),
         hunting_spreadsheet_id=e.get("HUNTING_SPREADSHEET_ID", "1hk3SXmXnvtD4ZJlux9a36NuaMaeo_5rA4KTx0R5Qlac"),

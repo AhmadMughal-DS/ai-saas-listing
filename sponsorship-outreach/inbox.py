@@ -208,13 +208,18 @@ class InboxMonitor:
                 print(f"  🚫 Opt-out → {key}")
             return "opt_out"
 
-        # 4. Positive → Hot lead + draft
+        # 4. Positive → Hot lead. Only flag for manual handling unless auto-draft is explicitly on.
         if POSITIVE.search(reply_text):
-            draft_info = self._draft_hot_reply(key, rec, msg, from_name, from_addr, subject)
             self.store.set_status(key, st.HOT_LEAD, f"reply from {from_addr}")
-            self.notify(key, f"🔥 Hot Lead — {from_addr} replied; pricing draft {draft_info}")
-            if verbose:
-                print(f"  🔥 HOT LEAD → {key} ({from_addr}) — draft {draft_info}")
+            if getattr(self.s, "auto_draft_hot_replies", False):
+                draft_info = self._draft_hot_reply(key, rec, msg, from_name, from_addr, subject)
+                self.notify(key, f"Hot lead — {from_addr} replied; pricing draft {draft_info}")
+                if verbose:
+                    print(f"  HOT LEAD -> {key} ({from_addr}) — draft {draft_info}")
+            else:
+                self.notify(key, f"Hot lead — {from_addr} replied; reply manually (auto-draft off)")
+                if verbose:
+                    print(f"  HOT LEAD -> {key} ({from_addr}) — reply manually (auto-draft off)")
             return "hot"
 
         # 5. Neutral human reply
