@@ -50,7 +50,7 @@ def _env() -> dict:
             "ALLOW_UNVERIFIED_FALLBACK", "EXCLUDE_DOMAINS", "YOUTUBE_CHANNEL_ID", "IMAP_POLL_MINUTES",
             "HUNTING_SPREADSHEET_ID", "EXCEL_LEADS_PATH", "HUNTING_LOG_SPREADSHEET_ID", "EMAIL_VERIFY_API_KEY",
             "HUNTER_API_KEY", "APOLLO_API_KEY", "SNOV_CLIENT_ID", "SNOV_CLIENT_SECRET", "AUTO_DRAFT_HOT_REPLIES",
-            "SEND_FOLLOWUPS",
+            "SEND_FOLLOWUPS", "SKIP_WEEKENDS",
         ):
             values[k] = v
     return values
@@ -109,6 +109,8 @@ class Settings:
     auto_draft_hot_replies: bool = False
     # When False (default), each tool gets exactly ONE email — no day-3 follow-up bump is ever sent.
     send_followups: bool = False
+    # When True (default), no emails are sent on Saturday or Sunday (weekend quiet period).
+    skip_weekends: bool = True
     exclude_domains: set = field(default_factory=set)
     imap_poll_minutes: int = 5
     # Optional 3rd-party email verifier (ZeroBounce). When set, candidates are verified
@@ -163,6 +165,7 @@ def load_settings() -> Settings:
         allow_unverified_fallback=_bool(e.get("ALLOW_UNVERIFIED_FALLBACK"), False),
         auto_draft_hot_replies=_bool(e.get("AUTO_DRAFT_HOT_REPLIES"), False),
         send_followups=_bool(e.get("SEND_FOLLOWUPS"), False),
+        skip_weekends=_bool(e.get("SKIP_WEEKENDS"), True),
         exclude_domains={d.strip().lower() for d in e.get("EXCLUDE_DOMAINS", "").split(",") if d.strip()},
         imap_poll_minutes=int(e.get("IMAP_POLL_MINUTES", 5)),
         hunting_spreadsheet_id=e.get("HUNTING_SPREADSHEET_ID", "1hk3SXmXnvtD4ZJlux9a36NuaMaeo_5rA4KTx0R5Qlac"),

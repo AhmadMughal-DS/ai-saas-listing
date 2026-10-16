@@ -227,6 +227,9 @@ class App:
             time.sleep(min(30, max(0, end - time.time())))
 
     def send_batch(self, limit: int, followups_only: bool = False) -> None:
+        if self.live and getattr(self.s, "skip_weekends", True) and date.today().weekday() >= 5:
+            print(f"[i] Weekend ({date.today():%A}) — sending paused. No emails sent today.")
+            return
         queue = [("followup", k) for k in self.due_followups()]
         if not followups_only:
             queue += [("initial", k) for k, r in self.store.tools.items() if r["status"] == st.READY]
