@@ -72,15 +72,23 @@ def registrable_host(url: str) -> str:
     return host[4:] if host.startswith("www.") else host
 
 
+# Emoji / pictographic symbol ranges (re has no \p{Emoji}); covers 🔥✨💼🚀📌🏷️🔗🎥 etc.
+_EMOJI_RE = re.compile(
+    "[\U0001F300-\U0001FAFF\U00002600-\U000027BF\U0001F1E6-\U0001F1FF\U00002B00-\U00002BFF"
+    "\U00002190-\U000021FF️‍]+"
+)
+
+
 def strip_markdown(text: str) -> str:
-    """Remove markdown emphasis that leaks in from sheet captions (**bold**, *italic*,
-    _underscore_, `code`), so cold emails stay clean plain text."""
+    """Remove markdown emphasis (**bold**, *italic*, _underscore_, `code`) and any emojis
+    that leak in from sheet captions, so cold emails stay clean, professional plain text."""
     if not text:
         return ""
     text = re.sub(r"\*{1,3}(.+?)\*{1,3}", r"\1", text)      # **bold** / *italic*
     text = re.sub(r"`([^`]+)`", r"\1", text)                 # `code`
     text = re.sub(r"(?<![A-Za-z0-9])_([^_]+)_(?![A-Za-z0-9])", r"\1", text)  # _underscore_
     text = text.replace("*", "").replace("`", "")            # strip any stray markers
+    text = _EMOJI_RE.sub("", text)                           # strip emojis / pictographs
     return re.sub(r"\s+", " ", text).strip()
 
 
@@ -306,3 +314,97 @@ class Sheet:
             ws_hist.append_row([ts, tool_name, event, email, subject, detail], value_input_option='USER_ENTERED')
         except Exception as exc:
             print(f"      (record_activity error: {exc})")
+
+    # ── Outreach status inside the "Present Data in Website" spreadsheet ──────
+    def sync_outreach_status_tab(self, store_tools: dict) -> str:
+        """Write per-tool outreach status into a dedicated tab of the main
+        'Present Data in Website' spreadsheet (the live website-data tab is never
+        touched). Answers, per tool: was an email found, which address, is it
+        confirmed/verified, which address we emailed and when, and whether it
+        bounced (address not found). Auto-refreshed on every daily run."""
+        tab_name = "Outreach Status"
+        try:
+            ws = self.ss_source.worksheet(tab_name)
+        except gspread.WorksheetNotFound:
+            ws = self.ss_source.add_worksheet(title=tab_name, rows=len(store_tools) + 20, cols=13)
+
+        status_text = {
+            "pending": "Pending (no contact yet)",
+            "ready": "Email found — ready to send",
+            "needs_review": "No email found — needs review",
+            "skipped": "Skipped (excluded / no website)",
+            "sent": "Email #1 sent",
+            "followed_up": "Follow-up sent",
+            "replied": "Replied (manual review)",
+            "hot_lead": "Hot lead — replied",
+            "opted_out": "Opted out",
+            "bounced": "Bounced — address not found",
+        }
+        found_states = {"ready", "sent", "followed_up", "replied", "hot_lead", "opted_out"}
+
+        headers = [
+            "Tool Name", "Category", "Official Website",
+            "Email Found?", "Contact Email", "Email Source", "Email Confirmed?",
+            "Outreach Status", "Emailed Address", "Email #1 Sent At", "Follow-up Sent At",
+            "Bounced / Address Not Found", "Last Update / Note",
+        ]
+        rows = [headers]
+
+        for key, rec in store_tools.items():
+            c = rec.get("contact") or {}
+            status_raw = rec.get("status", "pending")
+            email = c.get("email", "")
+            confidence = (c.get("confidence") or "").lower()
+
+            email_found = "Yes" if (email or status_raw in found_states) else "No"
+            if email and confidence in ("verified", "high", "confirmed"):
+                confirmed = "Yes (verified)"
+            elif email:
+                confirmed = "Unverified guess"
+            else:
+                confirmed = "—"
+
+            msgs = rec.get("messages", [])
+            initial_msg = next((m for m in msgs if m.get("type") == "initial"), None)
+            followup_msg = next((m for m in msgs if m.get("type") == "followup"), None)
+            emailed_to = (initial_msg or {}).get("to", "")
+            initial_at = (initial_msg or {}).get("sent_at", "")[:19]
+            followup_at = (followup_msg or {}).get("sent_at", "")[:19]
+
+            if status_raw == "bounced":
+                note = rec.get("last_note", "") or ""
+                bounced = emailed_to or (note.split("bounce:")[-1].strip() if "bounce:" in note else "Yes")
+            else:
+                bounced = ""
+
+            rows.append([
+                rec.get("tool_name", key),
+                rec.get("category", ""),
+                rec.get("website", ""),
+                email_found,
+                email,
+                c.get("source", ""),
+                confirmed,
+                status_text.get(status_raw, status_raw),
+                emailed_to,
+                initial_at,
+                followup_at,
+                bounced,
+                rec.get("last_note", ""),
+            ])
+
+        ws.clear()
+        ws.append_rows(rows, value_input_option="USER_ENTERED")
+        try:
+            ws.format("A1:M1", {
+                "backgroundColor": {"red": 0.05, "green": 0.11, "blue": 0.24},
+                "textFormat": {"bold": True, "foregroundColor": {"red": 1, "green": 1, "blue": 1}, "fontSize": 10},
+                "horizontalAlignment": "CENTER",
+                "verticalAlignment": "MIDDLE",
+            })
+            ws.freeze(rows=1, cols=1)
+            ws.format(f"D2:D{len(rows)}", {"horizontalAlignment": "CENTER"})
+            ws.format(f"M2:M{len(rows)}", {"wrapStrategy": "WRAP", "textFormat": {"fontSize": 9}})
+        except Exception:
+            pass
+        return tab_name

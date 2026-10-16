@@ -34,13 +34,13 @@ def _features(tool: ToolRow) -> str:
 
 
 def initial_email(tool: ToolRow, s: Settings, video_url: str = "") -> tuple[str, str]:
-    subject = f"We featured {tool.name} on ToolverAI (+ Problem/Solution Video) 🚀"
+    subject = f"We featured {tool.name} on ToolverAI (+ a short Problem/Solution video)"
     category = f" in our {tool.category} category" if tool.category else ""
 
     problem = first_sentence(tool.problem)
     solution = first_sentence(tool.solution)
     if problem and solution:
-        preview = f"  🔥 The Problem: {problem}\n  ✨ The Solution: {solution}\n\n"
+        preview = f"  The Problem: {problem}\n  The Solution: {solution}\n\n"
     else:
         preview = ""
 

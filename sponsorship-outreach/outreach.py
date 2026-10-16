@@ -307,9 +307,15 @@ class App:
             print(f"  🔥 {r['tool_name']}: {r.get('last_note', '')}")
 
     def sync_crm(self) -> None:
-        print("[*] Syncing live outreach state to Google Sheets CRM tab...")
+        print("[*] Syncing live outreach state to Google Sheets...")
         tab_name = self.sheet.sync_crm_tab(self.store.tools)
-        print(f"[✓] Google Sheet updated: Tab '{tab_name}' with {len(self.store.tools)} tools!")
+        print(f"[✓] Tracking CRM updated: Tab '{tab_name}' ({len(self.store.tools)} tools)")
+        # Also mirror per-tool outreach status into the 'Present Data in Website' sheet
+        try:
+            status_tab = self.sheet.sync_outreach_status_tab(self.store.tools)
+            print(f"[✓] 'Present Data in Website' updated: Tab '{status_tab}' ({len(self.store.tools)} tools)")
+        except Exception as exc:
+            print(f"[!] Outreach Status tab sync warning: {exc}")
 
 
 def check(s: Settings) -> None:

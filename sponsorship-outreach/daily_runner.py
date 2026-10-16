@@ -119,11 +119,11 @@ def run_daily_cycle(live: bool = False, max_send: int = 15) -> None:
         except Exception:
             pass
 
-    # 6. Final Google Sheet CRM Sync
-    print("\n📊 Updating Google Sheets CRM...")
+    # 6. Final Google Sheet Sync (tracking CRM + 'Outreach Status' tab in Present Data in Website)
+    print("\n📊 Updating Google Sheets (CRM + Outreach Status)...")
     try:
         app.sync_crm()
-        print("      ✅ Google Sheet Tab '🎯 Live Outreach CRM (120 Tools)' updated.")
+        print("      ✅ Tracking CRM + 'Outreach Status' tab (Present Data in Website) updated.")
     except Exception as exc:
         print(f"      ⚠️ CRM sync warning: {exc}")
 
