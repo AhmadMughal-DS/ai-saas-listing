@@ -225,10 +225,29 @@ class ContactFinder:
                 codes.append(code)
         return codes
 
-    def _api_verify(self, email: str) -> str | None:
-        """Verify via ZeroBounce over HTTPS when EMAIL_VERIFY_API_KEY is set. Returns
-        valid | invalid | catch_all | unknown, or None when no key / API error (so the
-        caller falls back to the SMTP probe). Works even when port 25 is blocked."""
+    def _hunter_verify(self, email: str) -> str | None:
+        """Verify via Hunter's email-verifier (free tier: 100/month). Separate credit pool
+        from Hunter domain-search, so it is the cheapest verification to lean on."""
+        key = getattr(self.s, "hunter_api_key", "")
+        if not key:
+            return None
+        try:
+            r = requests.get("https://api.hunter.io/v2/email-verifier",
+                             params={"email": email, "api_key": key}, timeout=20)
+            status = str(((r.json() or {}).get("data") or {}).get("status") or "").lower()
+        except Exception as exc:
+            self.log(f"(Hunter verify error: {exc})")
+            return None
+        if status in ("valid", "webmail"):
+            return "valid"
+        if status in ("invalid", "disposable"):
+            return "invalid"
+        if status == "accept_all":
+            return "catch_all"
+        return "unknown"
+
+    def _zerobounce_verify(self, email: str) -> str | None:
+        """Verify via ZeroBounce when EMAIL_VERIFY_API_KEY is set."""
         key = getattr(self.s, "email_verify_api_key", "")
         if not key:
             return None
@@ -239,7 +258,7 @@ class ContactFinder:
             status = str(data.get("status") or "").lower()
             sub = str(data.get("sub_status") or "").lower()
         except Exception as exc:
-            self.log(f"(email verify API error: {exc})")
+            self.log(f"(ZeroBounce verify error: {exc})")
             return None
         if status == "valid":
             return "valid"
@@ -252,14 +271,24 @@ class ContactFinder:
             # but they are exactly our outreach targets and do deliver — accept them.
             # Spamtraps / abuse / disposable / toxic addresses genuinely must be avoided.
             return "valid" if sub == "role_based" else "invalid"
-        return "unknown"  # greylisted / no-status / out of credits -> fall back to SMTP probe
+        return "unknown"
+
+    def _external_verify(self, email: str) -> str | None:
+        """Verify an address over HTTPS, most-available credits first: Hunter (100/mo) then
+        ZeroBounce. Returns a conclusive verdict (valid|invalid|catch_all) or None so probe()
+        falls back to the SMTP RCPT check. Works even when outbound port 25 is blocked."""
+        for verifier in (self._hunter_verify, self._zerobounce_verify):
+            v = verifier(email)
+            if v in ("valid", "invalid", "catch_all"):
+                return v
+        return None
 
     def probe(self, email: str) -> str:
         """Return valid | invalid | catch_all | unknown (never sends a message)."""
-        api = self._api_verify(email)
-        if api is not None:
-            self.log(f"{email} → {api} (API verify)")
-            return api
+        verdict = self._external_verify(email)
+        if verdict is not None:
+            self.log(f"{email} → {verdict} (API verify)")
+            return verdict
         domain = email.split("@", 1)[1]
         mxs = self.mx_hosts(domain)
         if not mxs:
@@ -423,17 +452,20 @@ class ContactFinder:
         return out
 
     def _run_finders(self, domain: str, tool_name: str) -> list[dict]:
-        """Query external finders in order; combine their decision-maker candidates.
-        Only providers whose API key is set actually run; all errors are swallowed."""
+        """Query finders in priority order and STOP at the first that returns candidates —
+        this conserves limited API credits. Apollo is skipped (its people-search API is not
+        on the free plan). Snov first (broad), then Hunter domain-search as backup."""
         if not domain:
             return []
-        items: list[dict] = []
-        for fn in (self._hunter_find, self._apollo_find, self._snov_find):
+        for fn in (self._snov_find, self._hunter_find):
             try:
-                items.extend(fn(domain, tool_name))
+                items = fn(domain, tool_name)
             except Exception as exc:
                 self.log(f"({fn.__name__} error: {exc})")
-        return items
+                continue
+            if items:
+                return items
+        return []
 
     def _try_candidates(self, items: list[dict], domains: set[str], max_try: int = 6) -> tuple[Contact | None, str]:
         """Clean, filter, rank and SMTP/API-verify a pool of candidate dicts.
