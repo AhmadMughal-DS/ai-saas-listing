@@ -19,9 +19,11 @@ COPY . .
 # Build args for VITE_ env vars (baked into frontend at build time)
 ARG VITE_FIREBASE_API_KEY=""
 ARG VITE_FIREBASE_PROJECT_ID=""
+ARG VITE_GA4_MEASUREMENT_ID=""
 
 ENV VITE_FIREBASE_API_KEY=$VITE_FIREBASE_API_KEY
 ENV VITE_FIREBASE_PROJECT_ID=$VITE_FIREBASE_PROJECT_ID
+ENV VITE_GA4_MEASUREMENT_ID=$VITE_GA4_MEASUREMENT_ID
 
 # Build: Vite bundles frontend → dist/ , esbuild bundles server → dist/server.cjs
 RUN npm run build

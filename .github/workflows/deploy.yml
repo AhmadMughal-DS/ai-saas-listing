@@ -51,6 +51,7 @@ jobs:
           build-args: |
             VITE_FIREBASE_API_KEY=${{ secrets.VITE_FIREBASE_API_KEY }}
             VITE_FIREBASE_PROJECT_ID=${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+            VITE_GA4_MEASUREMENT_ID=${{ secrets.VITE_GA4_MEASUREMENT_ID || 'G-4PT8227PG3' }}
 
   # ──────────────────────────────────────────────
   # Job 2: Deploy to VM via SSH
