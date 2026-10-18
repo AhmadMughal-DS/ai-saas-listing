@@ -235,16 +235,24 @@ class ContactFinder:
         try:
             r = requests.get("https://api.zerobounce.net/v2/validate",
                              params={"api_key": key, "email": email}, timeout=15)
-            status = str(r.json().get("status") or "").lower()
+            data = r.json()
+            status = str(data.get("status") or "").lower()
+            sub = str(data.get("sub_status") or "").lower()
         except Exception as exc:
             self.log(f"(email verify API error: {exc})")
             return None
-        return {
-            "valid": "valid", "invalid": "invalid",
-            "catch-all": "catch_all", "catch_all": "catch_all",
-            "spamtrap": "invalid", "abuse": "invalid", "do_not_mail": "invalid",
-            "unknown": "unknown",
-        }.get(status, "unknown")
+        if status == "valid":
+            return "valid"
+        if status in ("catch-all", "catch_all"):
+            return "catch_all"
+        if status == "invalid":
+            return "invalid"
+        if status == "do_not_mail":
+            # Role inboxes (partnerships@, marketing@, hello@) are flagged do_not_mail/role_based
+            # but they are exactly our outreach targets and do deliver — accept them.
+            # Spamtraps / abuse / disposable / toxic addresses genuinely must be avoided.
+            return "valid" if sub == "role_based" else "invalid"
+        return "unknown"  # greylisted / no-status / out of credits -> fall back to SMTP probe
 
     def probe(self, email: str) -> str:
         """Return valid | invalid | catch_all | unknown (never sends a message)."""
