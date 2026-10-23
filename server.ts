@@ -9,6 +9,8 @@ import { initializeApp as initFirebaseApp, cert, applicationDefault, App as Fire
 import dotenv from 'dotenv';
 import { INITIAL_TOOLS } from './src/data/initialData';
 import { buildSitemapXml, generateSitemapEntries } from './src/server/sitemap';
+import { clampMetaDescription, stripTrailingPunctuation } from './src/utils/metaText';
+import { buildToolFaqs, buildFaqPageJsonLd } from './src/utils/toolFaq';
 import {
   submitToIndexNow,
   triggerToolContentChange,
@@ -1704,7 +1706,9 @@ Only return valid JSON.`;
         .replace(/<meta\s+name=["']google-site-verification["'][^>]*\/?>\s*/gi, '')
         .replace(/<meta\s+name=["']msvalidate\.01["'][^>]*\/?>\s*/gi, '')
         .replace(/<meta\s+property=["']og:[^"']+["'][^>]*\/?>\s*/gi, '')
-        .replace(/<meta\s+name=["']twitter:[^"']+["'][^>]*\/?>\s*/gi, '');
+        .replace(/<meta\s+name=["']twitter:[^"']+["'][^>]*\/?>\s*/gi, '')
+        // The template's static homepage JSON-LD would duplicate each page's own schema
+        .replace(/<script\s+type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>\s*/gi, '');
     }
 
     /**
@@ -1715,7 +1719,7 @@ Only return valid JSON.`;
       const cleanedHtml = cleanHtmlTemplateHead(htmlTemplate);
 
       const title = options.title.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      const desc = options.description.replace(/"/g, '&quot;');
+      const desc = clampMetaDescription(options.description).replace(/"/g, '&quot;');
       const canonical = options.canonical;
       const robots = options.robots || 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
       const ogType = options.ogType || 'website';
@@ -1754,7 +1758,8 @@ Only return valid JSON.`;
       if (options.jsonLd && options.jsonLd.length > 0) {
         for (const schema of options.jsonLd) {
           const jsonStr = typeof schema === 'string' ? schema : JSON.stringify(schema);
-          tags.push(`<script type="application/ld+json">${jsonStr}</script>`);
+          // data-seo-dynamic lets the client SEOManager replace these instead of adding duplicates
+          tags.push(`<script type="application/ld+json" data-seo-dynamic="ssr">${jsonStr}</script>`);
         }
       }
 
@@ -1799,6 +1804,11 @@ Only return valid JSON.`;
     }));
 
     // ── SSR Categories Definition ──────────────────────────────────────
+    /** "127 tools" -> "120+", so copy stays true as the catalogue grows or shrinks. */
+    function formatToolCount(count: number): string {
+      return count >= 20 ? `${Math.floor(count / 10) * 10}+` : String(count);
+    }
+
     const SSR_CATEGORIES = [
       { name: 'Coding', slug: 'coding', desc: 'AI code completion, full repository refactoring, bug scanning, and test suite generation.' },
       { name: 'Productivity', slug: 'productivity', desc: 'Meeting notes summarization, automated email triage, calendar scheduling, and workflow AI.' },
@@ -1855,7 +1865,18 @@ Only return valid JSON.`;
           },
         ];
 
-        const topTools = tools.slice(0, 12);
+        // Trending = the two highest-traffic tools from each category, then ordered by traffic,
+        // so the list reflects its "ranked by monthly visits" label and covers every category.
+        const byVisits = [...tools].sort((a: any, b: any) => (Number(b.monthlyVisits) || 0) - (Number(a.monthlyVisits) || 0));
+        const perCategory = new Map<string, number>();
+        const topTools = byVisits.filter((t: any) => {
+          const key = (t.category || '').toLowerCase();
+          const count = perCategory.get(key) || 0;
+          if (count >= 2) return false;
+          perCategory.set(key, count + 1);
+          return true;
+        }).slice(0, 12);
+        const toolCountLabel = formatToolCount(tools.length);
         const homeBodyHtml = `
 <header>
   <nav aria-label="Main Navigation">
@@ -1871,7 +1892,7 @@ Only return valid JSON.`;
 <main>
   <section>
     <h1>Discover, Compare &amp; Find the Best AI Tools</h1>
-    <p>ToolverAI is the premier AI tools directory and software discovery platform. Explore 120+ artificial intelligence applications, compare pricing and estimated monthly traffic rankings, discover curated deals, and supercharge your engineering, creative, and business workflows.</p>
+    <p>ToolverAI is the premier AI tools directory and software discovery platform. Explore ${toolCountLabel} artificial intelligence applications, compare pricing and estimated monthly traffic rankings, discover curated deals, and supercharge your engineering, creative, and business workflows.</p>
     <nav aria-label="Explore Core Features">
       <a href="/rankings">Traffic Rankings</a>
       <a href="/deals">Exclusive AI Deals</a>
@@ -1889,7 +1910,7 @@ Only return valid JSON.`;
   </section>
   <section>
     <h2>Trending &amp; Popular AI Tools in 2026</h2>
-    <p>The top artificial intelligence tools ranked by estimated monthly web visits and community engagement:</p>
+    <p>The top artificial intelligence tools ranked by estimated monthly web visits, two per category:</p>
     <ul>
       ${topTools.map((t) => `<li><a href="/tool/${t.slug || t.id}"><strong>${t.name}</strong></a> (${t.category}) — ${t.tagline || t.description?.slice(0, 80)} [${t.monthlyVisitsFormatted || 'N/A'} visits/mo | ${t.pricingType || 'Freemium'}]</li>`).join('\n      ')}
     </ul>
@@ -1956,12 +1977,13 @@ Only return valid JSON.`;
 
         const cleanName = (tool.name || '').trim();
         const title = `${cleanName} Review 2026: Features, Pricing & Alternatives | ToolverAI`;
-        const desc = `${cleanName} (${tool.pricingType || 'Freemium'}): ${(tool.tagline || tool.description || '').slice(0, 130)}. Compare pricing, features, monthly traffic (${tool.monthlyVisitsFormatted || 'N/A'}) and top alternatives on ToolverAI.`.slice(0, 160);
+        const desc = clampMetaDescription(`${cleanName} (${tool.pricingType || 'Freemium'}): ${stripTrailingPunctuation(tool.tagline || tool.description || '')}. Compare pricing, features, traffic and top alternatives on ToolverAI.`);
         const canonical = `${baseUrl}/tool/${tool.slug || tool.id}`;
         const ogImage = tool.logoUrl && !tool.logoUrl.includes('unsplash') ? tool.logoUrl : `${baseUrl}/og-banner.png`;
 
         // JSON-LD for SoftwareApplication
-        const hasRealReviews = (tool.reviewCount || 0) >= 1;
+        // No aggregateRating: rating/reviewCount are seeded editorial values, not collected
+        // user reviews, and Google's review snippet policy penalises markup that isn't backed by them.
         const schemaJsonLd = {
           '@context': 'https://schema.org',
           '@type': 'SoftwareApplication',
@@ -1979,15 +2001,6 @@ Only return valid JSON.`;
               availability: 'https://schema.org/InStock',
             }
           } : {}),
-          ...(hasRealReviews ? {
-            aggregateRating: {
-              '@type': 'AggregateRating',
-              ratingValue: String(tool.rating || 4.5),
-              reviewCount: String(tool.reviewCount || 1),
-              bestRating: '5',
-              worstRating: '1',
-            }
-          } : {}),
           publisher: {
             '@type': 'Organization',
             name: 'ToolverAI',
@@ -1999,6 +2012,8 @@ Only return valid JSON.`;
         const sameCategoryTools = tools
           .filter((t: any) => (t.slug !== tool.slug && t.id !== tool.id) && t.category?.toLowerCase() === tool.category?.toLowerCase())
           .slice(0, 6);
+        const toolFaqs = buildToolFaqs(tool, sameCategoryTools);
+        const faqJsonLd = buildFaqPageJsonLd(toolFaqs, canonical);
 
         const breadcrumbJsonLd = {
           '@context': 'https://schema.org',
@@ -2032,7 +2047,6 @@ Only return valid JSON.`;
         <li><strong>Category:</strong> <a href="/categories/${categorySlug}">${tool.category}</a></li>
         <li><strong>Pricing Model:</strong> ${tool.pricingType || 'Freemium'}</li>
         <li><strong>Estimated Monthly Web Visits:</strong> ${tool.monthlyVisitsFormatted || 'N/A'}</li>
-        <li><strong>Community Rating:</strong> ${tool.rating || 4.5} / 5 (${tool.reviewCount || 1} reviews)</li>
         <li><strong>Official Website:</strong> <a href="${tool.url}" rel="nofollow noopener noreferrer" target="_blank">${cleanName}</a></li>
       </ul>
     </section>
@@ -2054,6 +2068,11 @@ Only return valid JSON.`;
         }).join('\n        ')}
       </ul>
     </section>
+    ${toolFaqs.length ? `
+    <section>
+      <h2>${cleanName} FAQ</h2>
+      ${toolFaqs.map((f) => `<h3>${f.question}</h3>\n      <p>${f.answer}</p>`).join('\n      ')}
+    </section>` : ''}
     <section>
       <h2>Related AI Software Comparisons</h2>
       <p>Compare ${cleanName} with industry alternatives or check current promotional pricing:</p>
@@ -2074,7 +2093,7 @@ Only return valid JSON.`;
           robots: 'index, follow, max-image-preview:large, max-snippet:-1',
           ogType: 'product',
           ogImage,
-          jsonLd: [schemaJsonLd, breadcrumbJsonLd],
+          jsonLd: faqJsonLd ? [schemaJsonLd, breadcrumbJsonLd, faqJsonLd] : [schemaJsonLd, breadcrumbJsonLd],
           bodyHtml: toolBodyHtml,
         });
 
@@ -2114,7 +2133,7 @@ Only return valid JSON.`;
 
         const canonical = `${baseUrl}/categories/${normalizedCategory}`;
         const title = `Best ${categoryName} Tools in 2026 | ToolverAI`;
-        const desc = `Discover the best ${categoryName} tools in 2026. Compare ${categoryTools.length}+ AI tools ranked by estimated monthly traffic, pricing, and authentic user reviews on ToolverAI.`;
+        const desc = `Discover the best ${categoryName} tools in 2026. Compare ${categoryTools.length}+ AI tools ranked by estimated monthly traffic, pricing, and features on ToolverAI.`;
 
         const relatedCategories = SSR_CATEGORIES.filter((c) => c.slug !== normalizedCategory);
 
@@ -2209,12 +2228,13 @@ Only return valid JSON.`;
     });
 
     // ── SSR: Submit Tool (/submit-tool) ─────────────────────────────────
-    app.get('/submit-tool', (req, res) => {
+    app.get('/submit-tool', async (req, res) => {
       try {
         const htmlTemplate = getIndexHtmlTemplate();
         const baseUrl = resolveBaseUrl(req);
         const title = 'Submit an AI Tool — Get Listed on ToolverAI';
-        const desc = 'Submit your AI tool to the ToolverAI directory. Get reviewed and listed alongside 120+ AI tools ranked by estimated monthly traffic.';
+        const toolCountLabel = formatToolCount((await getToolsFromDbOrFallback()).length);
+        const desc = `Submit your AI tool to the ToolverAI directory. Get reviewed and listed alongside ${toolCountLabel} AI tools ranked by estimated monthly traffic.`;
         const canonical = `${baseUrl}/submit-tool`;
 
         const submitBodyHtml = `
@@ -2273,7 +2293,7 @@ Only return valid JSON.`;
       },
       '/categories': {
         title: 'AI Tools by Category — Coding, Writing, Image, Video & More | ToolverAI',
-        desc: 'Browse 120+ AI tools organized across 8 core categories. Find top Coding AI, Writing AI, Image Generation, Video AI, and Marketing AI tools ranked on ToolverAI.',
+        desc: 'Browse {toolCount} AI tools organized across 8 core categories. Find top Coding AI, Writing AI, Image Generation, Video AI, and Marketing AI tools ranked on ToolverAI.',
         h1: 'Browse AI Tools by Category',
       },
       '/blog': {
@@ -2291,6 +2311,7 @@ Only return valid JSON.`;
           const baseUrl = resolveBaseUrl(req);
           const canonical = `${baseUrl}${routePath}`;
           const tools = await getToolsFromDbOrFallback();
+          const pageDesc = seo.desc.replace('{toolCount}', formatToolCount(tools.length));
 
           const breadcrumbJsonLd = {
             '@context': 'https://schema.org',
@@ -2376,7 +2397,7 @@ Only return valid JSON.`;
 </header>
 <main>
   <h1>${seo.h1}</h1>
-  <p>${seo.desc}</p>
+  <p>${pageDesc}</p>
   ${extraContent}
   <nav aria-label="Quick Navigation">
     <p><a href="/">Home</a> | <a href="/categories">All Categories</a> | <a href="/rankings">Rankings</a> | <a href="/deals">Deals</a></p>
@@ -2385,7 +2406,7 @@ Only return valid JSON.`;
 
           const finalHtml = renderSsrPage(htmlTemplate, {
             title: seo.title,
-            description: seo.desc,
+            description: pageDesc,
             canonical,
             ogType: seo.type || 'website',
             ogImage: `${baseUrl}/og-banner.png`,
@@ -2523,7 +2544,7 @@ Only return valid JSON.`;
         const canonical = `${baseUrl}/compare/${canonicalSlug}`;
 
         const title = `${name1} vs ${name2} (2026): Features, Pricing & Comparison | ToolverAI`;
-        const desc = `Detailed side-by-side comparison of ${name1} vs ${name2}. Compare monthly traffic (${tool1.monthlyVisitsFormatted || 'N/A'} vs ${tool2.monthlyVisitsFormatted || 'N/A'}), pricing tiers, features, and key differences.`.slice(0, 160);
+        const desc = `Detailed side-by-side comparison of ${name1} vs ${name2}. Compare monthly traffic (${tool1.monthlyVisitsFormatted || 'N/A'} vs ${tool2.monthlyVisitsFormatted || 'N/A'}), pricing tiers, features, and key differences.`;
 
         const breadcrumbJsonLd = {
           '@context': 'https://schema.org',
@@ -2703,7 +2724,7 @@ Only return valid JSON.`;
         const altCount = alternatives.length;
 
         const title = `Best ${cleanName} Alternatives in 2026 (Free & Paid) | ToolverAI`;
-        const desc = `Looking for the best alternatives to ${cleanName}? Compare top ${altCount} ${category} tools ranked by real traffic, pricing models, features, and user ratings.`.slice(0, 160);
+        const desc = `Looking for the best alternatives to ${cleanName}? Compare top ${altCount} ${category} tools ranked by real traffic, pricing models, features, and user ratings.`;
 
         const breadcrumbJsonLd = {
           '@context': 'https://schema.org',
@@ -2826,7 +2847,7 @@ Only return valid JSON.`;
 
         const canonical = `${baseUrl}/blog/${article.slug}`;
         const title = `${article.seoTitle || article.title} | ToolverAI`;
-        const desc = (article.metaDescription || article.excerpt).slice(0, 160);
+        const desc = article.metaDescription || article.excerpt;
         const heroImage = article.heroImage || article.coverImage || `${baseUrl}/og-banner.png`;
         const tools = await getToolsFromDbOrFallback();
 

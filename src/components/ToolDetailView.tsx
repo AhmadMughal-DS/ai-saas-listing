@@ -26,6 +26,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { getRelatedComparisonsForTool } from '../utils/programmaticSeo';
+import { buildToolFaqs, getFaqAlternatives } from '../utils/toolFaq';
 
 interface ToolDetailViewProps {
   tool: AITool;
@@ -63,6 +64,7 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
   );
   const relatedTools = (sameCategoryTools.length >= 3 ? sameCategoryTools : [...sameCategoryTools, ...otherTools]).slice(0, 3);
   const toolRelatedComparisons = getRelatedComparisonsForTool(tool.slug || '');
+  const toolFaqs = buildToolFaqs(tool, getFaqAlternatives(tool, allTools));
 
   const handleToggleHelpful = (revId: string, initialCount: number = 0) => {
     setHelpfulVotes(prev => {
@@ -265,7 +267,7 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
                   {tool.rating.toFixed(1)}
                 </span>
                 <span className="text-xs text-slate-400 dark:text-slate-500">
-                  ({tool.reviewCount.toLocaleString()} Verified Reviews)
+                  ({tool.reviewCount.toLocaleString()} ratings)
                 </span>
               </div>
 
@@ -534,13 +536,31 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
             </div>
           </section>
 
+          {/* FAQ — same questions as the FAQPage schema emitted by utils/seo.ts */}
+          {toolFaqs.length > 0 && (
+            <section className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-xs">
+              <h2 className="font-heading text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
+                <MessageSquare className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                <span>{tool.name} FAQ</span>
+              </h2>
+              <div className="space-y-5">
+                {toolFaqs.map((faq) => (
+                  <div key={faq.question}>
+                    <h3 className="font-heading text-sm sm:text-base font-bold text-slate-900 dark:text-white mb-1">{faq.question}</h3>
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">{faq.answer}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* User Reviews */}
           <section className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-xs">
             <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-100 dark:border-slate-800">
               <div>
                 <h2 className="font-heading text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <MessageSquare className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                  <span>Verified User Reviews</span>
+                  <span>User Reviews</span>
                 </h2>
                 <p className="text-xs text-slate-400 mt-0.5">
                   Real feedback from researchers, founders, and engineers

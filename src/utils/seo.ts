@@ -15,6 +15,8 @@ export interface SEOData {
 const BASE_URL = 'https://toolverai.com';
 
 import { normalizeComparisonSlugs } from './programmaticSeo';
+import { clampMetaDescription, stripTrailingPunctuation } from './metaText';
+import { buildToolFaqs, buildFaqPageJsonLd, getFaqAlternatives } from './toolFaq';
 
 // Use env var if available (set in Vite build), else fallback to Unsplash
 const DEFAULT_IMAGE =
@@ -31,7 +33,8 @@ export function generateSEOData(
   tool: AITool | null,
   categorySlugParam?: string | null,
   comparisonTools?: [AITool, AITool] | null,
-  selectedArticle?: BlogPost | null
+  selectedArticle?: BlogPost | null,
+  allTools: AITool[] = []
 ): SEOData {
   // ── Standalone Blog Article ──────────────────────────────────────────
   if (activeTab === 'blog' && selectedArticle) {
@@ -98,7 +101,7 @@ export function generateSEOData(
     const pricingStr = tool.pricingType || 'Freemium';
     const title = `${cleanName} Review 2026: Features, Pricing & Alternatives | ToolverAI`;
     const baseDesc = tool.tagline || tool.description.slice(0, 120);
-    const description = `${cleanName} (${pricingStr}): ${baseDesc}. ${visitsStr ? `Traffic: ${visitsStr}.` : ''} Compare pricing, features, and top alternatives on ToolverAI.`.slice(0, 160);
+    const description = clampMetaDescription(`${cleanName} (${pricingStr}): ${stripTrailingPunctuation(baseDesc)}. ${visitsStr ? `Traffic: ${visitsStr}.` : ''} Compare pricing, features, and top alternatives on ToolverAI.`);
 
     const canonicalUrl = `${BASE_URL}/tool/${tool.slug || tool.id}`;
     const ogImage = tool.logoUrl && !tool.logoUrl.includes('unsplash') ? tool.logoUrl : DEFAULT_IMAGE;
@@ -114,9 +117,6 @@ export function generateSEOData(
       `${tool.pricingType} AI tools`,
       'AI tools directory 2026',
     ].filter(Boolean) as string[];
-
-    // Safe aggregateRating: only emit if there are real reviews
-    const hasRealReviews = (tool.reviewCount || 0) >= 1;
 
     const softwareSchema: Record<string, any> = {
       '@context': 'https://schema.org',
@@ -145,15 +145,7 @@ export function generateSEOData(
       };
     }
 
-    if (hasRealReviews) {
-      softwareSchema.aggregateRating = {
-        '@type': 'AggregateRating',
-        ratingValue: String(tool.rating || 4.5),
-        reviewCount: String(tool.reviewCount),
-        bestRating: '5',
-        worstRating: '1',
-      };
-    }
+    // No aggregateRating until ratings come from real collected user reviews (Google review snippet policy).
 
     const breadcrumbSchema = {
       '@context': 'https://schema.org',
@@ -178,7 +170,8 @@ export function generateSEOData(
       ogType: 'product',
       ogImage,
       keywords,
-      jsonLd: [softwareSchema, breadcrumbSchema],
+      jsonLd: [softwareSchema, breadcrumbSchema, buildFaqPageJsonLd(buildToolFaqs(tool, getFaqAlternatives(tool, allTools)), canonicalUrl)]
+        .filter((schema): schema is Record<string, any> => schema !== null),
     };
   }
 
