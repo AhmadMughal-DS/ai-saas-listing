@@ -468,6 +468,7 @@ export const App: React.FC = () => {
         categorySlug={categorySlug}
         comparisonTools={comparisonTools}
         selectedArticle={selectedArticle}
+        allTools={tools}
       />
 
       {/* Dynamic Cyber Background */}

@@ -3,7 +3,8 @@ import { ELIGIBLE_COMPARISONS, ELIGIBLE_ALTERNATIVES } from '../utils/programmat
 
 export interface SitemapUrlEntry {
   loc: string;
-  lastmod: string;
+  /** Omitted when we don't know when the content last changed; Google ignores sitemaps whose lastmod is always "today". */
+  lastmod?: string;
   changefreq: 'always' | 'hourly' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'never';
   priority: string;
   image?: {
@@ -54,116 +55,135 @@ export function formatLastMod(dateInput?: string | number | Date | null): string
   }
 }
 
+/** Real content date of a record as YYYY-MM-DD, or undefined when it has none. */
+function contentDate(...dates: Array<string | number | Date | null | undefined>): string | undefined {
+  for (const d of dates) {
+    if (!d) continue;
+    const parsed = new Date(d);
+    if (!isNaN(parsed.getTime())) return parsed.toISOString().split('T')[0];
+  }
+  return undefined;
+}
+
+/** Latest of several YYYY-MM-DD dates (ISO dates sort lexically). */
+function latestDate(dates: Array<string | undefined>): string | undefined {
+  return dates.filter(Boolean).sort().pop();
+}
+
 /**
  * Generates an array of all sitemap URL entries
  */
 export function generateSitemapEntries(baseUrl: string, tools: any[] = []): SitemapUrlEntry[] {
   const cleanBaseUrl = baseUrl.replace(/\/+$/, '');
-  const today = new Date().toISOString().split('T')[0];
   const entries: SitemapUrlEntry[] = [];
+
+  const toolDate = (t: any) => contentDate(t?.updatedAt, t?.createdAt, t?.launchedDate);
+  const toolDateBySlug = new Map<string, string | undefined>();
+  tools.forEach((t) => {
+    const key = String(t?.slug || t?.id || '').toLowerCase();
+    if (key) toolDateBySlug.set(key, toolDate(t));
+  });
+  // Directory hubs change whenever a tool is added or edited
+  const latestToolDate = latestDate(tools.map(toolDate));
+  let latestBlogDate: string | undefined;
+  try {
+    latestBlogDate = latestDate(getPublishedArticles().map((p: any) => contentDate(p.updatedAt, p.publishedAt)));
+  } catch {}
 
   // 1. Core Primary Hub Pages
   entries.push(
     {
       loc: `${cleanBaseUrl}/`,
-      lastmod: today,
+      lastmod: latestToolDate,
       changefreq: 'daily',
       priority: '1.0',
     },
     {
       loc: `${cleanBaseUrl}/rankings`,
-      lastmod: today,
+      lastmod: latestToolDate,
       changefreq: 'daily',
       priority: '0.9',
     },
     {
       loc: `${cleanBaseUrl}/deals`,
-      lastmod: today,
       changefreq: 'daily',
       priority: '0.9',
     },
     {
       loc: `${cleanBaseUrl}/compare`,
-      lastmod: today,
+      lastmod: latestToolDate,
       changefreq: 'weekly',
       priority: '0.8',
     },
     {
       loc: `${cleanBaseUrl}/prompts`,
-      lastmod: today,
       changefreq: 'weekly',
       priority: '0.8',
     },
     {
       loc: `${cleanBaseUrl}/categories`,
-      lastmod: today,
+      lastmod: latestToolDate,
       changefreq: 'weekly',
       priority: '0.8',
     },
     {
       loc: `${cleanBaseUrl}/blog`,
-      lastmod: today,
+      lastmod: latestBlogDate,
       changefreq: 'daily',
       priority: '0.8',
     },
     {
       loc: `${cleanBaseUrl}/submit-tool`,
-      lastmod: today,
       changefreq: 'monthly',
       priority: '0.6',
     },
     {
       loc: `${cleanBaseUrl}/about`,
-      lastmod: today,
       changefreq: 'monthly',
       priority: '0.5',
     },
     {
       loc: `${cleanBaseUrl}/editorial-policy`,
-      lastmod: today,
       changefreq: 'monthly',
       priority: '0.5',
     },
     {
       loc: `${cleanBaseUrl}/how-we-rank-tools`,
-      lastmod: today,
       changefreq: 'monthly',
       priority: '0.5',
     },
     {
       loc: `${cleanBaseUrl}/privacy-policy`,
-      lastmod: today,
       changefreq: 'yearly',
       priority: '0.3',
     },
     {
       loc: `${cleanBaseUrl}/terms`,
-      lastmod: today,
       changefreq: 'yearly',
       priority: '0.3',
     },
     {
       loc: `${cleanBaseUrl}/affiliate-disclosure`,
-      lastmod: today,
       changefreq: 'yearly',
       priority: '0.3',
     }
   );
 
   // 2. Dynamic Category Pages — SEO-friendly /categories/{slug} URLs
-  const categorySet = new Set<string>();
+  const categoryDates = new Map<string, Array<string | undefined>>();
   tools.forEach((t) => {
     if (t.category && typeof t.category === 'string') {
-      categorySet.add(t.category.trim());
+      const category = t.category.trim();
+      categoryDates.set(category, [...(categoryDates.get(category) || []), toolDate(t)]);
     }
   });
 
-  categorySet.forEach((category) => {
+  categoryDates.forEach((dates, category) => {
     // Convert to SEO-friendly slug: "Coding" => "coding", "AI Writing" => "ai-writing"
     const categorySlug = category.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     entries.push({
       loc: `${cleanBaseUrl}/categories/${encodeURIComponent(categorySlug)}`,
-      lastmod: today,
+      lastmod: latestDate(dates),
       changefreq: 'weekly',
       priority: '0.75',
     });
@@ -177,7 +197,7 @@ export function generateSitemapEntries(baseUrl: string, tools: any[] = []): Site
       publishedArticles.forEach((post) => {
         if (post && post.slug) {
           const articleUrl = `${cleanBaseUrl}/blog/${encodeURIComponent(post.slug)}`;
-          const lastMod = formatLastMod(post.updatedAt || post.publishedAt);
+          const lastMod = contentDate(post.updatedAt, post.publishedAt);
           entries.push({
             loc: articleUrl,
             lastmod: lastMod,
@@ -201,7 +221,7 @@ export function generateSitemapEntries(baseUrl: string, tools: any[] = []): Site
 
     const identifier = tool.slug || tool.id;
     const toolUrl = `${cleanBaseUrl}/tool/${encodeURIComponent(identifier)}`;
-    const lastModified = formatLastMod(tool.updatedAt || tool.createdAt || tool.launchedDate);
+    const lastModified = toolDate(tool);
 
     // Calculate priority based on traffic and featured status
     let priority = '0.7';
@@ -236,7 +256,7 @@ export function generateSitemapEntries(baseUrl: string, tools: any[] = []): Site
   ELIGIBLE_COMPARISONS.forEach((comp) => {
     entries.push({
       loc: `${cleanBaseUrl}/compare/${encodeURIComponent(comp.canonicalSlug)}`,
-      lastmod: today,
+      lastmod: latestDate([toolDateBySlug.get(comp.slug1), toolDateBySlug.get(comp.slug2)]),
       changefreq: 'weekly',
       priority: '0.8',
     });
@@ -246,7 +266,7 @@ export function generateSitemapEntries(baseUrl: string, tools: any[] = []): Site
   ELIGIBLE_ALTERNATIVES.forEach((alt) => {
     entries.push({
       loc: `${cleanBaseUrl}/alternatives/${encodeURIComponent(alt.toolSlug)}`,
-      lastmod: today,
+      lastmod: toolDateBySlug.get(alt.toolSlug.toLowerCase()),
       changefreq: 'weekly',
       priority: '0.8',
     });
@@ -276,8 +296,7 @@ export function buildSitemapXml(baseUrl: string, tools: any[] = []): string {
 
       return `  <url>
     <loc>${escapeXml(entry.loc)}</loc>
-    <lastmod>${escapeXml(entry.lastmod)}</lastmod>
-    <changefreq>${escapeXml(entry.changefreq)}</changefreq>
+${entry.lastmod ? `    <lastmod>${escapeXml(entry.lastmod)}</lastmod>\n` : ''}    <changefreq>${escapeXml(entry.changefreq)}</changefreq>
     <priority>${escapeXml(entry.priority)}</priority>${imageXml}
   </url>`;
     })
