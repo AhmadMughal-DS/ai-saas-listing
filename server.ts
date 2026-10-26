@@ -7,6 +7,7 @@ import OpenAI from 'openai';
 import { MongoClient, Db } from 'mongodb';
 import { initializeApp as initFirebaseApp, cert, applicationDefault, App as FirebaseApp } from 'firebase-admin/app';
 import dotenv from 'dotenv';
+import { marked } from 'marked';
 import { INITIAL_TOOLS } from './src/data/initialData';
 import { buildSitemapXml, generateSitemapEntries } from './src/server/sitemap';
 import {
@@ -536,7 +537,9 @@ async function startServer() {
     try {
       const db = await getMongoDb();
       if (db) {
-        const tools = await db.collection('tools').find({}).toArray();
+        // Exclude the heavy per-tool `blog` field from this shared cache; the
+        // tool detail SSR loads the single blog it needs on its own.
+        const tools = await db.collection('tools').find({}, { projection: { blog: 0 } }).toArray();
         if (tools && tools.length > 0) {
           const mapped = tools.map((t) => {
             const { _id, ...rest } = t;
@@ -833,7 +836,9 @@ async function startServer() {
     try {
       const db = await getMongoDb();
       if (db) {
-        const tools = await db.collection('tools').find({}).toArray();
+        // Exclude the large `blog` field from the list payload — it is loaded
+        // on demand per tool via /api/tools/:slug/blog (keeps the list lean).
+        const tools = await db.collection('tools').find({}, { projection: { blog: 0 } }).toArray();
         // Normalize _id to id and ensure isVerified/isFeatured flags
         const cleanTools = tools.map((t) => {
           const { _id, ...rest } = t;
@@ -850,6 +855,24 @@ async function startServer() {
     } catch (error: any) {
       console.error('Error fetching tools:', error);
       res.json(memoryToolsCache);
+    }
+  });
+
+  // Per-tool long-form blog (loaded on demand by the tool detail page)
+  app.get('/api/tools/:slug/blog', async (req, res) => {
+    try {
+      const slug = String(req.params.slug || '').toLowerCase();
+      const db = await getMongoDb();
+      if (!db) return res.json({ blog: '' });
+      const tool = await db.collection('tools').findOne(
+        { $or: [{ slug }, { id: slug }, { id: `tool-${slug}` }] },
+        { projection: { blog: 1, name: 1 } },
+      );
+      res.set('Cache-Control', 'public, max-age=300, s-maxage=3600, stale-while-revalidate=86400');
+      return res.json({ blog: (tool && tool.blog) || '' });
+    } catch (error) {
+      console.error('Error fetching tool blog:', error);
+      return res.json({ blog: '' });
     }
   });
 
@@ -2011,6 +2034,27 @@ Only return valid JSON.`;
           ],
         };
 
+        // Load this tool's long-form blog on demand and render it as unique SEO body content
+        let blogSectionHtml = '';
+        try {
+          const blogDb = await getMongoDb();
+          const blogDoc = blogDb
+            ? await blogDb.collection('tools').findOne({ id: tool.id }, { projection: { blog: 1 } })
+            : null;
+          const blogMd = (blogDoc && (blogDoc as any).blog) || '';
+          if (blogMd && blogMd.split(/\s+/).length > 200) {
+            // Strip the blog's leading H1 so the page keeps exactly one <h1>
+            const blogBody = blogMd.replace(/^\s*#\s+.+\r?\n/, '');
+            blogSectionHtml = `
+    <section>
+      <h2>In-Depth ${cleanName} Guide</h2>
+      ${marked.parse(blogBody)}
+    </section>`;
+          }
+        } catch (blogErr) {
+          console.warn('Tool blog render skipped:', (blogErr as any)?.message);
+        }
+
         const toolBodyHtml = `
 <header>
   <nav aria-label="Breadcrumb">
@@ -2043,6 +2087,7 @@ Only return valid JSON.`;
         ${tool.keyFeatures.map((f: string) => `<li>${f}</li>`).join('\n        ')}
       </ul>
     </section>` : ''}
+    ${blogSectionHtml}
     <section>
       <h2>Top Alternatives to ${cleanName}</h2>
       <p>Explore the best alternative AI software in ${tool.category}:</p>

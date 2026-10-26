@@ -234,3 +234,25 @@
 .dark ::-webkit-scrollbar-thumb:hover {
   background: #475569;
 }
+
+/* In-depth tool guide (long-form blog rendered from Markdown) */
+.tool-blog { color: #334155; line-height: 1.75; font-size: 1rem; }
+.dark .tool-blog { color: #cbd5e1; }
+.tool-blog h2 { font-size: 1.4rem; font-weight: 700; margin: 2rem 0 0.75rem; color: #0f172a; }
+.tool-blog h3 { font-size: 1.15rem; font-weight: 700; margin: 1.5rem 0 0.5rem; color: #1e293b; }
+.dark .tool-blog h2, .dark .tool-blog h3 { color: #f1f5f9; }
+.tool-blog p { margin: 0 0 1rem; }
+.tool-blog ul, .tool-blog ol { margin: 0 0 1rem 1.5rem; }
+.tool-blog li { margin-bottom: 0.4rem; }
+.tool-blog a { color: #4f46e5; text-decoration: underline; }
+.dark .tool-blog a { color: #818cf8; }
+.tool-blog strong { color: #0f172a; font-weight: 700; }
+.dark .tool-blog strong { color: #e2e8f0; }
+.tool-blog table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.925rem; }
+.tool-blog th, .tool-blog td { border: 1px solid #e2e8f0; padding: 0.55rem 0.75rem; text-align: left; }
+.dark .tool-blog th, .dark .tool-blog td { border-color: #334155; }
+.tool-blog th { background: #f8fafc; font-weight: 700; }
+.dark .tool-blog th { background: #1e293b; }
+.tool-blog blockquote { border-left: 3px solid #4f46e5; padding-left: 1rem; margin: 1rem 0; color: #64748b; }
+.tool-blog hr { border: 0; border-top: 1px solid #e2e8f0; margin: 1.5rem 0; }
+.dark .tool-blog hr { border-top-color: #334155; }

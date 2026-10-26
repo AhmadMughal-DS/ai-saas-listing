@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { marked } from 'marked';
 import { AITool, ToolReview, UserAccount } from '../types';
 import { NewBadge } from './NewBadge';
 import { trackOutboundToolClick } from '../lib/analytics';
@@ -55,6 +56,24 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [helpfulVotes, setHelpfulVotes] = useState<Record<string, { count: number; voted: boolean }>>({});
+  const [blogHtml, setBlogHtml] = useState('');
+  // Load the tool's in-depth blog on demand and render it (unique long-form SEO content)
+  useEffect(() => {
+    let cancelled = false;
+    setBlogHtml('');
+    const key = tool.slug || tool.id;
+    if (!key) return;
+    fetch(`/api/tools/${encodeURIComponent(key)}/blog`)
+      .then((r) => (r.ok ? r.json() : { blog: '' }))
+      .then((data) => {
+        const md: string = (data && data.blog) || '';
+        if (cancelled || md.split(/\s+/).length < 200) return;
+        const body = md.replace(/^\s*#\s+.+\r?\n/, ''); // drop the blog's H1 (page has its own)
+        setBlogHtml(marked.parse(body) as string);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [tool.slug, tool.id]);
   // Filter alternatives by same category first
   const sameCategoryTools = allTools.filter(
     (t) => t.id !== tool.id && t.category?.toLowerCase() === tool.category?.toLowerCase()
@@ -468,7 +487,7 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
               <span>Core Capabilities</span>
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              {tool.keyFeatures.map((feature, idx) => (
+              {(tool.keyFeatures || []).map((feature, idx) => (
                 <div
                   key={idx}
                   className="flex items-center gap-3 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700"
@@ -541,6 +560,19 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
             </div>
           </section>
 
+          {/* In-Depth Guide (long-form SEO blog, loaded on demand) */}
+          {blogHtml && (
+            <section className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-xs">
+              <h2 className="font-heading text-xl font-bold text-slate-900 dark:text-white mb-6">
+                In-Depth {tool.name} Guide
+              </h2>
+              <div
+                className="tool-blog prose prose-slate dark:prose-invert max-w-none"
+                dangerouslySetInnerHTML={{ __html: blogHtml }}
+              />
+            </section>
+          )}
+
           {/* User Reviews */}
           <section className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-xs">
             <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-100 dark:border-slate-800">
@@ -572,7 +604,7 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
 
             {/* Reviews List */}
             <div className="space-y-4 mb-8">
-              {tool.reviews.map((rev) => {
+              {(tool.reviews || []).map((rev) => {
                 const currentHelpful = helpfulVotes[rev.id] || { 
                   count: rev.helpfulCount ?? Math.floor(Math.random() * 40 + 15), 
                   voted: false 
