@@ -29,24 +29,60 @@ export const DealsView: React.FC<DealsViewProps> = ({
   onSelectTool,
   onNavigate,
 }) => {
-  const [deals, setDeals] = useState<AIDeal[]>(INITIAL_DEALS);
+  const [claimOverlay, setClaimOverlay] = useState<Record<string, number>>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string>('All');
   const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
 
   const dealTypes = ['All', 'Discount', 'Lifetime', 'Free Trial', 'Free Credits'];
 
+  // Every tool appears in Deals: curated INITIAL_DEALS first, then one offer per tool.
+  const allDeals = useMemo<AIDeal[]>(() => {
+    const toDeal = (tool: AITool): AIDeal => {
+      const d: any = (tool as any).deal;
+      const pricing = tool.pricingType || 'Freemium';
+      let dealType: AIDeal['dealType'] = 'Discount';
+      let discount = 'Best Price';
+      let dealPrice = 'See site';
+      if (/free|open source/i.test(pricing)) { dealType = 'Free Credits'; discount = 'FREE ACCESS'; dealPrice = 'Free'; }
+      else if (/freemium|trial/i.test(pricing)) { dealType = 'Free Trial'; discount = 'FREE PLAN'; dealPrice = 'Free tier'; }
+      return {
+        id: `tool-deal-${tool.slug || tool.id}`,
+        toolId: tool.id,
+        toolName: tool.name,
+        toolLogo: tool.logoUrl || '',
+        discount: d?.discount || discount,
+        code: d?.code || '',
+        description: d?.description || tool.tagline || (tool.description ? tool.description.slice(0, 120) : `Explore ${tool.name} on ToolverAI.`),
+        dealPrice: d?.dealPrice || dealPrice,
+        expiresIn: d?.expiresIn || 'Ongoing',
+        dealType: (d?.dealType as AIDeal['dealType']) || dealType,
+        verified: Boolean(tool.isVerified),
+        claimedCount: (tool.upvotes as number) || 0,
+        url: tool.url || '',
+      };
+    };
+    const seen = new Set(INITIAL_DEALS.map((d) => d.toolName.toLowerCase()));
+    const toolDeals = (tools || [])
+      .filter((t) => t && t.name && !seen.has(t.name.toLowerCase()))
+      .map(toDeal);
+    return [...INITIAL_DEALS, ...toolDeals];
+  }, [tools]);
+
   const filteredDeals = useMemo(() => {
-    return deals.filter((deal) => {
-      const matchType = selectedType === 'All' || deal.dealType === selectedType;
-      const matchSearch =
-        deal.toolName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        deal.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        deal.discount.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        deal.code.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchType && matchSearch;
-    });
-  }, [deals, selectedType, searchQuery]);
+    const q = searchQuery.toLowerCase();
+    return allDeals
+      .map((deal) => ({ ...deal, claimedCount: deal.claimedCount + (claimOverlay[deal.id] || 0) }))
+      .filter((deal) => {
+        const matchType = selectedType === 'All' || deal.dealType === selectedType;
+        const matchSearch =
+          deal.toolName.toLowerCase().includes(q) ||
+          deal.description.toLowerCase().includes(q) ||
+          deal.discount.toLowerCase().includes(q) ||
+          deal.code.toLowerCase().includes(q);
+        return matchType && matchSearch;
+      });
+  }, [allDeals, selectedType, searchQuery, claimOverlay]);
 
   const handleCopyCode = (deal: AIDeal) => {
     if (deal.code) {
@@ -67,10 +103,8 @@ export const DealsView: React.FC<DealsViewProps> = ({
   };
 
   const handleClaim = (deal: AIDeal) => {
-    // Increment claimed count
-    setDeals((prev) =>
-      prev.map((d) => (d.id === deal.id ? { ...d, claimedCount: d.claimedCount + 1 } : d))
-    );
+    // Increment claimed count (overlay on the derived list)
+    setClaimOverlay((prev) => ({ ...prev, [deal.id]: (prev[deal.id] || 0) + 1 }));
     // Track deal_click with action: claim (opening the deal URL)
     trackDealClick({
       deal_id: deal.id,

@@ -128,7 +128,21 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
     } else if (sortBy === 'newest') {
       list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     } else {
-      list.sort((a, b) => b.reviewCount - a.reviewCount);
+      // "Popular" = quality-weighted score blended with a daily rotation seed, so the
+      // tools on display refresh every day (deterministic within a day, fair exposure).
+      const daySeed = Math.floor(Date.now() / 86_400_000); // increments once per day
+      const rotationScore = (t: AITool) => {
+        const base = (t.reviewCount || 0) + (t.monthlyVisits || 0) / 5000 + (t.rating || 0) * 50;
+        let h = 2166136261;
+        const key = `${t.id}-${daySeed}`;
+        for (let i = 0; i < key.length; i++) {
+          h ^= key.charCodeAt(i);
+          h = Math.imul(h, 16777619);
+        }
+        const jitter = ((h >>> 0) % 1000) / 1000; // 0..1, stable per tool per day
+        return base * (0.6 + 0.8 * jitter);        // ±40% daily reshuffle
+      };
+      list.sort((a, b) => rotationScore(b) - rotationScore(a));
     }
 
     return list;
