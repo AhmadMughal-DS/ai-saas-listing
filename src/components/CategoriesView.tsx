@@ -1,5 +1,6 @@
 import React from 'react';
 import { AITool } from '../types';
+import { NewBadge } from './NewBadge';
 import { Sparkles, FileText, Video, Code, Zap, Image, Mic, BarChart3, Bot, ChevronRight, Star, Flame, ShieldCheck, ArrowLeft } from 'lucide-react';
 
 export interface CategoryMetaItem {
@@ -240,13 +241,17 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold">
-                        <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-                        <span>{tool.rating.toFixed(1)}</span>
-                        <span className="text-slate-400 dark:text-slate-500 font-normal text-[10px]">
-                          ({tool.reviewCount})
-                        </span>
-                      </div>
+                      {tool.reviewCount > 0 ? (
+                        <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold">
+                          <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                          <span>{tool.rating.toFixed(1)}</span>
+                          <span className="text-slate-400 dark:text-slate-500 font-normal text-[10px]">
+                            ({tool.reviewCount})
+                          </span>
+                        </div>
+                      ) : (
+                        <NewBadge />
+                      )}
                     </div>
 
                     <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2 mt-2 leading-relaxed font-normal">

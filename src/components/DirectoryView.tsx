@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useDeferredValue, Suspense } from 'react';
 import { AITool, ActiveTab } from '../types';
 import { trackSearch, trackCategoryView } from '../lib/analytics';
+import { NewBadge } from './NewBadge';
 import { 
   Search, 
   Star, 
@@ -709,13 +710,17 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
                       </a>
                     </div>
 
-                    <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold">
-                      <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                      <span>{tool.rating.toFixed(1)}</span>
-                      <span className="text-slate-400 dark:text-slate-500 font-normal text-[10px]">
-                        ({tool.reviewCount})
-                      </span>
-                    </div>
+                    {tool.reviewCount > 0 ? (
+                      <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold">
+                        <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                        <span>{tool.rating.toFixed(1)}</span>
+                        <span className="text-slate-400 dark:text-slate-500 font-normal text-[10px]">
+                          ({tool.reviewCount})
+                        </span>
+                      </div>
+                    ) : (
+                      <NewBadge />
+                    )}
                   </div>
 
                   <p className="text-sm text-slate-600 dark:text-slate-300 line-clamp-2 mt-2 leading-relaxed font-normal">

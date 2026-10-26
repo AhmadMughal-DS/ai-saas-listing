@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { AITool, ActiveTab } from '../types';
+import { NewBadge } from './NewBadge';
 import { trackComparisonView } from '../lib/analytics';
 import { 
   GitCompare, 
@@ -456,22 +457,26 @@ export const CompareView: React.FC<CompareViewProps> = ({
                 </p>
 
                 {/* Rating & Reviews */}
-                <div className="flex items-center gap-2 mb-6">
-                  <div className="flex text-amber-500">
-                    {[...Array(5)].map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`w-3.5 h-3.5 ${
-                          i < Math.floor(tool.rating)
-                            ? 'fill-amber-500 text-amber-500'
-                            : 'text-amber-200 dark:text-slate-700'
-                        }`}
-                      />
-                    ))}
+                {tool.reviewCount > 0 ? (
+                  <div className="flex items-center gap-2 mb-6">
+                    <div className="flex text-amber-500">
+                      {[...Array(5)].map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`w-3.5 h-3.5 ${
+                            i < Math.floor(tool.rating)
+                              ? 'fill-amber-500 text-amber-500'
+                              : 'text-amber-200 dark:text-slate-700'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{tool.rating.toFixed(1)}</span>
+                    <span className="text-[11px] text-slate-400 dark:text-slate-500">({tool.reviewCount} reviews)</span>
                   </div>
-                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{tool.rating.toFixed(1)}</span>
-                  <span className="text-[11px] text-slate-400 dark:text-slate-500">({tool.reviewCount} reviews)</span>
-                </div>
+                ) : (
+                  <div className="mb-6"><NewBadge /></div>
+                )}
               </div>
 
               <div className="flex items-center gap-3 pt-4 border-t border-slate-200/60 dark:border-slate-700/60">

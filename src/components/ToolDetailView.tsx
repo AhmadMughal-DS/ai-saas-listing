@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AITool, ToolReview, UserAccount } from '../types';
+import { NewBadge } from './NewBadge';
 import { trackOutboundToolClick } from '../lib/analytics';
 import { 
   Star, 
@@ -249,24 +250,30 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
 
               {/* Stars & Verification */}
               <div className="flex items-center gap-2 mb-3">
-                <div className="flex text-amber-500">
-                  {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      className={`w-4 h-4 ${
-                        i < Math.floor(tool.rating)
-                          ? 'fill-amber-500 text-amber-500'
-                          : 'text-amber-200 dark:text-amber-900'
-                      }`}
-                    />
-                  ))}
-                </div>
-                <span className="text-sm font-bold text-slate-900 dark:text-white">
-                  {tool.rating.toFixed(1)}
-                </span>
-                <span className="text-xs text-slate-400 dark:text-slate-500">
-                  ({tool.reviewCount.toLocaleString()} Verified Reviews)
-                </span>
+                {tool.reviewCount > 0 ? (
+                  <>
+                    <div className="flex text-amber-500">
+                      {[...Array(5)].map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`w-4 h-4 ${
+                            i < Math.floor(tool.rating)
+                              ? 'fill-amber-500 text-amber-500'
+                              : 'text-amber-200 dark:text-amber-900'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-sm font-bold text-slate-900 dark:text-white">
+                      {tool.rating.toFixed(1)}
+                    </span>
+                    <span className="text-xs text-slate-400 dark:text-slate-500">
+                      ({tool.reviewCount.toLocaleString()} Verified Reviews)
+                    </span>
+                  </>
+                ) : (
+                  <NewBadge />
+                )}
               </div>
 
               <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 max-w-2xl font-normal leading-relaxed">
@@ -547,13 +554,19 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
                 </p>
               </div>
               <div className="text-right">
-                <div className="text-2xl font-extrabold text-amber-500 flex items-center gap-1 font-heading">
-                  <Star className="w-5 h-5 fill-amber-500" />
-                  <span>{tool.rating.toFixed(1)}</span>
-                </div>
-                <div className="text-xs text-slate-400">
-                  {tool.reviewCount.toLocaleString()} total reviews
-                </div>
+                {tool.reviewCount > 0 ? (
+                  <>
+                    <div className="text-2xl font-extrabold text-amber-500 flex items-center gap-1 font-heading">
+                      <Star className="w-5 h-5 fill-amber-500" />
+                      <span>{tool.rating.toFixed(1)}</span>
+                    </div>
+                    <div className="text-xs text-slate-400">
+                      {tool.reviewCount.toLocaleString()} total reviews
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-xs text-slate-400">No reviews yet</div>
+                )}
               </div>
             </div>
 
