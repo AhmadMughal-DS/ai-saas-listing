@@ -79,6 +79,17 @@ SPONSOR_TIERS: list[SponsorTier] = [
                 "and inclusion in our comparison/alternatives pages where relevant."),
 ]
 
+# Zero-cost, performance-based fallback offered alongside the paid tiers above.
+# If a vendor won't take a monthly or one-time package, we instead feature the
+# tool through the vendor's own affiliate/referral link — ToolverAI earns the
+# standard affiliate commission only on conversions we actually drive.
+AFFILIATE_OFFER = SponsorTier(
+    "Zero-Cost Affiliate Feature", "Free — commission only",
+    "No upfront fee: share your affiliate/referral link and we'll feature your tool to our "
+    "buying-intent audience. You pay only your standard affiliate commission, and only when a "
+    "visitor we send actually converts.",
+)
+
 
 @dataclass
 class Settings:
@@ -106,13 +117,14 @@ class Settings:
     allow_unverified_fallback: bool
     # When False (default), a positive "hot lead" reply is only flagged for manual handling —
     # the agent does NOT draft or send any reply. Set True to auto-draft (to Drafts, never auto-sent).
-    auto_draft_hot_replies: bool = False
+    auto_draft_hot_replies: bool = True
+    auto_reply_hot_leads: bool = True
     # When False (default), each tool gets exactly ONE email — no day-3 follow-up bump is ever sent.
     send_followups: bool = False
     # When True (default), no emails are sent on Saturday or Sunday (weekend quiet period).
     skip_weekends: bool = True
     exclude_domains: set = field(default_factory=set)
-    imap_poll_minutes: int = 5
+    imap_poll_minutes: int = 60
     # Optional 3rd-party email verifier (ZeroBounce). When set, candidates are verified
     # over HTTPS — works even when outbound port 25 (SMTP RCPT probe) is blocked.
     email_verify_api_key: str = ""
@@ -122,7 +134,7 @@ class Settings:
     snov_client_id: str = ""
     snov_client_secret: str = ""
     hunting_spreadsheet_id: str = "1hk3SXmXnvtD4ZJlux9a36NuaMaeo_5rA4KTx0R5Qlac"
-    excel_leads_path: str = "D:/company page/client data/all_ai_tools_leads_combined.xlsx"
+    excel_leads_path: str = "D:/company page/client data scrape-toolverai/all_ai_tools_leads_combined.xlsx"
     hunting_log_spreadsheet_id: str = "1PJST6oHU0x2qhUsdQp2dCSHb7DkUH2GdFZtwMKc5XDc"
 
     @property
@@ -162,14 +174,15 @@ def load_settings() -> Settings:
         max_delay=int(e.get("MAX_DELAY_SECONDS", 360)),
         followup_business_days=int(e.get("FOLLOWUP_AFTER_BUSINESS_DAYS", 3)),
         smtp_probe=_bool(e.get("SMTP_PROBE"), True),
-        allow_unverified_fallback=_bool(e.get("ALLOW_UNVERIFIED_FALLBACK"), False),
-        auto_draft_hot_replies=_bool(e.get("AUTO_DRAFT_HOT_REPLIES"), False),
+        allow_unverified_fallback=_bool(e.get("ALLOW_UNVERIFIED_FALLBACK"), True),
+        auto_draft_hot_replies=_bool(e.get("AUTO_DRAFT_HOT_REPLIES"), True),
+        auto_reply_hot_leads=_bool(e.get("AUTO_REPLY_HOT_LEADS"), True),
         send_followups=_bool(e.get("SEND_FOLLOWUPS"), False),
         skip_weekends=_bool(e.get("SKIP_WEEKENDS"), True),
         exclude_domains={d.strip().lower() for d in e.get("EXCLUDE_DOMAINS", "").split(",") if d.strip()},
-        imap_poll_minutes=int(e.get("IMAP_POLL_MINUTES", 5)),
+        imap_poll_minutes=int(e.get("IMAP_POLL_MINUTES", 60)),
         hunting_spreadsheet_id=e.get("HUNTING_SPREADSHEET_ID", "1hk3SXmXnvtD4ZJlux9a36NuaMaeo_5rA4KTx0R5Qlac"),
-        excel_leads_path=e.get("EXCEL_LEADS_PATH", "D:/company page/client data/all_ai_tools_leads_combined.xlsx"),
+        excel_leads_path=e.get("EXCEL_LEADS_PATH", "D:/company page/client data scrape-toolverai/all_ai_tools_leads_combined.xlsx"),
         hunting_log_spreadsheet_id=e.get("HUNTING_LOG_SPREADSHEET_ID", "1PJST6oHU0x2qhUsdQp2dCSHb7DkUH2GdFZtwMKc5XDc"),
         email_verify_api_key=e.get("EMAIL_VERIFY_API_KEY", ""),
         hunter_api_key=e.get("HUNTER_API_KEY", ""),

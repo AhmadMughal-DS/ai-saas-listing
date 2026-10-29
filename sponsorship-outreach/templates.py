@@ -2,7 +2,7 @@
 this is what keeps Email #1 in the primary inbox."""
 from __future__ import annotations
 
-from config import SPONSOR_TIERS, Settings
+from config import AFFILIATE_OFFER, SPONSOR_TIERS, Settings
 from sheet import ToolRow, first_sentence
 
 
@@ -60,7 +60,9 @@ def initial_email(tool: ToolRow, s: Settings, video_url: str = "") -> tuple[str,
         f"{video_line}"
         f"ToolverAI is where people come to compare and pick AI tools, so our visitors arrive with real buying intent. "
         f"Would you like to pin {tool.name} to our Homepage Featured Spot and get full ad-usage rights to the video? "
-        f"Reply \"INTERESTED\" and I'll send over our live GA4 traffic stats and partner packages.\n\n"
+        f"We have paid partner packages, plus a zero-cost option where we simply feature you through your own "
+        f"affiliate link — so there's a fit whatever your budget. "
+        f"Reply \"INTERESTED\" and I'll send over our live GA4 traffic stats and both options.\n\n"
         # Keep total links ≤ 2: drop the site URL from the signature when a video link is present
         f"{_signature(s, include_site=not video_url)}\n\n"
         f"{_footer(s)}\n"
@@ -72,11 +74,14 @@ def followup_email(tool: ToolRow, s: Settings, original_subject: str) -> tuple[s
     subject = original_subject if original_subject.lower().startswith("re:") else f"Re: {original_subject}"
     body = (
         f"Hi {tool.name} team,\n\n"
-        f"Just bumping this in case it got buried. {tool.name}'s listing is live here:\n"
+        f"I'm the founder of ToolverAI — following up personally on my note from a couple of days ago.\n\n"
+        f"Here's why I think this is worth two minutes: our visitors come specifically to compare and choose AI "
+        f"tools, so the traffic we'd send {tool.name} arrives ready to sign up. Your listing is already live:\n"
         f"{tool.live_page}\n\n"
-        f"You can follow the video rollout on our channel: {s.youtube_url}\n\n"
-        f"If a Homepage Featured Spot (plus ad rights to the video) sounds useful, a one-word \"INTERESTED\" is all "
-        f"I need, and I'll share our GA4 traffic numbers and partner packages.\n\n"
+        f"A Homepage Featured Spot puts {tool.name} in front of that buying-intent audience first, and you get full "
+        f"ad-usage rights to the 30-second Problem→Solution video we scripted for you.\n\n"
+        f"If that's interesting, just reply \"INTERESTED\" and I'll send our live GA4 traffic numbers and the options "
+        f"— including a zero-cost affiliate feature if a paid package isn't the right fit. No pressure either way.\n\n"
         f"{_signature(s, include_site=False)}\n\n"
         f"{_footer(s)}\n"
     )
@@ -93,13 +98,22 @@ def hot_lead_reply(tool_name: str, live_page: str, s: Settings, original_subject
     tiers = "\n".join(
         f"  {i}. {t.name} · {t.price}\n     {t.includes}" for i, t in enumerate(SPONSOR_TIERS, 1)
     )
+    affiliate_block = (
+        f"Not ready for a monthly or one-time package? There's also a zero-cost option:\n\n"
+        f"  • {AFFILIATE_OFFER.name} · {AFFILIATE_OFFER.price}\n"
+        f"    {AFFILIATE_OFFER.includes}\n\n"
+    )
     body = (
         f"{hi}\n\n"
         f"Thanks for getting back to me! {proof}\n\n"
         f"Here are our partner packages for {tool_name}:\n\n"
         f"{tiers}\n\n"
-        f"Every package builds on your existing listing ({live_page}). Tell me which one fits and I'll send the "
-        f"invoice and get {tool_name} pinned right away.\n\n"
+        f"{affiliate_block}"
+        f"Every option builds on your existing listing ({live_page}). Tell me which one fits and I'll get "
+        f"{tool_name} pinned right away.\n\n"
+        f"One quick win either way: many of our partners add their ToolverAI listing link to their own site, "
+        f"blog or newsletter — it sends your audience straight to the listing and helps {tool_name} rank higher "
+        f"across our comparison pages. Happy to send a ready-made badge if that's useful.\n\n"
         f"{_signature(s)}\n"
     )
     return subject, body
