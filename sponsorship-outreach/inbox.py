@@ -156,23 +156,42 @@ class InboxMonitor:
         subject = _decode(msg.get("Subject"))
         if from_addr == self.s.sender_email.lower():
             return "unmatched"
-        raw_text = _body_text(msg)
-
-        # 1. Bounces
+        raw_text = _body_text(msg)        # 1. Bounces (Delivery failure detection + learning + recovery)
         is_report = msg.get_content_type() == "multipart/report"
         if BOUNCE_FROM.match(from_addr.split("@")[0]) or is_report or BOUNCE_SUBJECT.search(subject):
             if _is_soft_bounce(msg):
                 return "auto"
             hit = False
             for rcpt in _failed_recipients(msg, raw_text):
-                key = self.store.find_by_email(rcpt)
+                key = self.store.find_by_email(rcpt) or self.store.find_by_domain(rcpt.split("@")[-1])
+                # 1. Learn from this delivery failure
+                self.store.record_bounce_learning(rcpt, reason=subject[:80], tool_key=key or "")
+                self.store.suppress(rcpt, f"hard bounce: {subject[:60]}")
+
                 if key:
                     hit = True
-                    self.store.suppress(rcpt, "hard bounce")
-                    self.store.set_status(key, st.BOUNCED, f"bounce: {rcpt}")
-                    self.notify(key, f"bounced ({rcpt}) — address suppressed")
-                    if verbose:
-                        print(f"  ❌ Bounce → {key} ({rcpt})")
+                    rec = self.store.tools[key]
+                    tool_dom = (rec.get("domain") or rcpt.split("@")[-1]).lower()
+
+                    # 2. Check if an alternate role fallback can be tried (e.g. contact@ if marketing@ failed)
+                    alternate = self.store.get_alternate_fallback(tool_dom)
+                    if alternate and alternate.lower() != rcpt.lower():
+                        rec["contact"] = {
+                            "email": alternate,
+                            "source": "learned_bounce_recovery",
+                            "verification": "must_send",
+                            "confidence": "medium",
+                            "verified_at": st.now_iso(),
+                        }
+                        self.store.set_status(key, st.READY, f"learned bounce on {rcpt} -> switched to alternate {alternate}")
+                        self.notify(key, f"bounce learned ({rcpt}) — auto-switched to alternate {alternate}")
+                        if verbose:
+                            print(f"  ❌ Bounce → {key} ({rcpt}) — learned, auto-switched to {alternate}")
+                    else:
+                        self.store.set_status(key, st.BOUNCED, f"bounce: {rcpt} (all fallbacks exhausted)")
+                        self.notify(key, f"bounced ({rcpt}) — address suppressed, fallbacks exhausted")
+                        if verbose:
+                            print(f"  ❌ Bounce → {key} ({rcpt}) — all fallbacks exhausted")
             return "bounce" if hit else "unmatched"
 
         # Match to a tool
@@ -206,20 +225,48 @@ class InboxMonitor:
             self.notify(key, f"opted out ({from_addr}) — no further emails")
             if verbose:
                 print(f"  🚫 Opt-out → {key}")
-            return "opt_out"
-
-        # 4. Positive → Hot lead. Only flag for manual handling unless auto-draft is explicitly on.
+            return "opt_out"        # 4. Positive → Hot lead (auto-draft and auto-reply if enabled)
         if POSITIVE.search(reply_text):
             self.store.set_status(key, st.HOT_LEAD, f"reply from {from_addr}")
-            if getattr(self.s, "auto_draft_hot_replies", False):
+            first = from_name.split()[0] if from_name and re.match(r"^[A-Za-z][a-z]+", from_name.split()[0]) else ""
+            has_proof = GA4_PROOF_PATH.exists()
+            subj, body = hot_lead_reply(rec.get("tool_name", key), rec.get("live_page", ""), self.s, subject,
+                                        has_proof, first)
+            their_id = msg.get("Message-ID", "")
+            refs = re.findall(r"<[^>]+>", msg.get("References", "")) + ([their_id] if their_id else [])
+            reply_msg = build_message(self.s, from_addr, subj, body, in_reply_to=their_id, references=refs,
+                                      attachment=GA4_PROOF_PATH if has_proof else None)
+
+            # Auto-reply directly via SMTP if enabled
+            auto_replied = False
+            if getattr(self.s, "auto_reply_hot_leads", True):
+                try:
+                    self.mailer.send(reply_msg)
+                    try:
+                        self.mailer.append(reply_msg, "sent")
+                    except Exception:
+                        pass
+                    auto_replied = True
+                    rec.setdefault("replies_sent", []).append({
+                        "at": st.now_iso(),
+                        "to": from_addr,
+                        "subject": subj,
+                        "type": "hot_lead_pricing"
+                    })
+                    self.notify(key, f"Auto-replied to HOT LEAD {from_addr} with pricing + GA4 proof")
+                    if verbose:
+                        print(f"  🚀 Auto-replied to HOT LEAD → {key} ({from_addr}) with pricing + GA4 proof!")
+                except Exception as exc:
+                    print(f"  ⚠️ Auto-reply send failed (fallback to draft): {exc}")
+
+            # Save draft as record / fallback
+            if not auto_replied or getattr(self.s, "auto_draft_hot_replies", True):
                 draft_info = self._draft_hot_reply(key, rec, msg, from_name, from_addr, subject)
-                self.notify(key, f"Hot lead — {from_addr} replied; pricing draft {draft_info}")
-                if verbose:
-                    print(f"  HOT LEAD -> {key} ({from_addr}) — draft {draft_info}")
-            else:
-                self.notify(key, f"Hot lead — {from_addr} replied; reply manually (auto-draft off)")
-                if verbose:
-                    print(f"  HOT LEAD -> {key} ({from_addr}) — reply manually (auto-draft off)")
+                if not auto_replied:
+                    self.notify(key, f"Hot lead — {from_addr} replied; pricing draft {draft_info}")
+                    if verbose:
+                        print(f"  HOT LEAD -> {key} ({from_addr}) — draft {draft_info}")
+
             return "hot"
 
         # 5. Neutral human reply

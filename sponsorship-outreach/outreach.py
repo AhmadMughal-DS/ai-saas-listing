@@ -122,8 +122,8 @@ class App:
         return keys
 
     # ── discover ─────────────────────────────────────────────────────────────
-    def discover(self, limit: int, only: str = "", retry: bool = False) -> None:
-        finder = ContactFinder(self.s)
+    def discover(self, limit: int, only: str = "", retry: bool = True) -> None:
+        finder = ContactFinder(self.s, store=self.store)
         statuses = {st.PENDING} | ({st.NEEDS_REVIEW} if retry else set())
         todo = [k for k, r in self.store.tools.items() if r["status"] in statuses and (not only or k == only)]
         print(f"[*] Discovering contacts for {min(limit, len(todo))} of {len(todo)} tools...")

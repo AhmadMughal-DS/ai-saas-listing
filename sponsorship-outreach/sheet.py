@@ -116,7 +116,7 @@ class Sheet:
         creds = Credentials.from_service_account_file(settings.service_account_file, scopes=SCOPES)
         self.gc = gspread.authorize(creds)
         self.ss_source = self.gc.open_by_key(settings.spreadsheet_id)
-        self.ws = self.ss_source.worksheet(settings.sheet_tab)
+        self.ws = self._open_tools_tab(settings.sheet_tab)
         self._cols: dict[str, int] = {}
 
         # Dedicated Hunting & Outreach Tracking Google Sheet
@@ -126,6 +126,21 @@ class Sheet:
         except Exception as exc:
             print(f"      (tracking sheet notice: {exc})")
             self.ss_tracking = self.ss_source
+
+    def _open_tools_tab(self, configured_name: str):
+        """Open the live-tools tab. The tab name carries a tool count, e.g.
+        '🚀 Live Website Tools (120)', which goes stale as tools are added.
+        Try the configured name first, then fall back to matching on the stable
+        prefix (ignoring the '(NNN)' suffix) so renaming the count never breaks it."""
+        try:
+            return self.ss_source.worksheet(configured_name)
+        except Exception:
+            prefix = re.sub(r"\s*\(\d+\)\s*$", "", configured_name).strip()
+            for ws in self.ss_source.worksheets():
+                if ws.title.strip().startswith(prefix):
+                    print(f"      (tools tab: using '{ws.title}' — configured name '{configured_name}' not found)")
+                    return ws
+            raise
 
     def _resolve_columns(self, header_row: list[str]) -> None:
         for field, title in HEADERS.items():

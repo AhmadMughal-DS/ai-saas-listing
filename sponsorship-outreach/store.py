@@ -111,6 +111,105 @@ class Store:
     def is_suppressed(self, email: str) -> bool:
         return email.lower() in self.data["suppression"]
 
+    # ── bounce learning & recovery ───────────────────────────────────────────
+    @property
+    def bounce_learning(self) -> dict:
+        return self.data.setdefault("bounce_learning", {
+            "bounced_emails": {},      # email -> {reason, at, tool, role, domain}
+            "domain_rules": {},        # domain -> {bounced_roles: [...], status: "active"|"dead", last_bounce: iso}
+        })
+
+    def record_bounce_learning(self, email_addr: str, reason: str = "", tool_key: str = "") -> dict:
+        """Extract role and domain from bounce, record learned pattern, update domain rules."""
+        email_clean = email_addr.lower().strip()
+        parts = email_clean.split("@", 1)
+        role = parts[0] if len(parts) == 2 else ""
+        domain = parts[1] if len(parts) == 2 else ""
+
+        learning = self.bounce_learning
+        learning["bounced_emails"][email_clean] = {
+            "reason": reason,
+            "at": now_iso(),
+            "tool": tool_key,
+            "role": role,
+            "domain": domain,
+        }
+
+        if domain:
+            dom_entry = learning["domain_rules"].setdefault(domain, {
+                "bounced_roles": [],
+                "status": "active",
+                "last_bounce": now_iso()
+            })
+            if role and role not in dom_entry["bounced_roles"]:
+                dom_entry["bounced_roles"].append(role)
+            dom_entry["last_bounce"] = now_iso()
+
+            # If both contact and marketing (or 3+ roles) have bounced, mark domain dead
+            roles = set(dom_entry["bounced_roles"])
+            if ("contact" in roles and "marketing" in roles) or len(roles) >= 3:
+                dom_entry["status"] = "dead"
+
+        return {
+            "role": role,
+            "domain": domain,
+            "domain_status": learning["domain_rules"].get(domain, {}).get("status", "active"),
+            "bounced_roles": learning["domain_rules"].get(domain, {}).get("bounced_roles", []),
+        }
+
+    def get_alternate_fallback(self, domain: str) -> str | None:
+        """Given a domain, suggest the next unbounced role between contact@ and marketing@."""
+        if not domain:
+            return None
+        dom_clean = domain.lower().strip()
+        learning = self.bounce_learning
+        dom_entry = learning["domain_rules"].get(dom_clean, {})
+        if dom_entry.get("status") == "dead":
+            return None
+        bounced_roles = set(dom_entry.get("bounced_roles", []))
+
+        for preferred in ("contact", "marketing"):
+            candidate = f"{preferred}@{dom_clean}"
+            if preferred not in bounced_roles and not self.is_suppressed(candidate):
+                return candidate
+        return None
+
+    def is_role_bounced(self, domain: str, role: str) -> bool:
+        if not domain or not role:
+            return False
+        learning = self.bounce_learning
+        dom_entry = learning["domain_rules"].get(domain.lower().strip(), {})
+        return role.lower().strip() in dom_entry.get("bounced_roles", [])
+
+    def recover_bounced_tools(self) -> list[tuple[str, str, str]]:
+        """Scan tools with BOUNCED status, learn their bounce, and auto-switch to alternate (contact@/marketing@).
+        Returns list of (tool_key, old_email, new_email) recovered."""
+        recovered = []
+        for key, rec in self.tools.items():
+            if rec.get("status") != BOUNCED:
+                continue
+            c = rec.get("contact") or {}
+            old_email = (c.get("email") or "").lower().strip()
+            tool_dom = (rec.get("domain") or "").lower().strip()
+            if not tool_dom and "@" in old_email:
+                tool_dom = old_email.split("@", 1)[1]
+
+            if old_email:
+                self.record_bounce_learning(old_email, reason=rec.get("last_note", "historical bounce"), tool_key=key)
+
+            alternate = self.get_alternate_fallback(tool_dom)
+            if alternate and alternate != old_email:
+                rec["contact"] = {
+                    "email": alternate,
+                    "source": "learned_bounce_recovery",
+                    "verification": "must_send",
+                    "confidence": "medium",
+                    "verified_at": now_iso(),
+                }
+                self.set_status(key, READY, f"learned bounce on {old_email} -> switched to {alternate}")
+                recovered.append((key, old_email, alternate))
+        return recovered
+
     # ── daily quota ──────────────────────────────────────────────────────────
     def sent_today(self) -> int:
         return int(self.data["daily"].get(today_key(), 0))

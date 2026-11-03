@@ -104,9 +104,10 @@ class Contact:
 
 
 class ContactFinder:
-    def __init__(self, settings: Settings, verbose: bool = True):
+    def __init__(self, settings: Settings, verbose: bool = True, store: object = None):
         self.s = settings
         self.verbose = verbose
+        self.store = store
         self._mx_cache: dict[str, list[str]] = {}
         self._catch_all: dict[str, str] = {}
         self._port25: bool | None = None
@@ -151,7 +152,7 @@ class ContactFinder:
                 self.log(f"(hunting sheet leads unavailable: {exc})")
 
         # 2. Load from Local Excel 'all_ai_tools_leads_combined.xlsx'
-        excel_path = Path(getattr(self.s, "excel_leads_path", "D:/company page/client data/all_ai_tools_leads_combined.xlsx"))
+        excel_path = Path(getattr(self.s, "excel_leads_path", "D:/company page/client data scrape-toolverai/all_ai_tools_leads_combined.xlsx"))
         if excel_path.exists():
             try:
                 import openpyxl
@@ -535,21 +536,32 @@ class ContactFinder:
                 domains.add(mail_domain)
             contact, note = self._try_candidates(finder_items, domains)
             if contact:
-                return contact, note
+                return contact, note        # 3. Role fallbacks & Mandatory contact@ / marketing@ rule
+        if not mail_domain:
+            mail_domain = clean_dom or safe_domain(website) or safe_domain(tool_domain)
 
-        # 3. Role fallbacks on the primary mail domain (last resort)
-        if not mail_domain or not self.mx_hosts(mail_domain):
-            return None, f"no MX records for {mail_domain or tool_domain}"
-        for role in FALLBACK_ROLES:
-            email = f"{role}@{mail_domain}"
-            result = self.probe(email)
-            self.log(f"{email} → {result}")
-            if result == "valid":
-                return Contact(email, "role_fallback", "valid", "medium"), "role fallback (SMTP verified)"
-            # Catch-all domains accept every address at RCPT, so a *guessed* role on one
-            # is a top bounce source — only use it when unverified fallback is explicitly on.
-            if result == "catch_all" and self.s.allow_unverified_fallback:
-                return Contact(email, "role_fallback", "catch_all", "low"), "role fallback (catch-all, unverified)"
-            if result == "unknown" and self.s.allow_unverified_fallback:
-                return Contact(email, "role_fallback", "mx_only", "low"), "role fallback (MX only, unverified)"
-        return None, "no verifiable contact — manual review"
+        # A. If MX exists, probe role guesses first
+        if mail_domain and self.mx_hosts(mail_domain):
+            for role in ("contact", "marketing", "partnerships", "hello"):
+                if getattr(self, "store", None) and self.store.is_role_bounced(mail_domain, role):
+                    continue
+                email = f"{role}@{mail_domain}"
+                if getattr(self, "store", None) and self.store.is_suppressed(email):
+                    continue
+                result = self.probe(email)
+                self.log(f"{email} → {result}")
+                if result == "valid":
+                    return Contact(email, "role_fallback", "valid", "medium"), "role fallback (SMTP verified)"
+                if result == "catch_all" and self.s.allow_unverified_fallback:
+                    return Contact(email, "role_fallback", "catch_all", "low"), "role fallback (catch-all, unverified)"
+
+        # B. Mandatory fallback (User rule: if no email found, MUST send to contact@ or marketing@)
+        if mail_domain and "." in mail_domain:
+            for pref_role in ("contact", "marketing"):
+                cand = f"{pref_role}@{mail_domain}"
+                if getattr(self, "store", None):
+                    if self.store.is_role_bounced(mail_domain, pref_role) or self.store.is_suppressed(cand):
+                        continue
+                return Contact(cand, "mandatory_role_fallback", "must_send", "medium"), f"mandatory fallback ({cand})"
+
+        return None, f"no valid domain or all fallbacks exhausted for {tool_domain or website}"
