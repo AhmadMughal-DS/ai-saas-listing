@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { adminFetch, clearAdminToken, getAdminToken, setAdminToken } from '../lib/adminAuth';
 import { AITool, ActiveTab, PricingType, ToolSubmission } from '../types';
 import { 
   Database, 
@@ -69,12 +70,17 @@ export const AdminView: React.FC<AdminViewProps> = ({
   onRefreshTools,
 }) => {
   // Authentication State
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return (
-      sessionStorage.getItem('aiflux_admin_auth') === 'true' ||
-      localStorage.getItem('aiflux_admin_auth') === 'true'
-    );
-  });
+  // Authenticated = holds a server-issued token. The server re-verifies it on
+  // every admin call; a 401 anywhere logs the panel out (see adminFetch).
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => Boolean(getAdminToken()));
+  useEffect(() => {
+    const onLogout = () => setIsAuthenticated(false);
+    window.addEventListener('toolver-admin-logout', onLogout);
+    if (getAdminToken()) {
+      adminFetch('/api/admin/verify').catch(() => undefined);
+    }
+    return () => window.removeEventListener('toolver-admin-logout', onLogout);
+  }, []);
   const [usernameInput, setUsernameInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -104,7 +110,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const fetchSubmissions = async () => {
     setIsLoadingSubmissions(true);
     try {
-      const res = await fetch('/api/submissions');
+      const res = await adminFetch('/api/submissions');
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data.submissions)) {
@@ -123,7 +129,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
     try {
       setProcessingSubmissionId(sub.id);
-      const res = await fetch(`/api/submissions/${sub.id}/approve`, {
+      const res = await adminFetch(`/api/submissions/${sub.id}/approve`, {
         method: 'POST',
       });
       const data = await res.json();
@@ -154,7 +160,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
     try {
       setProcessingSubmissionId(sub.id);
-      const res = await fetch(`/api/submissions/${sub.id}/reject`, {
+      const res = await adminFetch(`/api/submissions/${sub.id}/reject`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes: reason }),
@@ -180,7 +186,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
     try {
       setProcessingSubmissionId(sub.id);
-      const res = await fetch(`/api/submissions/${sub.id}`, { method: 'DELETE' });
+      const res = await adminFetch(`/api/submissions/${sub.id}`, { method: 'DELETE' });
       if (res.ok) {
         setStatusMessage({
           type: 'success',
@@ -227,7 +233,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const fetchSubscribers = async () => {
     setIsLoadingSubscribers(true);
     try {
-      const res = await fetch('/api/newsletter/subscribers');
+      const res = await adminFetch('/api/newsletter/subscribers');
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data.subscribers)) {
@@ -339,46 +345,24 @@ export const AdminView: React.FC<AdminViewProps> = ({
         }),
       });
 
-      if (res.ok) {
-        if (rememberMe) {
-          localStorage.setItem('aiflux_admin_auth', 'true');
-        } else {
-          sessionStorage.setItem('aiflux_admin_auth', 'true');
-        }
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.token) {
+        setAdminToken(data.token, rememberMe);
         setIsAuthenticated(true);
         fetchDbStatus();
-        setIsLoggingIn(false);
-        return;
-      }
-    } catch (err) {
-      console.warn('Server auth check failed, using local auth validator:', err);
-    }
-
-    // Client-side fallback authentication check
-    const cleanUser = usernameInput.trim().toLowerCase();
-    const cleanPass = passwordInput.trim();
-
-    if (
-      (cleanUser === 'admin' && (cleanPass === 'toolver2026' || cleanPass === 'aiflux2026' || cleanPass === 'admin123' || cleanPass === 'admin')) ||
-      (cleanUser === 'toolver_admin' && (cleanPass === 'toolver2026' || cleanPass === 'aiflux2026')) ||
-      (cleanUser === 'aiflux_admin' && cleanPass === 'aiflux2026')
-    ) {
-      if (rememberMe) {
-        localStorage.setItem('aiflux_admin_auth', 'true');
+        fetchSubscribers();
+        fetchSubmissions();
       } else {
-        sessionStorage.setItem('aiflux_admin_auth', 'true');
+        setAuthError(data.error || 'Invalid administrator credentials. Access denied.');
       }
-      setIsAuthenticated(true);
-      fetchDbStatus();
-    } else {
-      setAuthError('Invalid administrator credentials. Access denied.');
+    } catch (err: any) {
+      setAuthError('Could not reach the server to sign in: ' + (err?.message || 'network error'));
     }
     setIsLoggingIn(false);
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem('aiflux_admin_auth');
-    localStorage.removeItem('aiflux_admin_auth');
+    clearAdminToken();
     setIsAuthenticated(false);
     setUsernameInput('');
     setPasswordInput('');
@@ -446,7 +430,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const handleSyncDatabase = async () => {
     setIsLoadingStatus(true);
     try {
-      const res = await fetch('/api/db/sync', { method: 'POST' });
+      const res = await adminFetch('/api/db/sync', { method: 'POST' });
       const data = await res.json();
       if (data.status === 'connected') {
         setStatusMessage({ type: 'success', text: `✅ MongoDB Connected! Synchronized ${data.count} tools.` });
@@ -472,7 +456,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const handleSeedDatabase = async () => {
     setIsLoadingStatus(true);
     try {
-      const res = await fetch('/api/tools/seed', { method: 'POST' });
+      const res = await adminFetch('/api/tools/seed', { method: 'POST' });
       const data = await res.json();
       if (res.ok) {
         setStatusMessage({ type: 'success', text: data.message || 'Database seeded successfully!' });
@@ -579,7 +563,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
     try {
       if (editingToolId) {
         // PUT update
-        const res = await fetch(`/api/tools/${editingToolId}`, {
+        const res = await adminFetch(`/api/tools/${editingToolId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(toolPayload),
@@ -595,7 +579,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
         }
       } else {
         // POST create
-        const res = await fetch('/api/tools', {
+        const res = await adminFetch('/api/tools', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(toolPayload),
@@ -662,7 +646,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
     if (!window.confirm(`Are you sure you want to delete "${toolName}" from MongoDB?`)) return;
 
     try {
-      const res = await fetch(`/api/tools/${toolId}`, { method: 'DELETE' });
+      const res = await adminFetch(`/api/tools/${toolId}`, { method: 'DELETE' });
       if (res.ok) {
         onToolDeleted(toolId);
         setStatusMessage({ type: 'success', text: `Tool "${toolName}" removed from MongoDB.` });
@@ -801,17 +785,6 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
           {/* Quick demo credentials helper pill */}
           <div className="mt-6 pt-5 border-t border-slate-100 dark:border-slate-800 text-center">
-            <div className="inline-block p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-left w-full">
-              <div className="text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                <span>Authorized Credentials Hint:</span>
-              </div>
-              <div className="text-[11px] font-mono text-slate-600 dark:text-slate-400 flex items-center justify-between">
-                <span>User: <strong className="text-indigo-600 dark:text-indigo-400">admin</strong></span>
-                <span>Pass: <strong className="text-indigo-600 dark:text-indigo-400">toolver2026</strong></span>
-              </div>
-            </div>
-            
             <button
               onClick={() => onNavigate('directory')}
               className="mt-4 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors inline-flex items-center gap-1 cursor-pointer"

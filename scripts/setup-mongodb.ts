@@ -1,7 +1,13 @@
+import 'dotenv/config';
 import { MongoClient } from 'mongodb';
 import { INITIAL_TOOLS } from '../src/data/initialData';
 
-const MONGODB_URI = 'mongodb+srv://ahmadzafar392_db_user:bPqxg08qdV0fs4kK@cluster0.00jxnf9.mongodb.net/?retryWrites=true&w=majority';
+// Read from .env / the environment only — never hardcode credentials (public repo).
+const MONGODB_URI = process.env.MONGODB_URI || '';
+if (!MONGODB_URI) {
+  console.error('MONGODB_URI is not set (add it to .env).');
+  process.exit(1);
+}
 const DB_NAME = 'toolver_db';
 
 export const TOOL_COLLECTION_SCHEMA = {

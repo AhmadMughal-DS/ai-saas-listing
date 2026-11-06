@@ -1,6 +1,7 @@
 @echo off
 chcp 65001 > nul
 set PYTHONIOENCODING=utf-8
+call "d:\company page\ai-saas-listing\sponsorship-outreach\ensure_env.bat"
 set PYTHONUTF8=1
 cd /d "d:\company page\ai-saas-listing\sponsorship-outreach"
 

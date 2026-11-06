@@ -2,6 +2,7 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import zlib from 'zlib';
+import crypto from 'crypto';
 import { createServer as createViteServer } from 'vite';
 import OpenAI from 'openai';
 import { MongoClient, Db } from 'mongodb';
@@ -96,7 +97,9 @@ function getFirebaseAdmin(): FirebaseApp | null {
 }
 
 // MongoDB Database Manager with Strict Schema Validation & Indexes
-const DEFAULT_MONGODB_URI = 'mongodb+srv://ahmadzafar392_db_user:bPqxg08qdV0fs4kK@cluster0.00jxnf9.mongodb.net/?retryWrites=true&w=majority';
+// The connection string comes ONLY from the MONGODB_URI env var (a GitHub secret
+// in production). Never hardcode it here: this repository is public.
+const DEFAULT_MONGODB_URI = '';
 const DEFAULT_DB_NAME = 'toolver_db';
 
 let mongoClient: MongoClient | null = null;
@@ -276,9 +279,14 @@ async function ensureMongoIndexesAndSchema(db: Db) {
 
 async function getMongoDb(forceReconnect = false): Promise<Db | null> {
   const rawUri = process.env.MONGODB_URI || DEFAULT_MONGODB_URI;
-  const uri = rawUri ? rawUri.replace(/^["']|["']$/g, '').trim() : DEFAULT_MONGODB_URI;
+  const uri = rawUri ? rawUri.replace(/^["']|["']$/g, '').trim() : '';
 
   if (dbInstance) return dbInstance;
+  if (!uri) {
+    if (!lastConnectionError) console.warn('⚠️ MONGODB_URI is not set — running on the in-memory dataset.');
+    lastConnectionError = 'MONGODB_URI not set';
+    return null;
+  }
 
   // If currently in connection attempt, return ongoing promise
   if (isConnectingPromise) {
@@ -667,7 +675,7 @@ async function startServer() {
 
   // ── SEO: IndexNow Submission API ───────────────────────────────────────
   // Reusable API to submit URLs on-demand to Microsoft Bing IndexNow
-  app.post('/api/indexnow/submit', async (req, res) => {
+  app.post('/api/indexnow/submit', requireAdmin, async (req, res) => {
     try {
       const baseUrl = resolveBaseUrl(req);
       const { urls } = req.body || {};
@@ -737,26 +745,70 @@ async function startServer() {
     });
   });
 
+  // ── Admin authentication ──────────────────────────────────────────────
+  // Credentials come ONLY from the environment (ADMIN_USERNAME / ADMIN_PASSWORD).
+  // There are no built-in fallback passwords: the repo is public, so any
+  // hardcoded password is a published password. If ADMIN_PASSWORD is not set,
+  // admin login is disabled. Successful login returns an HMAC-signed,
+  // expiring token which every admin/write endpoint verifies (requireAdmin).
+  const ADMIN_TOKEN_TTL_MS = 12 * 60 * 60 * 1000; // 12h
+
+  function adminSecret(): string {
+    return (process.env.ADMIN_TOKEN_SECRET || process.env.ADMIN_PASSWORD || '').trim();
+  }
+
+  function safeEqual(a: string, b: string): boolean {
+    const ha = crypto.createHash('sha256').update(a).digest();
+    const hb = crypto.createHash('sha256').update(b).digest();
+    return crypto.timingSafeEqual(ha, hb);
+  }
+
+  function signAdminToken(username: string): string {
+    const payload = Buffer.from(JSON.stringify({ u: username, exp: Date.now() + ADMIN_TOKEN_TTL_MS })).toString('base64url');
+    const sig = crypto.createHmac('sha256', adminSecret()).update(payload).digest('base64url');
+    return `${payload}.${sig}`;
+  }
+
+  function verifyAdminToken(token: string): boolean {
+    const secret = adminSecret();
+    if (!secret || !token || !token.includes('.')) return false;
+    const [payload, sig] = token.split('.', 2);
+    const expected = crypto.createHmac('sha256', secret).update(payload).digest('base64url');
+    if (!safeEqual(sig, expected)) return false;
+    try {
+      const { exp } = JSON.parse(Buffer.from(payload, 'base64url').toString('utf-8'));
+      return typeof exp === 'number' && Date.now() < exp;
+    } catch {
+      return false;
+    }
+  }
+
+  function requireAdmin(req: express.Request, res: express.Response, next: express.NextFunction) {
+    const header = req.headers.authorization || '';
+    const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+    if (verifyAdminToken(token)) return next();
+    return res.status(401).json({ success: false, error: 'Admin authentication required' });
+  }
+
   // Private Admin Authentication Endpoint
   app.post('/api/admin/login', (req, res) => {
     try {
       const { username, password } = req.body || {};
       const validUser = (process.env.ADMIN_USERNAME || 'admin').trim().toLowerCase();
-      const validPass = (process.env.ADMIN_PASSWORD || 'toolver2026').trim();
+      const validPass = (process.env.ADMIN_PASSWORD || '').trim();
+      if (!validPass) {
+        return res.status(503).json({ error: 'Admin login is not configured on this server (ADMIN_PASSWORD missing).' });
+      }
 
-      const inputUser = (username || '').trim().toLowerCase();
-      const inputPass = (password || '').trim();
+      const inputUser = String(username || '').trim().toLowerCase();
+      const inputPass = String(password || '').trim();
 
-      if (
-        (inputUser === validUser && (inputPass === validPass || inputPass === 'toolver2026' || inputPass === 'aiflux2026')) ||
-        (inputUser === 'admin' && (inputPass === 'toolver2026' || inputPass === 'aiflux2026' || inputPass === 'admin123' || inputPass === 'admin')) ||
-        (inputUser === 'toolver_admin' && (inputPass === 'toolver2026' || inputPass === 'aiflux2026')) ||
-        (inputUser === 'aiflux_admin' && (inputPass === 'toolver2026' || inputPass === 'aiflux2026'))
-      ) {
+      if (safeEqual(inputUser, validUser) && safeEqual(inputPass, validPass)) {
         return res.json({
           success: true,
-          token: `toolver_token_${Date.now()}_${Math.random().toString(36).substring(2)}`,
-          user: { username: inputUser, role: 'superadmin' }
+          token: signAdminToken(inputUser),
+          expiresInMs: ADMIN_TOKEN_TTL_MS,
+          user: { username: inputUser, role: 'superadmin' },
         });
       }
 
@@ -764,6 +816,11 @@ async function startServer() {
     } catch (err: any) {
       return res.status(500).json({ error: err.message });
     }
+  });
+
+  // Lets the admin panel check whether its stored token is still valid.
+  app.get('/api/admin/verify', requireAdmin, (req, res) => {
+    res.json({ success: true });
   });
 
   // DB Status API
@@ -806,7 +863,7 @@ async function startServer() {
   });
 
   // DB Sync / Reconnect API
-  app.post('/api/db/sync', async (req, res) => {
+  app.post('/api/db/sync', requireAdmin, async (req, res) => {
     try {
       const db = await getMongoDb(true);
       if (db) {
@@ -877,7 +934,7 @@ async function startServer() {
   });
 
   // Add a New Tool
-  app.post('/api/tools', async (req, res) => {
+  app.post('/api/tools', requireAdmin, async (req, res) => {
     try {
       const toolData = req.body;
       if (!toolData.name || !toolData.category) {
@@ -1006,7 +1063,7 @@ async function startServer() {
   });
 
   // Update a Tool
-  app.put('/api/tools/:id', async (req, res) => {
+  app.put('/api/tools/:id', requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
       const updates = req.body;
@@ -1033,8 +1090,53 @@ async function startServer() {
     }
   });
 
+  // Public: add a user review to a tool. Accepts ONLY review fields (validated,
+  // length-capped) and recomputes rating server-side — the public client can
+  // no longer overwrite arbitrary tool fields.
+  app.post('/api/tools/:id/reviews', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const b = req.body || {};
+      const clip = (v: any, n: number) => String(v ?? '').replace(/[<>]/g, '').trim().slice(0, n);
+      const rating = Math.round(Number(b.rating));
+      const comment = clip(b.comment, 2000);
+      if (!comment || !(rating >= 1 && rating <= 5)) {
+        return res.status(400).json({ success: false, error: 'A comment and a 1-5 rating are required.' });
+      }
+      const avatar = String(b.authorAvatar || '');
+      const review = {
+        id: `rev-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        authorName: clip(b.authorName, 80) || 'Verified Member',
+        authorRole: clip(b.authorRole, 80) || 'Verified User',
+        authorCompany: clip(b.authorCompany, 80) || '',
+        authorAvatar: /^https:\/\//i.test(avatar) ? avatar.slice(0, 500) : '',
+        rating,
+        comment,
+        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        verified: false,
+        helpfulCount: 0,
+      };
+
+      const db = await getMongoDb();
+      if (!db) return res.status(503).json({ success: false, error: 'Database unavailable' });
+      const tool = await db.collection('tools').findOne({ id }, { projection: { reviews: 1 } });
+      if (!tool) return res.status(404).json({ success: false, error: 'Tool not found' });
+      const reviews = [review, ...(Array.isArray(tool.reviews) ? tool.reviews : [])].slice(0, 200);
+      const avg = reviews.reduce((s: number, r: any) => s + (Number(r.rating) || 0), 0) / reviews.length;
+      await db.collection('tools').updateOne(
+        { id },
+        { $set: { reviews, reviewCount: reviews.length, rating: parseFloat(avg.toFixed(1)) } }
+      );
+      invalidateDbToolsCache();
+      res.status(201).json({ success: true, review, reviewCount: reviews.length, rating: parseFloat(avg.toFixed(1)) });
+    } catch (error: any) {
+      console.error('Error in POST /api/tools/:id/reviews:', error);
+      res.status(500).json({ success: false, error: error?.message || 'Failed to add review' });
+    }
+  });
+
   // Delete a Tool
-  app.delete('/api/tools/:id', async (req, res) => {
+  app.delete('/api/tools/:id', requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
       const deletedTool = memoryToolsCache.find((t) => t.id === id) || { id };
@@ -1061,7 +1163,7 @@ async function startServer() {
   });
 
   // Seed MongoDB
-  app.post('/api/tools/seed', async (req, res) => {
+  app.post('/api/tools/seed', requireAdmin, async (req, res) => {
     try {
       const db = await getMongoDb();
       if (!db) {
@@ -1193,7 +1295,7 @@ async function startServer() {
   });
 
   // Get Newsletter Subscribers (Admin / Overview)
-  app.get('/api/newsletter/subscribers', async (req, res) => {
+  app.get('/api/newsletter/subscribers', requireAdmin, async (req, res) => {
     try {
       const db = await getMongoDb();
       if (db) {
@@ -1231,6 +1333,14 @@ async function startServer() {
       }
       if (!imageUrl || typeof imageUrl !== 'string' || !imageUrl.trim()) {
         return res.status(400).json({ success: false, error: 'Image URL is required.' });
+      }
+      // Reject markup in text fields and non-web URLs (blocks stored-XSS payloads at the door).
+      if ([name, description, category].some((v) => /[<>]/.test(v)) || name.length > 120 || description.length > 3000) {
+        return res.status(400).json({ success: false, error: 'Text fields may not contain HTML and must be reasonably short.' });
+      }
+      const webUrl = (u: string) => /^(https?:\/\/)?[a-z0-9.-]+\.[a-z]{2,}(\/\S*)?$/i.test(u.trim()) && !/^\s*(javascript|data|vbscript):/i.test(u);
+      if (!webUrl(websiteUrl) || !/^https?:\/\//i.test(imageUrl.trim())) {
+        return res.status(400).json({ success: false, error: 'Website and image must be normal http(s) URLs.' });
       }
 
       const id = `sub-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
@@ -1273,7 +1383,7 @@ async function startServer() {
   });
 
   // Get Tool Submissions Queue (Admin)
-  app.get('/api/submissions', async (req, res) => {
+  app.get('/api/submissions', requireAdmin, async (req, res) => {
     try {
       const db = await getMongoDb();
       if (db) {
@@ -1307,7 +1417,7 @@ async function startServer() {
   });
 
   // Approve a Tool Submission (Creates tool in directory & updates queue)
-  app.post('/api/submissions/:id/approve', async (req, res) => {
+  app.post('/api/submissions/:id/approve', requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
       let submission = memorySubmissionsCache.find((s) => s.id === id);
@@ -1452,7 +1562,7 @@ async function startServer() {
   });
 
   // Reject a Tool Submission
-  app.post('/api/submissions/:id/reject', async (req, res) => {
+  app.post('/api/submissions/:id/reject', requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
       const { notes } = req.body || {};
@@ -1490,7 +1600,7 @@ async function startServer() {
   });
 
   // Delete a Tool Submission
-  app.delete('/api/submissions/:id', async (req, res) => {
+  app.delete('/api/submissions/:id', requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
       const db = await getMongoDb();
@@ -1693,6 +1803,38 @@ Only return valid JSON.`;
   } else {
     const distPath = path.join(process.cwd(), 'dist');
 
+    // ── SSR output escaping ───────────────────────────────────────────────
+    // SSR pages build HTML with template strings straight from tool data, much of
+    // which comes from public submissions. Every SSR route therefore reads tools
+    // through getSsrTools(), which returns copies whose strings are neutralised
+    // for HTML (< > " ' encoded) and whose URLs are restricted to http(s).
+    // `&` is left as-is: it cannot open a tag/attribute, and leaving it keeps
+    // names like "Data & Analytics" clean inside JSON-LD.
+    const escHtml = (s: string) =>
+      s.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    const URL_KEYS = new Set(['url', 'logoUrl', 'thumbnailVideoUrl', 'imageUrl', 'websiteUrl', 'authorAvatar']);
+    function sanitizeForHtml(value: any, key = ''): any {
+      if (typeof value === 'string') {
+        if (URL_KEYS.has(key) && value && !/^https?:\/\//i.test(value.trim())) return '';
+        return escHtml(value);
+      }
+      if (Array.isArray(value)) return value.map((v) => sanitizeForHtml(v));
+      if (value && typeof value === 'object' && !(value instanceof Date)) {
+        const out: Record<string, any> = {};
+        for (const [k, v] of Object.entries(value)) out[k] = sanitizeForHtml(v, k);
+        return out;
+      }
+      return value;
+    }
+    let ssrToolsCache: { src: any[]; data: any[] } | null = null;
+    async function getSsrTools(): Promise<any[]> {
+      const src = await getToolsFromDbOrFallback();
+      if (ssrToolsCache && ssrToolsCache.src === src) return ssrToolsCache.data;
+      const data = src.map((t) => sanitizeForHtml(t));
+      ssrToolsCache = { src, data };
+      return data;
+    }
+
     // ── Legacy Tool Slug 301 Permanent Redirect Map ─────────────────────
     const LEGACY_SLUG_REDIRECTS: Record<string, string> = {
       'cursor-ai': 'cursor',
@@ -1701,6 +1843,7 @@ Only return valid JSON.`;
       'jasper-ai': 'jasper',
       'julius-ai': 'julius',
       'devin-ai': 'devin',
+      apple: 'vidcap', // lead file mislabelled VidCap (vidcap.app) as "Apple"; renamed 2026-11-06
     };
 
     interface SsrMetaOptions {
@@ -1737,9 +1880,17 @@ Only return valid JSON.`;
     function renderSsrPage(htmlTemplate: string, options: SsrMetaOptions): string {
       const cleanedHtml = cleanHtmlTemplateHead(htmlTemplate);
 
-      const title = options.title.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      const desc = options.description.replace(/"/g, '&quot;');
-      const canonical = options.canonical;
+      // Values below land in element text AND double-quoted attributes: escape both contexts.
+      // (Callers pass already-escaped tool fields; the `&(?!...)` guard avoids double-encoding entities.)
+      const escAttr = (s: string) =>
+        String(s ?? '')
+          .replace(/&(?!(?:amp|lt|gt|quot|#39);)/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      const title = escAttr(options.title);
+      const desc = escAttr(options.description);
+      const canonical = escAttr(options.canonical);
       const robots = options.robots || 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
       const ogType = options.ogType || 'website';
       const ogImage = options.ogImage || 'https://toolverai.com/og-banner.png';
@@ -1776,7 +1927,8 @@ Only return valid JSON.`;
       // JSON-LD Structured Data
       if (options.jsonLd && options.jsonLd.length > 0) {
         for (const schema of options.jsonLd) {
-          const jsonStr = typeof schema === 'string' ? schema : JSON.stringify(schema);
+          // `<` -> < keeps JSON valid while making `</script>` break-outs impossible.
+          const jsonStr = (typeof schema === 'string' ? schema : JSON.stringify(schema)).replace(/</g, '\\u003c');
           tags.push(`<script type="application/ld+json">${jsonStr}</script>`);
         }
       }
@@ -1841,7 +1993,7 @@ Only return valid JSON.`;
         const title = 'Best AI Tools & AI Tools Directory | ToolverAI';
         const desc = 'Explore the best AI tools in 2026. Discover, compare, and track top AI tools across coding, productivity, image, and video generation in our curated AI tools directory.';
         const canonical = `${baseUrl}/`;
-        const tools = await getToolsFromDbOrFallback();
+        const tools = await getSsrTools();
 
         const homeJsonLd = [
           {
@@ -1955,7 +2107,7 @@ Only return valid JSON.`;
           return res.redirect(301, `/tool/${normalizedSlug}`);
         }
 
-        const tools = await getToolsFromDbOrFallback();
+        const tools = await getSsrTools();
         const tool = tools.find(
           (t: any) =>
             t.slug?.toLowerCase() === normalizedSlug ||
@@ -2144,7 +2296,7 @@ Only return valid JSON.`;
 
         const baseUrl = resolveBaseUrl(req);
         const htmlTemplate = getIndexHtmlTemplate();
-        const tools = await getToolsFromDbOrFallback();
+        const tools = await getSsrTools();
 
         const matchedMeta = SSR_CATEGORIES.find((c) => c.slug === normalizedCategory);
         const categoryName = matchedMeta
@@ -2335,7 +2487,7 @@ Only return valid JSON.`;
           const htmlTemplate = getIndexHtmlTemplate();
           const baseUrl = resolveBaseUrl(req);
           const canonical = `${baseUrl}${routePath}`;
-          const tools = await getToolsFromDbOrFallback();
+          const tools = await getSsrTools();
 
           const breadcrumbJsonLd = {
             '@context': 'https://schema.org',
@@ -2454,7 +2606,7 @@ Only return valid JSON.`;
       try {
         const htmlTemplate = getIndexHtmlTemplate();
         const baseUrl = resolveBaseUrl(req);
-        const tools = await getToolsFromDbOrFallback();
+        const tools = await getSsrTools();
         const canonical = `${baseUrl}/alternatives`;
         const title = 'Best AI Tool Alternatives & Competitors 2026 | ToolverAI';
         const desc = 'Discover the best alternatives to leading AI tools including ChatGPT, Cursor, Copilot, Claude, Midjourney, and more. Compare features, pricing, and traffic on ToolverAI.';
@@ -2539,7 +2691,7 @@ Only return valid JSON.`;
 
         // 2. Quality Gate: strictly index only eligible comparisons to prevent thin mass-generation
         const isEligible = isEligibleComparison(slug1, slug2);
-        const tools = await getToolsFromDbOrFallback();
+        const tools = await getSsrTools();
         const tool1 = tools.find((t: any) => t.slug?.toLowerCase() === slug1 || t.id?.toLowerCase() === slug1);
         const tool2 = tools.find((t: any) => t.slug?.toLowerCase() === slug2 || t.id?.toLowerCase() === slug2);
 
@@ -2724,7 +2876,7 @@ Only return valid JSON.`;
 
         // Quality gate: is this tool eligible?
         const isEligible = isEligibleAlternative(normalizedSlug);
-        const tools = await getToolsFromDbOrFallback();
+        const tools = await getSsrTools();
         const sourceTool = tools.find((t: any) => t.slug?.toLowerCase() === normalizedSlug || t.id?.toLowerCase() === normalizedSlug);
 
         if (!isEligible || !sourceTool) {
@@ -2873,7 +3025,7 @@ Only return valid JSON.`;
         const title = `${article.seoTitle || article.title} | ToolverAI`;
         const desc = (article.metaDescription || article.excerpt).slice(0, 160);
         const heroImage = article.heroImage || article.coverImage || `${baseUrl}/og-banner.png`;
-        const tools = await getToolsFromDbOrFallback();
+        const tools = await getSsrTools();
 
         const breadcrumbJsonLd = {
           '@context': 'https://schema.org',

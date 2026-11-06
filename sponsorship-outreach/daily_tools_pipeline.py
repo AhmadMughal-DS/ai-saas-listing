@@ -52,6 +52,12 @@ PRICING = ["Free", "Freemium", "Paid", "Enterprise", "Free Trial", "Open Source"
 NEW_COL_BLOG = "📄 Medium Blog (SEO)"
 NEW_COL_LIVE = "✅ Live on Website? (Yes/No)"
 
+# A blog below this is treated as a failed generation: retried, and never saved to
+# the tool page (thin content hurts SEO more than no guide at all).
+MIN_BLOG_WORDS = 600
+BLOG_ATTEMPTS = 3
+BLOG_MODEL = "deepseek-v4-pro"
+
 DEEPSEEK_KEY = dotenv_values(ROOT / ".env").get("DEEPSEEK_API_KEY") or dotenv_values(BASE / ".env").get("DEEPSEEK_API_KEY")
 MONGO = dotenv_values(ROOT / ".env")
 
@@ -187,6 +193,21 @@ def _finalize_blog(text: str, name: str, toolver_page: str, cat_link: str) -> st
 
 
 def write_blog(name: str, url: str, category: str, research_blob: dict, toolver_page: str = "") -> tuple[str, float]:
+    """Generate the blog, retrying when the result is too short (the model sometimes
+    returns only a stub). Returns the longest attempt and the total cost."""
+    best, total = "", 0.0
+    for attempt in range(1, BLOG_ATTEMPTS + 1):
+        text, cost = _write_blog_once(name, url, category, research_blob, toolver_page)
+        total += cost
+        if len(text.split()) > len(best.split()):
+            best = text
+        if len(best.split()) >= MIN_BLOG_WORDS:
+            break
+        print(f"   (blog only {len(text.split())}w < {MIN_BLOG_WORDS}; retry {attempt}/{BLOG_ATTEMPTS})")
+    return best, total
+
+
+def _write_blog_once(name: str, url: str, category: str, research_blob: dict, toolver_page: str = "") -> tuple[str, float]:
     """High-quality, web-grounded Medium blog via deepseek-v4-pro + server-side web_search.
     The model searches the live web for the tool itself, then writes. Falls back to the
     cheaper chat model (grounded only on our scrape) if the Responses API call fails.
@@ -243,9 +264,12 @@ def write_blog(name: str, url: str, category: str, research_blob: dict, toolver_
 def existing_keys(db, ws_vals) -> set:
     keys = set()
     try:
-        for d in db["tools"].find({}, {"name": 1, "slug": 1}):
+        for d in db["tools"].find({}, {"name": 1, "slug": 1, "aliases": 1}):
             keys.add((d.get("name") or "").strip().lower())
             keys.add((d.get("slug") or "").strip().lower())
+            # lead-file names of renamed tools (e.g. "Apple" -> VidCap), so they aren't re-imported
+            for a in d.get("aliases") or []:
+                keys.add(str(a).strip().lower())
     except Exception:
         pass
     for row in ws_vals[1:]:
@@ -288,10 +312,18 @@ def _display_traffic() -> tuple[int, str, int]:
     return visits, fmt, growth
 
 
-def build_doc(name, url, cat, rb) -> dict:
+def blog_fields(blog: str, source: str) -> dict:
+    """DB fields for a tool's long-form guide; empty when the blog is too thin to publish."""
+    if len((blog or "").split()) < MIN_BLOG_WORDS:
+        return {}
+    return {"blog": blog, "blog_model": BLOG_MODEL, "blog_source": source}
+
+
+def build_doc(name, url, cat, rb, blog: str = "") -> dict:
     slug = slugify(name)
     visits, visits_fmt, growth = _display_traffic()
     return {
+        **blog_fields(blog, "pipeline"),
         "id": f"tool-{slug}", "name": name, "slug": slug, "category": cat,
         "pricingType": rb["pricing_type"], "url": url,
         "tagline": rb["tagline"], "description": rb["description"], "desc": rb["description"],
@@ -377,7 +409,7 @@ def main():
                 lnote = "already in S3" if existing else "will fetch+upload on live run"
                 if existing:
                     rb["logo_url"] = existing
-            doc = build_doc(t["name"], t["url"], cat, rb)
+            doc = build_doc(t["name"], t["url"], cat, rb, blog)
             live = False
             if args.db:
                 try:
@@ -397,7 +429,8 @@ def main():
                             "scrape_error": rb["_scrape_error"], "blog_words": len(blog.split()),
                             "live": live, "cost": round(cost, 4), "blog": blog, "doc": doc})
             print(f"[{i}/{len(tools)}] {t['name'][:24]:24} {cat:15} {rb['pricing_type']:9} "
-                  f"blog~{len(blog.split())}w  logo:{lnote[:22]:22} ({round(time.time()-ts,1)}s ${round(cost,4)}) "
+                  f"blog~{len(blog.split())}w{'' if 'blog' in doc else ' SHORT(not saved)'}  "
+                  f"logo:{lnote[:22]:22} ({round(time.time()-ts,1)}s ${round(cost,4)}) "
                   f"{'LIVE' if live else 'dry'}")
         except Exception as exc:
             failed += 1

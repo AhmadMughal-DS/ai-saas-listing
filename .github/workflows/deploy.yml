@@ -92,6 +92,9 @@ jobs:
               -e GOOGLE_APPLICATION_CREDENTIALS="${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}" \
               -e FIREBASE_SERVICE_ACCOUNT="${{ secrets.FIREBASE_SERVICE_ACCOUNT }}" \
               -e VITE_FIREBASE_PROJECT_ID="${{ secrets.VITE_FIREBASE_PROJECT_ID }}" \
+              -e ADMIN_USERNAME="${{ secrets.ADMIN_USERNAME || 'admin' }}" \
+              -e ADMIN_PASSWORD="${{ secrets.ADMIN_PASSWORD }}" \
+              -e ADMIN_TOKEN_SECRET="${{ secrets.ADMIN_TOKEN_SECRET }}" \
               -e NODE_ENV=production \
               $IMAGE
 

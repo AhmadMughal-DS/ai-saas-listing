@@ -286,47 +286,24 @@ export const App: React.FC = () => {
     return () => clearTimeout(timer);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleToolAdded = async (newTool: AITool) => {
+  // These only sync local state: AdminView has already persisted the change
+  // through the authenticated admin API before calling them.
+  const handleToolAdded = (newTool: AITool) => {
     setTools((prev) => [newTool, ...prev.filter((t) => t.id !== newTool.id)]);
-    try {
-      await fetch('/api/tools', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newTool),
-      });
-    } catch (err) {
-      console.error('Failed to store tool in MongoDB:', err);
-    }
   };
 
-  const handleToolUpdated = async (updatedTool: AITool) => {
+  const handleToolUpdated = (updatedTool: AITool) => {
     setTools((prev) => prev.map((t) => (t.id === updatedTool.id ? { ...t, ...updatedTool } : t)));
     if (selectedTool?.id === updatedTool.id) {
       setSelectedTool(updatedTool);
     }
-    try {
-      await fetch(`/api/tools/${updatedTool.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedTool),
-      });
-    } catch (err) {
-      console.error('Failed to update tool in MongoDB:', err);
-    }
   };
 
-  const handleToolDeleted = async (toolId: string) => {
+  const handleToolDeleted = (toolId: string) => {
     setTools((prev) => prev.filter((t) => t.id !== toolId));
     if (selectedTool?.id === toolId) {
       setSelectedTool(null);
       setActiveTab('directory');
-    }
-    try {
-      await fetch(`/api/tools/${toolId}`, {
-        method: 'DELETE',
-      });
-    } catch (err) {
-      console.error('Failed to delete tool from MongoDB:', err);
     }
   };
 
@@ -448,10 +425,12 @@ export const App: React.FC = () => {
 
     if (updatedTargetTool) {
       try {
-        await fetch(`/api/tools/${toolId}`, {
-          method: 'PUT',
+        // Public review endpoint: sends only the review; server validates it
+        // and recomputes rating/reviewCount.
+        await fetch(`/api/tools/${encodeURIComponent(toolId)}/reviews`, {
+          method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updatedTargetTool),
+          body: JSON.stringify(review),
         });
       } catch (err) {
         console.error('Failed to persist review to MongoDB:', err);
