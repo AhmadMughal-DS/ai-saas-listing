@@ -141,6 +141,14 @@ export interface BlogPost {
   relatedComparisonSlugs?: string[];
   relatedAlternativeSlugs?: string[];
   relatedArticleSlugs?: string[];
+  // Tool reviews built from a tool's stored blog (served by /api/guides)
+  isToolGuide?: boolean;
+  toolSlug?: string;
+  toolName?: string;
+  logoUrl?: string;
+  /** Overrides the default /blog/<slug> canonical (tool reviews point at /tool/<slug>). */
+  canonicalUrl?: string;
+  wordCount?: number;
 }
 
 export interface MembershipPlan {

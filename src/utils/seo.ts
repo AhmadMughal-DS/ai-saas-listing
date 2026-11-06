@@ -36,7 +36,8 @@ export function generateSEOData(
   // ── Standalone Blog Article ──────────────────────────────────────────
   if (activeTab === 'blog' && selectedArticle) {
     const article = selectedArticle;
-    const articleUrl = `${BASE_URL}/blog/${article.slug}`;
+    // Tool reviews carry the tool page as canonical (same text is rendered there).
+    const articleUrl = article.canonicalUrl || `${BASE_URL}/blog/${article.slug}`;
     const articleTitle = `${article.seoTitle || article.title} | ToolverAI`;
     const articleDesc = article.metaDescription || article.excerpt;
     const articleImage = article.heroImage || article.coverImage || DEFAULT_IMAGE;

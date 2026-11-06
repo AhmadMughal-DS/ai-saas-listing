@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { AITool, ActiveTab, ToolReview, UserAccount, BlogPost } from './types';
 import { getArticleBySlug } from './data/blogData';
+import { fetchToolGuide, isToolGuideSlug } from './lib/toolGuides';
 import { CyberBackground } from './components/CyberBackground';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
@@ -183,11 +184,27 @@ export const App: React.FC = () => {
     return tools.find((t) => t.slug === alternativesSlug) || null;
   }, [alternativesSlug, tools]);
 
-  // Resolve blog article from articleSlug
+  // Resolve blog article from articleSlug: an editorial article, or a tool
+  // review (/blog/<tool>-review) fetched from the tool's stored blog.
+  const [toolGuideArticle, setToolGuideArticle] = useState<BlogPost | null>(null);
+  useEffect(() => {
+    if (activeTab !== 'blog' || !articleSlug || getArticleBySlug(articleSlug) || !isToolGuideSlug(articleSlug)) {
+      setToolGuideArticle(null);
+      return;
+    }
+    let cancelled = false;
+    fetchToolGuide(articleSlug).then((g) => {
+      if (!cancelled) setToolGuideArticle(g);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, articleSlug]);
+
   const selectedArticle = useMemo<BlogPost | null>(() => {
     if (activeTab !== 'blog' || !articleSlug) return null;
-    return getArticleBySlug(articleSlug) || null;
-  }, [activeTab, articleSlug]);
+    return getArticleBySlug(articleSlug) || (toolGuideArticle?.slug === articleSlug ? toolGuideArticle : null);
+  }, [activeTab, articleSlug, toolGuideArticle]);
 
   // Clear any residual tools from localStorage to ensure 100% pure MongoDB usage
   useEffect(() => {

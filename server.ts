@@ -933,6 +933,121 @@ async function startServer() {
     }
   });
 
+  // ── Tool reviews in "News & Guides" ─────────────────────────────────
+  // Every tool blog already stored in the DB is surfaced as a review article
+  // at /blog/<tool-slug>-review (read-only: nothing is generated here).
+  // The same text is also rendered on /tool/<slug>, so review pages declare
+  // the TOOL page as canonical: one ranking URL per piece of content, while
+  // the guides hub adds a crawlable internal link to every tool.
+  app.get('/api/guides', async (req, res) => {
+    try {
+      const guides = await getToolGuides();
+      res.set('Cache-Control', 'public, max-age=300, s-maxage=900, stale-while-revalidate=86400');
+      return res.json({ guides: guides.map(({ content, ...meta }) => meta) });
+    } catch (error) {
+      console.error('Error listing tool guides:', error);
+      return res.json({ guides: [] });
+    }
+  });
+
+  app.get('/api/guides/:slug', async (req, res) => {
+    try {
+      const guide = await getToolGuide(String(req.params.slug || ''));
+      if (!guide) return res.status(404).json({ guide: null });
+      res.set('Cache-Control', 'public, max-age=300, s-maxage=900, stale-while-revalidate=86400');
+      return res.json({ guide });
+    } catch (error) {
+      console.error('Error fetching tool guide:', error);
+      return res.status(500).json({ guide: null });
+    }
+  });
+
+  // Builds BlogPost-shaped review articles from the stored tool blogs.
+  const GUIDE_MIN_WORDS = 600; // same quality bar the pipeline uses before publishing
+  const GUIDE_CACHE_TTL_MS = 5 * 60_000;
+  let toolGuidesCache: { data: any[]; expiresAt: number } | null = null;
+
+  function stripMd(s: string): string {
+    return s
+      .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+      .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+      .replace(/[*_`>#]+/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function buildToolGuide(t: any) {
+    const md = String(t.blog || '').trim();
+    const words = md.split(/\s+/).filter(Boolean).length;
+    const h1Match = md.match(/^\s*#\s+(.+)$/m);
+    const title = h1Match ? stripMd(h1Match[1]) : `${t.name} Review`;
+    const content = md.replace(/^\s*#\s+.+\r?\n/, '').trim();
+    const firstPara =
+      content
+        .split(/\r?\n\s*\r?\n/)
+        .map((b) => b.trim())
+        .find((b) => b && !/^(#|\||[-*]\s|\d+\.\s|>|---)/.test(b)) || '';
+    let excerpt = stripMd(firstPara);
+    if (excerpt.length > 180) excerpt = excerpt.slice(0, 177).replace(/\s+\S*$/, '') + '…';
+    const toolSlug = t.slug || String(t.id || '').replace(/^tool-/, '');
+    const created = t.createdAt ? new Date(t.createdAt) : null;
+    const updated = t.updatedAt ? new Date(t.updatedAt) : created;
+    const iso = (d: Date | null) => (d && !isNaN(d.getTime()) ? d.toISOString().slice(0, 10) : undefined);
+    const categorySlug = String(t.category || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    return {
+      id: `guide-${toolSlug}`,
+      slug: `${toolSlug}-review`,
+      title,
+      seoTitle: title,
+      metaDescription: excerpt,
+      excerpt,
+      content,
+      coverImage: t.logoUrl || '',
+      topic: 'AI Tool Reviews',
+      category: t.category || 'AI Tools',
+      readTime: `${Math.max(3, Math.round(words / 220))} min read`,
+      publishedDate: created && !isNaN(created.getTime())
+        ? created.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        : '',
+      publishedAt: iso(created),
+      updatedAt: iso(updated),
+      status: 'published',
+      author: { name: 'ToolverAI Editorial Team', role: 'Editorial', avatar: '' },
+      relatedToolSlugs: [toolSlug],
+      relatedCategorySlugs: categorySlug ? [categorySlug] : [],
+      isToolGuide: true,
+      toolSlug,
+      toolName: t.name,
+      logoUrl: t.logoUrl || '',
+      canonicalUrl: `${(process.env.SITE_URL || 'https://toolverai.com').replace(/\/$/, '')}/tool/${toolSlug}`,
+      wordCount: words,
+    };
+  }
+
+  async function getToolGuides(): Promise<any[]> {
+    if (toolGuidesCache && Date.now() < toolGuidesCache.expiresAt) return toolGuidesCache.data;
+    const db = await getMongoDb();
+    if (!db) return toolGuidesCache?.data || [];
+    const docs = await db
+      .collection('tools')
+      .find(
+        { blog: { $exists: true, $ne: '' } },
+        { projection: { name: 1, slug: 1, id: 1, category: 1, logoUrl: 1, createdAt: 1, updatedAt: 1, blog: 1 } },
+      )
+      .toArray();
+    const data = docs
+      .map(buildToolGuide)
+      .filter((g) => g.wordCount >= GUIDE_MIN_WORDS && g.toolSlug)
+      .sort((a, b) => String(b.publishedAt || '').localeCompare(String(a.publishedAt || '')));
+    toolGuidesCache = { data, expiresAt: Date.now() + GUIDE_CACHE_TTL_MS };
+    return data;
+  }
+
+  async function getToolGuide(slug: string): Promise<any | null> {
+    const s = slug.toLowerCase();
+    return (await getToolGuides()).find((g) => g.slug === s) || null;
+  }
+
   // Add a New Tool
   app.post('/api/tools', requireAdmin, async (req, res) => {
     try {
@@ -2560,6 +2675,18 @@ Only return valid JSON.`;
         ${articles.map((a) => `<li><a href="/blog/${a.slug}"><strong>${a.title}</strong></a> (${a.topic}) — ${a.excerpt} [Updated: ${a.updatedAt || a.publishedAt}]</li>`).join('\n        ')}
       </ul>
     </section>`;
+            const guides = await getToolGuides().catch(() => []);
+            if (guides.length) {
+              // Link straight to the canonical tool pages (where the review text lives).
+              extraContent += `
+    <section>
+      <h2>AI Tool Reviews (${guides.length})</h2>
+      <p>Hands-on reviews of every tool in the ToolverAI directory — features, pricing, pros &amp; cons and alternatives:</p>
+      <ul>
+        ${guides.map((g) => `<li><a href="/tool/${g.toolSlug}"><strong>${escHtml(g.title)}</strong></a> (${escHtml(g.category)}) — ${escHtml(g.excerpt)}</li>`).join('\n        ')}
+      </ul>
+    </section>`;
+            }
           }
 
           const hubBodyHtml = `
@@ -3008,6 +3135,83 @@ Only return valid JSON.`;
 
         // Look up article
         const article = getArticleBySlug(normalizedSlug);
+
+        // Tool review built from the tool's stored blog (/blog/<tool>-review)
+        if (!article) {
+          const guide = await getToolGuide(normalizedSlug);
+          if (guide) {
+            const toolUrl = `${baseUrl}/tool/${guide.toolSlug}`;
+            const pageUrl = `${baseUrl}/blog/${guide.slug}`;
+            const gTitle = escHtml(guide.title);
+            const gName = escHtml(guide.toolName || '');
+            const gCategory = escHtml(guide.category || '');
+            const categorySlug = guide.relatedCategorySlugs?.[0] || '';
+            const guideBreadcrumb = {
+              '@context': 'https://schema.org',
+              '@type': 'BreadcrumbList',
+              itemListElement: [
+                { '@type': 'ListItem', position: 1, name: 'Home', item: `${baseUrl}/` },
+                { '@type': 'ListItem', position: 2, name: 'Blog', item: `${baseUrl}/blog` },
+                { '@type': 'ListItem', position: 3, name: guide.title, item: pageUrl },
+              ],
+            };
+            const guideArticleLd = {
+              '@context': 'https://schema.org',
+              '@type': 'Article',
+              headline: guide.title,
+              description: guide.excerpt,
+              image: guide.logoUrl || `${baseUrl}/og-banner.png`,
+              datePublished: guide.publishedAt,
+              dateModified: guide.updatedAt || guide.publishedAt,
+              author: { '@type': 'Organization', name: 'ToolverAI Editorial Team', url: `${baseUrl}/about` },
+              publisher: { '@type': 'Organization', name: 'ToolverAI', url: baseUrl },
+              mainEntityOfPage: { '@type': 'WebPage', '@id': toolUrl },
+              about: { '@type': 'SoftwareApplication', name: guide.toolName, url: toolUrl },
+            };
+            const guideBodyHtml = `
+<header>
+  <nav aria-label="Breadcrumb">
+    <ol>
+      <li><a href="/">Home</a></li>
+      <li><a href="/blog">Blog</a></li>
+      <li aria-current="page">${gTitle}</li>
+    </ol>
+  </nav>
+</header>
+<main>
+  <article>
+    <header>
+      <span class="badge">AI Tool Review · ${gCategory}</span>
+      <h1>${gTitle}</h1>
+      <p class="byline">By <strong>ToolverAI Editorial Team</strong>${guide.publishedAt ? ` | Published: ${guide.publishedAt}` : ''} | ${guide.readTime}</p>
+    </header>
+    <div class="article-content">${marked.parse(guide.content)}</div>
+    <section>
+      <h2>${gName} on ToolverAI</h2>
+      <p><a href="/tool/${guide.toolSlug}"><strong>See ${gName} pricing, features, traffic and alternatives &rarr;</strong></a></p>
+      ${categorySlug ? `<p><a href="/categories/${categorySlug}">Browse all ${gCategory} tools</a></p>` : ''}
+    </section>
+    <nav aria-label="Editorial Links">
+      <p><a href="/blog">All Editorial Guides &amp; Reviews</a> | <a href="/editorial-policy">Editorial Policy</a> | <a href="/">Home Directory</a></p>
+    </nav>
+  </article>
+</main>`;
+            const guideHtml = renderSsrPage(htmlTemplate, {
+              title: `${guide.title} | ToolverAI`,
+              description: (guide.excerpt || `${guide.toolName} review`).slice(0, 160),
+              // Same text lives on the tool page: consolidate ranking there.
+              canonical: toolUrl,
+              robots: 'index, follow, max-image-preview:large, max-snippet:-1',
+              ogType: 'article',
+              ogImage: guide.logoUrl || `${baseUrl}/og-banner.png`,
+              jsonLd: [guideBreadcrumb, guideArticleLd],
+              bodyHtml: guideBodyHtml,
+            });
+            res.header('Content-Type', 'text/html; charset=utf-8');
+            res.header('Cache-Control', 'public, max-age=300, s-maxage=3600');
+            return res.status(200).send(guideHtml);
+          }
+        }
 
         // Quality gate: 404 for nonexistent or draft articles
         if (!article || article.status !== 'published') {

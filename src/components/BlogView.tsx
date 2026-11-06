@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BlogPost } from '../types';
 import { getPublishedArticles, getArticleBySlug } from '../data/blogData';
+import { fetchToolGuide, fetchToolGuides, isToolGuideSlug } from '../lib/toolGuides';
 import {
   Sparkles,
   Calendar,
@@ -30,9 +31,48 @@ export const BlogView: React.FC<BlogViewProps> = ({
 }) => {
   const [selectedTopic, setSelectedTopic] = useState('All Topics');
   const [copiedLink, setCopiedLink] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
-  const publishedArticles = getPublishedArticles();
-  const currentArticle = articleSlug ? getArticleBySlug(articleSlug) : null;
+  // Tool reviews (from each tool's stored blog) shown alongside editorial guides
+  const [toolGuides, setToolGuides] = useState<BlogPost[]>([]);
+  const [guideArticle, setGuideArticle] = useState<BlogPost | null>(null);
+  const [guideCheckedSlug, setGuideCheckedSlug] = useState<string | null>(null);
+
+  const editorialArticles = getPublishedArticles();
+  const staticArticle = articleSlug ? getArticleBySlug(articleSlug) : undefined;
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchToolGuides().then((g) => {
+      if (!cancelled) setToolGuides(g);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!articleSlug || staticArticle || !isToolGuideSlug(articleSlug)) {
+      setGuideArticle(null);
+      return;
+    }
+    let cancelled = false;
+    fetchToolGuide(articleSlug).then((g) => {
+      if (cancelled) return;
+      setGuideArticle(g);
+      setGuideCheckedSlug(articleSlug);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [articleSlug, staticArticle]);
+
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [selectedTopic]);
+
+  const publishedArticles = [...editorialArticles, ...toolGuides];
+  const currentArticle = staticArticle || (guideArticle?.slug === articleSlug ? guideArticle : null);
 
   const topics = ['All Topics', ...Array.from(new Set(publishedArticles.map((a) => a.topic).filter(Boolean)))];
 
@@ -40,8 +80,9 @@ export const BlogView: React.FC<BlogViewProps> = ({
     if (selectedTopic === 'All Topics') return true;
     return post.topic === selectedTopic;
   });
+  const visibleArticles = filteredArticles.slice(0, visibleCount);
 
-  const featuredArticle = publishedArticles.find((p) => p.isFeatured) || publishedArticles[0];
+  const featuredArticle = editorialArticles.find((p) => p.isFeatured) || editorialArticles[0];
 
   const handleArticleClick = (e: React.MouseEvent, slug: string) => {
     e.preventDefault();
@@ -72,6 +113,31 @@ export const BlogView: React.FC<BlogViewProps> = ({
       setTimeout(() => setCopiedLink(false), 2000);
     }
   };
+
+  // ── Tool review still loading / not found ────────────────────────────
+  const guideLoading = Boolean(articleSlug && !staticArticle && guideCheckedSlug !== articleSlug);
+  if (articleSlug && !currentArticle && isToolGuideSlug(articleSlug)) {
+    return (
+      <div className="w-full pt-28 pb-24 px-4 sm:px-8 max-w-[1200px] mx-auto">
+        {guideLoading ? (
+          <div className="max-w-4xl mx-auto animate-pulse space-y-4" aria-busy="true">
+            <div className="h-4 w-40 rounded bg-slate-200 dark:bg-slate-800" />
+            <div className="h-10 w-3/4 rounded bg-slate-200 dark:bg-slate-800" />
+            <div className="h-4 w-full rounded bg-slate-200 dark:bg-slate-800" />
+            <div className="h-4 w-5/6 rounded bg-slate-200 dark:bg-slate-800" />
+          </div>
+        ) : (
+          <div className="max-w-xl mx-auto text-center">
+            <h1 className="font-heading text-2xl font-bold text-slate-900 dark:text-white mb-3">Review not found</h1>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">This tool review is not available.</p>
+            <a href="/blog" onClick={handleBack} className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
+              Back to all guides
+            </a>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   // ── Standalone Article View ──────────────────────────────────────────
   if (currentArticle) {
@@ -194,24 +260,81 @@ export const BlogView: React.FC<BlogViewProps> = ({
           </div>
         </header>
 
-        {/* Hero Image */}
-        <div className="max-w-4xl mx-auto rounded-3xl overflow-hidden mb-12 border border-slate-200 dark:border-slate-800 shadow-sm aspect-[16/9] max-h-[460px] w-full bg-slate-100 dark:bg-slate-800">
-          <img
-            src={currentArticle.heroImage || currentArticle.coverImage}
-            alt={currentArticle.title}
-            width={1200}
-            height={675}
-            className="w-full h-full object-cover"
-            loading="eager"
-            decoding="async"
-            {...({ fetchpriority: 'high' } as any)}
-          />
-        </div>
+        {/* Hero: tool reviews show the tool's logo + a link to its directory page */}
+        {currentArticle.isToolGuide ? (
+          <a
+            href={`/tool/${currentArticle.toolSlug}`}
+            className="max-w-4xl mx-auto mb-12 flex items-center gap-5 p-5 sm:p-6 rounded-3xl border border-slate-200 dark:border-slate-800 bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-950/40 dark:to-slate-900 hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors group"
+          >
+            <div className="w-20 h-20 shrink-0 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center overflow-hidden">
+              {currentArticle.logoUrl ? (
+                <img src={currentArticle.logoUrl} alt={`${currentArticle.toolName} logo`} width={80} height={80} className="w-full h-full object-contain p-2" loading="eager" decoding="async" />
+              ) : (
+                <span className="text-2xl font-extrabold text-indigo-600">{(currentArticle.toolName || '?').charAt(0)}</span>
+              )}
+            </div>
+            <div className="min-w-0">
+              <div className="text-[11px] uppercase tracking-wider font-bold text-indigo-600 dark:text-indigo-400">{currentArticle.category}</div>
+              <div className="font-heading text-xl font-extrabold text-slate-900 dark:text-white truncate">{currentArticle.toolName}</div>
+              <div className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1 mt-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
+                Pricing, features, traffic &amp; alternatives <ArrowRight className="w-3.5 h-3.5" />
+              </div>
+            </div>
+          </a>
+        ) : (
+          <div className="max-w-4xl mx-auto rounded-3xl overflow-hidden mb-12 border border-slate-200 dark:border-slate-800 shadow-sm aspect-[16/9] max-h-[460px] w-full bg-slate-100 dark:bg-slate-800">
+            <img
+              src={currentArticle.heroImage || currentArticle.coverImage}
+              alt={currentArticle.title}
+              width={1200}
+              height={675}
+              className="w-full h-full object-cover"
+              loading="eager"
+              decoding="async"
+              {...({ fetchpriority: 'high' } as any)}
+            />
+          </div>
+        )}
 
         {/* Article Body Content */}
         <article className="max-w-4xl mx-auto prose prose-slate max-w-none text-slate-700 dark:text-slate-300 leading-relaxed text-base">
-          {currentArticle.content.split('\n\n').map((block, idx) => {
+          {currentArticle.content.replace(/\r\n/g, '\n').split(/\n\s*\n/).map((block, idx) => {
             const trimmed = block.trim();
+            if (!trimmed) return null;
+            if (trimmed.startsWith('# ')) {
+              // A stray H1 inside the body becomes an H2 (the page keeps exactly one H1)
+              return (
+                <h2 key={idx} className="font-heading text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mt-10 mb-4 pb-2 border-b border-slate-200 dark:border-slate-800">
+                  {trimmed.replace(/^#\s+/, '')}
+                </h2>
+              );
+            }
+            if (trimmed.startsWith('#### ')) {
+              return (
+                <h4 key={idx} className="font-heading text-lg font-bold text-slate-900 dark:text-white mt-5 mb-2">
+                  {trimmed.replace(/^####\s+/, '')}
+                </h4>
+              );
+            }
+            if (/^\d+\.\s/.test(trimmed)) {
+              const items = trimmed.split('\n').filter((l) => l.trim());
+              return (
+                <ol key={idx} className="space-y-2 my-4 list-decimal list-inside text-slate-700 dark:text-slate-300">
+                  {items.map((it, i) => (
+                    <li key={i} dangerouslySetInnerHTML={{ __html: renderInlineLinks(it.replace(/^\s*\d+\.\s+/, '')) }} />
+                  ))}
+                </ol>
+              );
+            }
+            if (trimmed.startsWith('>')) {
+              return (
+                <blockquote
+                  key={idx}
+                  className="my-6 pl-4 border-l-4 border-indigo-400 dark:border-indigo-500 italic text-slate-600 dark:text-slate-300"
+                  dangerouslySetInnerHTML={{ __html: renderInlineLinks(trimmed.replace(/^>\s?/gm, '')) }}
+                />
+              );
+            }
             if (trimmed.startsWith('## ')) {
               return (
                 <h2 key={idx} className="font-heading text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mt-10 mb-4 pb-2 border-b border-slate-200 dark:border-slate-800">
@@ -289,6 +412,20 @@ export const BlogView: React.FC<BlogViewProps> = ({
             <span>Related Directory Research &amp; Comparisons</span>
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Reviewed tool */}
+            {currentArticle.isToolGuide && currentArticle.toolSlug && (
+              <a
+                href={`/tool/${currentArticle.toolSlug}`}
+                className="p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-500 hover:shadow-xs transition-all flex items-center justify-between text-xs font-semibold text-slate-800 dark:text-slate-200"
+              >
+                <div>
+                  <span className="text-[10px] uppercase text-indigo-600 dark:text-indigo-400 font-bold tracking-wider">Tool Profile</span>
+                  <div className="font-bold text-slate-900 dark:text-white mt-0.5">{currentArticle.toolName} on ToolverAI</div>
+                </div>
+                <ArrowRight className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              </a>
+            )}
+
             {/* Category Link */}
             {currentArticle.relatedCategorySlugs?.map((catSlug) => (
               <a
@@ -502,7 +639,7 @@ export const BlogView: React.FC<BlogViewProps> = ({
 
       {/* Article Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {filteredArticles.map((post) => (
+        {visibleArticles.map((post) => (
           <a
             key={post.id}
             href={`/blog/${post.slug}`}
@@ -511,14 +648,27 @@ export const BlogView: React.FC<BlogViewProps> = ({
           >
             <div>
               <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
-                <img
-                  src={post.heroImage || post.coverImage}
-                  alt={post.title}
-                  width={600}
-                  height={375}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  loading="lazy"
-                />
+                {post.isToolGuide ? (
+                  // Tool logos are small squares: show them contained on a soft gradient
+                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-violet-50 dark:from-indigo-950/50 dark:via-slate-900 dark:to-violet-950/40">
+                    <div className="w-24 h-24 rounded-3xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-center overflow-hidden group-hover:scale-105 transition-transform duration-500">
+                      {post.logoUrl ? (
+                        <img src={post.logoUrl} alt={`${post.toolName} logo`} width={96} height={96} className="w-full h-full object-contain p-3" loading="lazy" decoding="async" />
+                      ) : (
+                        <span className="text-3xl font-extrabold text-indigo-600">{(post.toolName || '?').charAt(0)}</span>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <img
+                    src={post.heroImage || post.coverImage}
+                    alt={post.title}
+                    width={600}
+                    height={375}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    loading="lazy"
+                  />
+                )}
                 <div className="absolute top-3 left-3">
                   <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/95 dark:bg-slate-900/95 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800 shadow-xs">
                     {post.topic || post.category}
@@ -557,17 +707,36 @@ export const BlogView: React.FC<BlogViewProps> = ({
           </a>
         ))}
       </div>
+
+      {filteredArticles.length > visibleCount && (
+        <div className="mt-12 text-center">
+          <button
+            onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-slate-900 dark:bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-600 dark:hover:bg-indigo-500 transition-colors shadow-xs cursor-pointer"
+          >
+            Load more guides ({filteredArticles.length - visibleCount} more)
+          </button>
+        </div>
+      )}
     </div>
   );
 };
+
+const PAGE_SIZE = 24;
 
 /**
  * Basic markdown link helper that converts [text](url) to HTML <a href="url">text</a>
  */
 function renderInlineLinks(text: string): string {
-  // Convert [label](/url) to <a href="/url" class="...">label</a>
+  // Neutralise raw HTML first (content is injected via innerHTML), then convert
+  // [label](/url) to <a href="/url" class="...">label</a> — http(s) or site-relative only.
   return text
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">$1</a>')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\[([^\]]+)\]\(((?:https?:\/\/|\/)[^)\s"]*)\)/g, (_m, label, url) => {
+      const external = /^https?:\/\//i.test(url) && !/^https?:\/\/(www\.)?toolverai\.com/i.test(url);
+      return `<a href="${url}" class="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"${external ? ' rel="nofollow noopener noreferrer" target="_blank"' : ''}>${label}</a>`;
+    })
     .replace(/\*\*([^*]+)\*\*/g, '<strong class="font-bold text-slate-900 dark:text-white">$1</strong>')
     .replace(/`([^`]+)`/g, '<code class="bg-slate-100 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 px-1 py-0.5 rounded text-xs font-mono">$1</code>');
 }
