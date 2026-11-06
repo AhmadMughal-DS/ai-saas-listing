@@ -61,6 +61,26 @@ BLOG_MODEL = "deepseek-v4-pro"
 DEEPSEEK_KEY = dotenv_values(ROOT / ".env").get("DEEPSEEK_API_KEY") or dotenv_values(BASE / ".env").get("DEEPSEEK_API_KEY")
 MONGO = dotenv_values(ROOT / ".env")
 
+# IndexNow (Bing, Yandex, Seznam, Naver). The key is public by design: search
+# engines verify it at https://toolverai.com/<key>.txt (served from public/).
+SITE_URL = "https://toolverai.com"
+INDEXNOW_KEY = MONGO.get("INDEXNOW_KEY") or "918469d3edf54adf9868b52b9959d0de"
+
+
+def indexnow_ping(urls: list[str]) -> str:
+    """Tell IndexNow search engines about new/changed pages. Never raises."""
+    urls = sorted({u for u in urls if u.startswith(SITE_URL + "/")})[:10000]
+    if not urls:
+        return "nothing to submit"
+    payload = {"host": "toolverai.com", "key": INDEXNOW_KEY,
+               "keyLocation": f"{SITE_URL}/{INDEXNOW_KEY}.txt", "urlList": urls}
+    try:
+        r = requests.post("https://api.indexnow.org/indexnow", json=payload, timeout=30,
+                          headers={"User-Agent": "ToolverAI-IndexNow/1.0 (+https://toolverai.com)"})
+        return f"{len(urls)} URLs -> HTTP {r.status_code}" + ("" if r.status_code in (200, 202) else f" {r.text[:120]}")
+    except Exception as exc:
+        return f"failed: {type(exc).__name__}: {str(exc)[:100]}"
+
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
@@ -446,6 +466,13 @@ def main():
     print(f"\n==== {len(results)} tools | {failed} skipped | mode: {mode} | DeepSeek cost ${round(total_cost,4)} "
           f"(~${round(total_cost/max(len(results),1)*30,3)}/day@30) ====")
     print(f"Preview JSON: {OUT_DIR / 'pipeline_preview.json'}")
+
+    # Notify IndexNow search engines about today's new pages (live runs only).
+    live_slugs = [slugify(r["name"]) for r in results if r.get("live")]
+    if args.db and live_slugs:
+        urls = [f"{SITE_URL}/tool/{s}" for s in live_slugs]
+        urls.append(f"{SITE_URL}/blog")  # hub lists every review, so it changes daily too
+        print(f"[indexnow] {indexnow_ping(urls)}")
 
 
 if __name__ == "__main__":
