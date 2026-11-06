@@ -2,20 +2,20 @@
 from __future__ import annotations
 
 import imaplib
-import mimetypes
 import re
 import smtplib
 import ssl
 import time
 from email.message import EmailMessage
 from email.utils import formataddr, formatdate, make_msgid
-from pathlib import Path
 
 from config import Settings
 
 
 def build_message(s: Settings, to: str, subject: str, body: str, *, in_reply_to: str = "",
-                  references: list[str] | None = None, attachment: Path | None = None) -> EmailMessage:
+                  references: list[str] | None = None) -> EmailMessage:
+    """Plain-text email only. By policy no outgoing email carries an attachment
+    or image of any kind, so this function deliberately has no way to add one."""
     msg = EmailMessage()
     msg["From"] = formataddr((s.sender_name, s.sender_email))
     msg["To"] = to
@@ -28,10 +28,6 @@ def build_message(s: Settings, to: str, subject: str, body: str, *, in_reply_to:
         msg["In-Reply-To"] = in_reply_to
         msg["References"] = " ".join(references or [in_reply_to])
     msg.set_content(body)
-    if attachment and attachment.exists():
-        ctype, _ = mimetypes.guess_type(attachment.name)
-        maintype, subtype = (ctype or "application/octet-stream").split("/", 1)
-        msg.add_attachment(attachment.read_bytes(), maintype=maintype, subtype=subtype, filename=attachment.name)
     return msg
 
 

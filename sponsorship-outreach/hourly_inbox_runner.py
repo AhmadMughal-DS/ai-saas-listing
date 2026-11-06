@@ -3,7 +3,7 @@
 Runs every 1 hour (or on-demand):
   1. Checks PrivateEmail (IMAP) for new messages.
   2. Bounces: Learns from delivery failures, records domain & role, auto-switches to alternate (contact@ or marketing@).
-  3. Hot Leads: Auto-replies with 3 sponsorship packages ($49, $99, $199) + GA4 traffic proof attachment.
+  3. Hot Leads: Auto-replies with 3 sponsorship packages ($49, $99, $199) (plain text, no attachment).
   4. Human Replies: Logs snippet & updates tracking sheet.
   5. Syncs Google Sheet CRM in real time.
 """

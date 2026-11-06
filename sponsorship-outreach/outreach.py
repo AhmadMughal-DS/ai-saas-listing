@@ -24,7 +24,7 @@ from collections import Counter
 from datetime import date, datetime, timedelta
 
 import store as st
-from config import GA4_PROOF_PATH, PREVIEW_DIR, Settings, load_settings
+from config import PREVIEW_DIR, Settings, load_settings
 from contacts import ContactFinder, base_domain
 from inbox import InboxMonitor
 from mailer import Mailer, build_message
@@ -383,8 +383,6 @@ def check(s: Settings) -> None:
     except OSError:
         print("  ⚠️  Outbound port 25 blocked — contact checks fall back to MX-only "
               "(role guesses need ALLOW_UNVERIFIED_FALLBACK=true)")
-    print(f"  {'✅' if GA4_PROOF_PATH.exists() else '⚠️ '} GA4 proof image "
-          f"{'found' if GA4_PROOF_PATH.exists() else 'missing'}: {GA4_PROOF_PATH}")
     print("\n[✓] Ready." if ok else "\n[!] Fix the ❌ items above before sending.")
 
 

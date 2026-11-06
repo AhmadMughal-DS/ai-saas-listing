@@ -62,7 +62,7 @@ def initial_email(tool: ToolRow, s: Settings, video_url: str = "") -> tuple[str,
         f"Would you like to pin {tool.name} to our Homepage Featured Spot and get full ad-usage rights to the video? "
         f"We have paid partner packages, plus a zero-cost option where we simply feature you through your own "
         f"affiliate link — so there's a fit whatever your budget. "
-        f"Reply \"INTERESTED\" and I'll send over our live GA4 traffic stats and both options.\n\n"
+        f"Reply \"INTERESTED\" and I'll send over both options.\n\n"
         # Keep total links ≤ 2: drop the site URL from the signature when a video link is present
         f"{_signature(s, include_site=not video_url)}\n\n"
         f"{_footer(s)}\n"
@@ -80,7 +80,7 @@ def followup_email(tool: ToolRow, s: Settings, original_subject: str) -> tuple[s
         f"{tool.live_page}\n\n"
         f"A Homepage Featured Spot puts {tool.name} in front of that buying-intent audience first, and you get full "
         f"ad-usage rights to the 30-second Problem→Solution video we scripted for you.\n\n"
-        f"If that's interesting, just reply \"INTERESTED\" and I'll send our live GA4 traffic numbers and the options "
+        f"If that's interesting, just reply \"INTERESTED\" and I'll send the options "
         f"— including a zero-cost affiliate feature if a paid package isn't the right fit. No pressure either way.\n\n"
         f"{_signature(s, include_site=False)}\n\n"
         f"{_footer(s)}\n"
@@ -89,12 +89,10 @@ def followup_email(tool: ToolRow, s: Settings, original_subject: str) -> tuple[s
 
 
 def hot_lead_reply(tool_name: str, live_page: str, s: Settings, original_subject: str,
-                   has_attachment: bool, greeting_name: str = "") -> tuple[str, str]:
+                   greeting_name: str = "") -> tuple[str, str]:
+    """Pricing reply for a positive response. Plain text, no attachments."""
     subject = original_subject if original_subject.lower().startswith("re:") else f"Re: {original_subject}"
     hi = f"Hi {greeting_name}," if greeting_name else f"Hi {tool_name} team,"
-    proof = ("I've attached a snapshot of our live GA4 traffic for toolverai.com."
-             if has_attachment else
-             "I'm happy to share our live GA4 traffic figures for toolverai.com on request.")
     tiers = "\n".join(
         f"  {i}. {t.name} · {t.price}\n     {t.includes}" for i, t in enumerate(SPONSOR_TIERS, 1)
     )
@@ -105,7 +103,7 @@ def hot_lead_reply(tool_name: str, live_page: str, s: Settings, original_subject
     )
     body = (
         f"{hi}\n\n"
-        f"Thanks for getting back to me! {proof}\n\n"
+        f"Thanks for getting back to me!\n\n"
         f"Here are our partner packages for {tool_name}:\n\n"
         f"{tiers}\n\n"
         f"{affiliate_block}"
@@ -113,7 +111,7 @@ def hot_lead_reply(tool_name: str, live_page: str, s: Settings, original_subject
         f"{tool_name} pinned right away.\n\n"
         f"One quick win either way: many of our partners add their ToolverAI listing link to their own site, "
         f"blog or newsletter — it sends your audience straight to the listing and helps {tool_name} rank higher "
-        f"across our comparison pages. Happy to send a ready-made badge if that's useful.\n\n"
+        f"across our comparison pages.\n\n"
         f"{_signature(s)}\n"
     )
     return subject, body

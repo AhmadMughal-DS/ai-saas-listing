@@ -4,7 +4,7 @@ Classifies every new message (by UID cursor — never marks mail as read):
   bounce      → status BOUNCED, address suppressed
   auto-reply  → logged only (out-of-office does not stop the follow-up)
   opt-out     → status OPTED_OUT, address suppressed
-  positive    → status HOT_LEAD, pricing + GA4 proof reply saved to Drafts
+  positive    → status HOT_LEAD, pricing reply (no attachment) sent/saved to Drafts
   other human → status REPLIED (manual review), follow-ups stop
 """
 from __future__ import annotations
@@ -21,7 +21,7 @@ from typing import Callable
 from bs4 import BeautifulSoup
 
 import store as st
-from config import DRAFTS_DIR, GA4_PROOF_PATH, Settings
+from config import DRAFTS_DIR, Settings
 from mailer import Mailer, build_message
 from templates import hot_lead_reply
 
@@ -229,13 +229,11 @@ class InboxMonitor:
         if POSITIVE.search(reply_text):
             self.store.set_status(key, st.HOT_LEAD, f"reply from {from_addr}")
             first = from_name.split()[0] if from_name and re.match(r"^[A-Za-z][a-z]+", from_name.split()[0]) else ""
-            has_proof = GA4_PROOF_PATH.exists()
             subj, body = hot_lead_reply(rec.get("tool_name", key), rec.get("live_page", ""), self.s, subject,
-                                        has_proof, first)
+                                        first)
             their_id = msg.get("Message-ID", "")
             refs = re.findall(r"<[^>]+>", msg.get("References", "")) + ([their_id] if their_id else [])
-            reply_msg = build_message(self.s, from_addr, subj, body, in_reply_to=their_id, references=refs,
-                                      attachment=GA4_PROOF_PATH if has_proof else None)
+            reply_msg = build_message(self.s, from_addr, subj, body, in_reply_to=their_id, references=refs)
 
             # Auto-reply directly via SMTP if enabled
             auto_replied = False
@@ -253,9 +251,9 @@ class InboxMonitor:
                         "subject": subj,
                         "type": "hot_lead_pricing"
                     })
-                    self.notify(key, f"Auto-replied to HOT LEAD {from_addr} with pricing + GA4 proof")
+                    self.notify(key, f"Auto-replied to HOT LEAD {from_addr} with pricing")
                     if verbose:
-                        print(f"  🚀 Auto-replied to HOT LEAD → {key} ({from_addr}) with pricing + GA4 proof!")
+                        print(f"  🚀 Auto-replied to HOT LEAD → {key} ({from_addr}) with pricing!")
                 except Exception as exc:
                     print(f"  ⚠️ Auto-reply send failed (fallback to draft): {exc}")
 
@@ -279,13 +277,11 @@ class InboxMonitor:
     def _draft_hot_reply(self, key: str, rec: dict, msg: Message, from_name: str, from_addr: str,
                          subject: str) -> str:
         first = from_name.split()[0] if from_name and re.match(r"^[A-Za-z][a-z]+", from_name.split()[0]) else ""
-        has_proof = GA4_PROOF_PATH.exists()
         subj, body = hot_lead_reply(rec.get("tool_name", key), rec.get("live_page", ""), self.s, subject,
-                                    has_proof, first)
+                                    first)
         their_id = msg.get("Message-ID", "")
         refs = re.findall(r"<[^>]+>", msg.get("References", "")) + ([their_id] if their_id else [])
-        draft = build_message(self.s, from_addr, subj, body, in_reply_to=their_id, references=refs,
-                              attachment=GA4_PROOF_PATH if has_proof else None)
+        draft = build_message(self.s, from_addr, subj, body, in_reply_to=their_id, references=refs)
         DRAFTS_DIR.mkdir(exist_ok=True)
         local = DRAFTS_DIR / f"{key}-{datetime.now().strftime('%Y%m%d-%H%M%S')}.eml"
         local.write_bytes(draft.as_bytes())
@@ -295,5 +291,5 @@ class InboxMonitor:
             where = "saved to mailbox Drafts"
         except (imaplib.IMAP4.error, OSError) as exc:
             print(f"      (Drafts append failed, kept local copy: {exc})")
-        rec["hot_lead_draft"] = {"at": st.now_iso(), "file": local.name, "has_ga4_proof": has_proof}
-        return where + ("" if has_proof else " — ⚠ GA4 screenshot missing")
+        rec["hot_lead_draft"] = {"at": st.now_iso(), "file": local.name}
+        return where

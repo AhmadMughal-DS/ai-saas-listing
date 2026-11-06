@@ -20,7 +20,6 @@ ROOT_ENV_PATH = PROJECT_ROOT / ".env"
 LOG_PATH = BASE_DIR / "outreach-log.json"
 LOCK_PATH = BASE_DIR / "outreach.lock"
 ASSETS_DIR = BASE_DIR / "assets"
-GA4_PROOF_PATH = ASSETS_DIR / "ga4-traffic-proof.png"
 PREVIEW_DIR = BASE_DIR / "previews"
 DRAFTS_DIR = BASE_DIR / "drafts"
 
@@ -71,7 +70,7 @@ class SponsorTier:
 
 SPONSOR_TIERS: list[SponsorTier] = [
     SponsorTier("Featured Category Pin", "$49 / month",
-                "Your tool pinned to the top of its category page with a 'Featured' badge."),
+                "Your tool pinned to the top of its category page with a 'Featured' label."),
     SponsorTier("Homepage Spotlight + Video Asset Rights", "$99 / month",
                 "Homepage featured spot, plus full ad-usage rights to your 30-second Problem→Solution video."),
     SponsorTier("Full Monthly Partner Pack", "$199 / month",

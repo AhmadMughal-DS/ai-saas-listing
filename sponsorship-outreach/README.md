@@ -28,7 +28,7 @@ flowchart TD
     App -->|2. Real-Time Status & Notes Sync| CRM["Google Sheet Tab: 📬 Sponsorship Outreach CRM"]
     
     Prospect -->|Reply: INTERESTED| IMAP["IMAP Monitor (mail.privateemail.com:993)"]
-    IMAP -->|Classify: 🔥 Hot Lead| Draft["Drafts Auto-Created + GA4 Traffic Proof + 3 Partner Tiers"]
+    IMAP -->|Classify: 🔥 Hot Lead| Draft["Pricing Reply + 3 Partner Tiers"]
 ```
 
 ---
@@ -52,7 +52,6 @@ sponsorship-outreach/
 ├── outreach.py              # Unified Command-Line Interface (CLI)
 ├── outreach-log.json        # Live JSON database (gitignored)
 ├── assets/
-│   └── ga4-traffic-proof.png # Traffic proof screenshot for hot lead replies (gitignored)
 ├── previews/                # Generated email drafts for human review (gitignored)
 └── drafts/                  # Local .eml backups of hot-lead responses (gitignored)
 ```
@@ -144,4 +143,4 @@ python outreach.py run --live
 - **Auto-Suppression:** Hard bounces and unsubscribe replies are automatically added to the suppression list in `outreach-log.json` and will never be contacted again.
 - **Namecheap Private Email:** Connects directly to `mail.privateemail.com` over SSL (Port 465 for SMTP, Port 993 for IMAP).
 - **CAN-SPAM Compliance:** Clear opt-out instructions and unsubscribe mailto headers on every outgoing message.
-- **Sent & Drafts Integration:** Every email sent is saved to the mailbox's `Sent` folder. Hot lead replies are pre-drafted directly into the mailbox's `Drafts` folder with GA4 traffic proof attached.
+- **Sent & Drafts Integration:** Every email sent is saved to the mailbox's `Sent` folder. Hot lead replies are pre-drafted directly into the mailbox's `Drafts` folder.
