@@ -40,6 +40,14 @@ import {
   seoInlineToHtml,
 } from './src/data/hubSeoContent';
 import { buildToolFaqs } from './src/utils/toolFaq';
+import {
+  HUB_TITLES,
+  toolTitle,
+  compareTitle,
+  alternativesTitle,
+  categoryTitle,
+  articleTitle,
+} from './src/utils/seoTitles';
 
 dotenv.config();
 
@@ -1036,8 +1044,23 @@ async function startServer() {
     };
   }
 
+  let toolGuidesRefresh: Promise<any[]> | null = null;
   async function getToolGuides(): Promise<any[]> {
     if (toolGuidesCache && Date.now() < toolGuidesCache.expiresAt) return toolGuidesCache.data;
+    // Stale-while-revalidate: serve the previous list instantly and refresh in the background.
+    if (!toolGuidesRefresh) {
+      toolGuidesRefresh = loadToolGuides().finally(() => {
+        toolGuidesRefresh = null;
+      });
+    }
+    if (toolGuidesCache) {
+      toolGuidesRefresh.catch(() => {});
+      return toolGuidesCache.data;
+    }
+    return toolGuidesRefresh;
+  }
+
+  async function loadToolGuides(): Promise<any[]> {
     const db = await getMongoDb();
     if (!db) return toolGuidesCache?.data || [];
     const docs = await db
@@ -1990,6 +2013,7 @@ Only return valid JSON.`;
      */
     function cleanHtmlTemplateHead(html: string): string {
       return html
+        .replace(/<meta\s+charset=["']?[^"'>\s]+["']?\s*\/?>\s*/gi, '')
         .replace(/<title>[^<]*<\/title>\s*/gi, '')
         .replace(/<meta\s+name=["']description["'][^>]*\/?>\s*/gi, '')
         .replace(/<meta\s+name=["']robots["'][^>]*\/?>\s*/gi, '')
@@ -2023,6 +2047,9 @@ Only return valid JSON.`;
       const ogImage = options.ogImage || 'https://toolverai.com/og-banner.png';
 
       const tags: string[] = [
+        // Must sit in the first 1024 bytes. It used to land ~3.9KB in (after these tags), and
+        // crawlers that sniff the encoding showed every em dash in titles as a replacement char.
+        `<meta charset="UTF-8" />`,
         `<title>${title}</title>`,
         `<meta name="description" content="${desc}" />`,
         `<meta name="robots" content="${robots}" />`,
@@ -2064,11 +2091,28 @@ Only return valid JSON.`;
       let result = cleanedHtml.replace(/<head>/i, `<head>\n${injectedBlock}`);
 
       if (options.bodyHtml) {
-        result = result.replace(/<div id=["']root["']>\s*<\/div>/i, `<div id="root">\n${options.bodyHtml}\n</div>`);
+        // Crawlers that don't run JS never see the React footer, which left the trust/legal pages
+        // with zero internal inlinks. Every SSR body therefore ends with the same plain footer nav.
+        const body = `${options.bodyHtml}\n${SSR_FOOTER_HTML}`;
+        result = result.replace(/<div id=["']root["']>\s*<\/div>/i, `<div id="root">\n${body}\n</div>`);
       }
 
       return result;
     }
+
+    const SSR_FOOTER_HTML = `<footer>
+  <nav aria-label="Site">
+    <p>
+      <a href="/">AI Tools Directory</a> | <a href="/categories">Categories</a> | <a href="/rankings">Rankings</a> |
+      <a href="/compare">Compare AI Tools</a> | <a href="/alternatives">Alternatives</a> | <a href="/deals">AI Deals</a> |
+      <a href="/prompts">Prompts</a> | <a href="/blog">Blog</a> | <a href="/submit-tool">Submit a Tool</a>
+    </p>
+    <p>
+      <a href="/about">About</a> | <a href="/editorial-policy">Editorial Policy</a> | <a href="/how-we-rank-tools">How We Rank Tools</a> |
+      <a href="/affiliate-disclosure">Affiliate Disclosure</a> | <a href="/privacy-policy">Privacy Policy</a> | <a href="/terms">Terms of Service</a>
+    </p>
+  </nav>
+</footer>`;
 
     let cachedIndexHtmlTemplate: string | null = null;
     function getIndexHtmlTemplate(): string {
@@ -2117,7 +2161,7 @@ Only return valid JSON.`;
       try {
         const htmlTemplate = getIndexHtmlTemplate();
         const baseUrl = resolveBaseUrl(req);
-        const title = 'Best AI Tools & AI Tools Directory | ToolverAI';
+        const title = HUB_TITLES.home;
         const desc = 'Explore the best AI tools in 2026. Discover, compare, and track top AI tools across coding, productivity, image, and video generation in our curated AI tools directory.';
         const canonical = `${baseUrl}/`;
         const tools = await getSsrTools();
@@ -2257,7 +2301,7 @@ Only return valid JSON.`;
         }
 
         const cleanName = (tool.name || '').trim();
-        const title = `${cleanName} Review 2026: Features, Pricing & Alternatives | ToolverAI`;
+        const title = toolTitle(cleanName);
         const desc = `${cleanName} (${tool.pricingType || 'Freemium'}): ${(tool.tagline || tool.description || '').slice(0, 130)}. Compare pricing, features, monthly traffic (${tool.monthlyVisitsFormatted || 'N/A'}) and top alternatives on ToolverAI.`.slice(0, 160);
         const canonical = `${baseUrl}/tool/${tool.slug || tool.id}`;
         const ogImage = tool.logoUrl && !tool.logoUrl.includes('unsplash') ? tool.logoUrl : `${baseUrl}/og-banner.png`;
@@ -2450,7 +2494,7 @@ Only return valid JSON.`;
         );
 
         const canonical = `${baseUrl}/categories/${normalizedCategory}`;
-        const title = `Best ${categoryName} Tools in 2026 | ToolverAI`;
+        const title = categoryTitle(categoryName);
         const desc = `Discover the best ${categoryName} tools in 2026. Compare ${categoryTools.length}+ AI tools ranked by estimated monthly traffic, pricing, and authentic user reviews on ToolverAI.`;
 
         const relatedCategories = SSR_CATEGORIES.filter((c) => c.slug !== normalizedCategory);
@@ -2535,8 +2579,12 @@ Only return valid JSON.`;
 
     Object.entries(staticPageMap).forEach(([routePath, fileName]) => {
       app.get(routePath, (req, res) => {
-        const filePath = path.join(process.cwd(), 'public', fileName);
-        if (fs.existsSync(filePath)) {
+        // The Docker image only ships dist/ (Vite copies public/* into it). Looking only in public/
+        // made these pages fall back to the SPA shell in production: generic title, no canonical.
+        const filePath = [path.join(distPath, fileName), path.join(process.cwd(), 'public', fileName)].find((f) =>
+          fs.existsSync(f)
+        );
+        if (filePath) {
           res.header('Content-Type', 'text/html; charset=utf-8');
           res.header('Cache-Control', 'public, max-age=86400, s-maxage=604800');
           return res.status(200).sendFile(filePath);
@@ -2550,7 +2598,7 @@ Only return valid JSON.`;
       try {
         const htmlTemplate = getIndexHtmlTemplate();
         const baseUrl = resolveBaseUrl(req);
-        const title = 'Submit an AI Tool — Get Listed on ToolverAI';
+        const title = HUB_TITLES.submit;
         const desc = 'Submit your AI tool to the ToolverAI directory. Get reviewed and listed alongside 120+ AI tools ranked by estimated monthly traffic.';
         const canonical = `${baseUrl}/submit-tool`;
 
@@ -2589,32 +2637,32 @@ Only return valid JSON.`;
     // ── SSR: Major Section Hub Pages ────────────────────────────────────
     const majorPageSeo: Record<string, { title: string; desc: string; h1: string; type?: 'website' | 'article' }> = {
       '/rankings': {
-        title: 'Top AI Tools by Monthly Traffic — Verified Rankings 2026 | ToolverAI',
+        title: HUB_TITLES.rankings,
         desc: 'Explore estimated monthly traffic statistics, growth velocity, and user volume leaderboards across Coding, LLMs, Image, and Audio AI platforms. Updated weekly on ToolverAI.',
         h1: 'Top AI Tools by Monthly Traffic — Verified Rankings 2026',
       },
       '/compare': {
-        title: 'AI Comparison Tool — Compare AI Tools Side-by-Side (Free) | ToolverAI',
+        title: HUB_TITLES.compare,
         desc: 'Free AI comparison tool: compare AI tools side by side on pricing, features, monthly traffic, platforms and ratings. 180+ AI tools, no sign-up.',
         h1: 'AI Comparison Tool: Compare AI Tools Side-by-Side',
       },
       '/deals': {
-        title: 'AI Deals 2026 — Verified AI Tool Discounts & Promo Codes | ToolverAI',
+        title: HUB_TITLES.deals,
         desc: 'The best AI deals in one place: verified AI tool discounts, promo codes and extended free trials for ChatGPT, Claude, Cursor, ElevenLabs and more.',
         h1: 'AI Deals: Verified AI Tool Discounts & Promo Codes',
       },
       '/prompts': {
-        title: 'AI Prompt Engineering Library — Templates for ChatGPT, Claude & More | ToolverAI',
+        title: HUB_TITLES.prompts,
         desc: 'Master ChatGPT, Claude, Midjourney, and Cursor AI with battle-tested prompts for coding, SEO, marketing, and workflow automation. Free prompt engineering library.',
         h1: 'AI Prompt Engineering Library',
       },
       '/categories': {
-        title: 'AI Tools by Category — Coding, Writing, Image, Video & More | ToolverAI',
+        title: HUB_TITLES.categories,
         desc: 'Browse 120+ AI tools organized across 8 core categories. Find top Coding AI, Writing AI, Image Generation, Video AI, and Marketing AI tools ranked on ToolverAI.',
         h1: 'Browse AI Tools by Category',
       },
       '/blog': {
-        title: 'AI Tools Blog & Decision Guides — Expert Analysis | ToolverAI',
+        title: HUB_TITLES.blog,
         desc: 'Read in-depth AI tool comparisons, buyer guides, and architectural decision frameworks from the ToolverAI Editorial Team. Grounded in real data.',
         h1: 'ToolverAI Editorial Guides & Insights',
         type: 'website',
@@ -2634,7 +2682,7 @@ Only return valid JSON.`;
             '@type': 'BreadcrumbList',
             itemListElement: [
               { '@type': 'ListItem', position: 1, name: 'Home', item: `${baseUrl}/` },
-              { '@type': 'ListItem', position: 2, name: seo.title.split('—')[0].trim(), item: canonical },
+              { '@type': 'ListItem', position: 2, name: seo.h1, item: canonical },
             ],
           };
 
@@ -2775,7 +2823,7 @@ Only return valid JSON.`;
         const baseUrl = resolveBaseUrl(req);
         const tools = await getSsrTools();
         const canonical = `${baseUrl}/alternatives`;
-        const title = 'Best AI Tool Alternatives & Competitors 2026 | ToolverAI';
+        const title = HUB_TITLES.alternatives;
         const desc = 'Discover the best alternatives to leading AI tools including ChatGPT, Cursor, Copilot, Claude, Midjourney, and more. Compare features, pricing, and traffic on ToolverAI.';
 
         const breadcrumbJsonLd = {
@@ -2886,7 +2934,14 @@ Only return valid JSON.`;
         const category = tool1.category || tool2.category || 'AI Tools';
         const canonical = `${baseUrl}/compare/${canonicalSlug}`;
 
-        const title = `${name1} vs ${name2} (2026): Features, Pricing & Comparison | ToolverAI`;
+        const title = compareTitle(name1, name2);
+        // Link a tool's alternatives page only if it exists (e.g. /alternatives/devin 404'd); otherwise its category.
+        const altCell = (t: any, n: string) => {
+          const key = String(t.slug || t.id);
+          if (isEligibleAlternative(key)) return `<a href="/alternatives/${key}">Best ${n} Alternatives</a>`;
+          const cat = String(t.category || 'tools').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+          return `<a href="/categories/${cat}">More ${t.category || 'AI'} tools</a>`;
+        };
         const desc = `Detailed side-by-side comparison of ${name1} vs ${name2}. Compare monthly traffic (${tool1.monthlyVisitsFormatted || 'N/A'} vs ${tool2.monthlyVisitsFormatted || 'N/A'}), pricing tiers, features, and key differences.`.slice(0, 160);
 
         const breadcrumbJsonLd = {
@@ -2959,8 +3014,8 @@ Only return valid JSON.`;
           </tr>
           <tr>
             <td>Alternatives</td>
-            <td><a href="/alternatives/${tool1.slug || tool1.id}">Best ${name1} Alternatives</a></td>
-            <td><a href="/alternatives/${tool2.slug || tool2.id}">Best ${name2} Alternatives</a></td>
+            <td>${altCell(tool1, name1)}</td>
+            <td>${altCell(tool2, name2)}</td>
           </tr>
         </tbody>
       </table>
@@ -3066,7 +3121,7 @@ Only return valid JSON.`;
         const alternatives = getToolAlternatives(sourceTool, tools, 6);
         const altCount = alternatives.length;
 
-        const title = `Best ${cleanName} Alternatives in 2026 (Free & Paid) | ToolverAI`;
+        const title = alternativesTitle(cleanName);
         const desc = `Looking for the best alternatives to ${cleanName}? Compare top ${altCount} ${category} tools ranked by real traffic, pricing models, features, and user ratings.`.slice(0, 160);
 
         const breadcrumbJsonLd = {
@@ -3118,10 +3173,14 @@ Only return valid JSON.`;
       <h2>Top Ranked ${cleanName} Alternatives</h2>
       <ul>
         ${alternatives.map((alt: any) => {
-          const { canonicalSlug } = normalizeComparisonSlugs(sourceTool.slug || sourceTool.id, alt.slug || alt.id);
+          const srcKey = String(sourceTool.slug || sourceTool.id);
+          const altKey = String(alt.slug || alt.id);
+          // Only curated pairs have a /compare page; every other pair 404s (45 crawl errors on 2026-11-08).
+          const cmp = isEligibleComparison(srcKey, altKey)
+            ? `\n            [<a href="/compare/${normalizeComparisonSlugs(srcKey, altKey).canonicalSlug}">Compare ${cleanName} vs ${alt.name}</a>]`
+            : '';
           return `<li>
-            <a href="/tool/${alt.slug || alt.id}"><strong>${alt.name}</strong></a> (${alt.pricingType || 'Freemium'} | ${alt.monthlyVisitsFormatted || 'N/A'} visits/mo | ${alt.rating || 4.5}★) — ${alt.tagline || alt.description?.slice(0, 80)}
-            [<a href="/compare/${canonicalSlug}">Compare ${cleanName} vs ${alt.name}</a>]
+            <a href="/tool/${altKey}"><strong>${alt.name}</strong></a> (${alt.pricingType || 'Freemium'} | ${alt.monthlyVisitsFormatted || 'N/A'} visits/mo | ${alt.rating || 4.5}★) — ${alt.tagline || alt.description?.slice(0, 80)}${cmp}
           </li>`;
         }).join('\n        ')}
       </ul>
@@ -3237,7 +3296,7 @@ Only return valid JSON.`;
   </article>
 </main>`;
             const guideHtml = renderSsrPage(htmlTemplate, {
-              title: `${guide.title} | ToolverAI`,
+              title: articleTitle(guide.title),
               description: (guide.excerpt || `${guide.toolName} review`).slice(0, 160),
               // Same text lives on the tool page: consolidate ranking there.
               canonical: toolUrl,
@@ -3266,7 +3325,7 @@ Only return valid JSON.`;
         }
 
         const canonical = `${baseUrl}/blog/${article.slug}`;
-        const title = `${article.seoTitle || article.title} | ToolverAI`;
+        const title = articleTitle(article.seoTitle || article.title);
         const desc = (article.metaDescription || article.excerpt).slice(0, 160);
         const heroImage = article.heroImage || article.coverImage || `${baseUrl}/og-banner.png`;
         const tools = await getSsrTools();
@@ -3313,6 +3372,7 @@ Only return valid JSON.`;
         // Only link comparison pages that resolve (both tools live).
         const liveCompSlugs = new Set(getLiveComparisons(tools).map((c) => c.canonicalSlug));
         const liveBlogComparisons = (article.relatedComparisonSlugs || []).filter((c) => liveCompSlugs.has(c));
+        const liveAltSlugs = new Set(getLiveAlternatives(tools).map((a) => a.toolSlug));
 
         // Render referenced tools
         const relatedTools = (article.relatedToolSlugs || [])
@@ -3363,7 +3423,7 @@ Only return valid JSON.`;
     <section>
       <h2>Curated Alternatives Guides</h2>
       <ul>
-        ${article.relatedAlternativeSlugs!.map((aSlug) => `<li><a href="/alternatives/${aSlug}">Best ${aSlug} Alternatives</a></li>`).join('\n        ')}
+        ${article.relatedAlternativeSlugs!.filter((aSlug) => liveAltSlugs.has(aSlug)).map((aSlug) => `<li><a href="/alternatives/${aSlug}">Best ${aSlug} Alternatives</a></li>`).join('\n        ')}
       </ul>
     </section>` : ''}
 

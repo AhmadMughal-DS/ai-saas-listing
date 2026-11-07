@@ -1,6 +1,6 @@
 import React from 'react';
 import { AITool } from '../types';
-import { getToolAlternatives, getRelatedComparisonsForTool, normalizeComparisonSlugs, getLiveAlternatives } from '../utils/programmaticSeo';
+import { getToolAlternatives, getRelatedComparisonsForTool, normalizeComparisonSlugs, getLiveAlternatives, isEligibleComparison } from '../utils/programmaticSeo';
 import { slugifyCategory } from '../utils/seo';
 import { 
   Star, 
@@ -286,6 +286,8 @@ export const AlternativesView: React.FC<AlternativesViewProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {alternatives.map((alt, idx) => {
             const { canonicalSlug } = normalizeComparisonSlugs(tool.slug || tool.id, alt.slug || alt.id);
+            // Only curated pairs have a crawlable /compare page; others open the comparison in-app only.
+            const compareHref = isEligibleComparison(tool.slug || tool.id, alt.slug || alt.id) ? `/compare/${canonicalSlug}` : "/compare";
             return (
               <div
                 key={alt.id}
@@ -372,7 +374,7 @@ export const AlternativesView: React.FC<AlternativesViewProps> = ({
                     View Specs
                   </a>
                   <a
-                    href={`/compare/${canonicalSlug}`}
+                    href={compareHref}
                     onClick={(e) => {
                       e.preventDefault();
                       if (onNavigateComparison) {

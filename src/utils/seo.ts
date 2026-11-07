@@ -1,4 +1,12 @@
 import { ActiveTab, AITool, BlogPost } from '../types';
+import {
+  HUB_TITLES,
+  toolTitle,
+  compareTitle,
+  alternativesTitle,
+  categoryTitle,
+  articleTitle as buildArticleTitle,
+} from './seoTitles';
 
 export interface SEOData {
   title: string;
@@ -38,7 +46,7 @@ export function generateSEOData(
     const article = selectedArticle;
     // Tool reviews carry the tool page as canonical (same text is rendered there).
     const articleUrl = article.canonicalUrl || `${BASE_URL}/blog/${article.slug}`;
-    const articleTitle = `${article.seoTitle || article.title} | ToolverAI`;
+    const articleTitle = buildArticleTitle(article.seoTitle || article.title);
     const articleDesc = article.metaDescription || article.excerpt;
     const articleImage = article.heroImage || article.coverImage || DEFAULT_IMAGE;
 
@@ -97,7 +105,7 @@ export function generateSEOData(
     const cleanName = tool.name.trim();
     const visitsStr = tool.monthlyVisitsFormatted ? `${tool.monthlyVisitsFormatted} visits/mo` : '';
     const pricingStr = tool.pricingType || 'Freemium';
-    const title = `${cleanName} Review 2026: Features, Pricing & Alternatives | ToolverAI`;
+    const title = toolTitle(cleanName);
     const baseDesc = tool.tagline || tool.description.slice(0, 120);
     const description = `${cleanName} (${pricingStr}): ${baseDesc}. ${visitsStr ? `Traffic: ${visitsStr}.` : ''} Compare pricing, features, and top alternatives on ToolverAI.`.slice(0, 160);
 
@@ -187,7 +195,7 @@ export function generateSEOData(
   switch (activeTab) {
     case 'rankings':
       return {
-        title: 'Top AI Tools by Monthly Traffic — Estimated Traffic Rankings 2026 | ToolverAI',
+        title: HUB_TITLES.rankings,
         description: 'Explore estimated monthly traffic statistics, growth velocity, and user volume leaderboards across Coding, LLMs, Image, and Audio AI platforms. Updated weekly.',
         canonicalUrl: `${BASE_URL}/rankings`,
         ogType: 'website',
@@ -227,7 +235,7 @@ export function generateSEOData(
         const { slug1, canonicalSlug } = normalizeComparisonSlugs(raw1.slug || raw1.id, raw2.slug || raw2.id);
         const t1 = (raw1.slug || raw1.id) === slug1 ? raw1 : raw2;
         const t2 = (raw1.slug || raw1.id) === slug1 ? raw2 : raw1;
-        const title = `${t1.name} vs ${t2.name} (2026): Features, Pricing & Comparison | ToolverAI`;
+        const title = compareTitle(t1.name, t2.name);
         const description = `Compare ${t1.name} vs ${t2.name} in 2026. Side-by-side analysis of pricing (${t1.pricingType} vs ${t2.pricingType}), monthly traffic (${t1.monthlyVisitsFormatted || 'N/A'} vs ${t2.monthlyVisitsFormatted || 'N/A'}), features, pros/cons, and top alternatives on ToolverAI.`;
         const canonicalUrl = `${BASE_URL}/compare/${canonicalSlug}`;
 
@@ -268,7 +276,7 @@ export function generateSEOData(
       }
 
       return {
-        title: 'AI Comparison Tool — Compare AI Tools Side-by-Side (Free) | ToolverAI',
+        title: HUB_TITLES.compare,
         description: 'Free AI comparison tool: compare AI tools side by side on pricing, features, monthly traffic, platforms and ratings. 180+ AI tools, no sign-up.',
         canonicalUrl: `${BASE_URL}/compare`,
         ogType: 'website',
@@ -307,7 +315,7 @@ export function generateSEOData(
     case 'alternatives': {
       if (tool) {
         const cleanName = tool.name.trim();
-        const title = `Best ${cleanName} Alternatives in 2026 | ToolverAI`;
+        const title = alternativesTitle(cleanName);
         const description = `Looking for the best ${cleanName} alternatives in 2026? Compare top ${tool.category} AI tools by pricing, estimated monthly traffic, features, and authentic user reviews on ToolverAI.`;
         const canonicalUrl = `${BASE_URL}/alternatives/${tool.slug || tool.id}`;
 
@@ -349,7 +357,7 @@ export function generateSEOData(
       }
 
       return {
-        title: 'Best AI Tool Alternatives & Competitor Directory | ToolverAI',
+        title: HUB_TITLES.alternatives,
         description: 'Discover top alternative AI software for ChatGPT, Cursor, Midjourney, and leading AI models. Detailed feature matrices and pricing breakdowns on ToolverAI.',
         canonicalUrl: `${BASE_URL}/compare`,
         ogType: 'website',
@@ -361,7 +369,7 @@ export function generateSEOData(
 
     case 'deals':
       return {
-        title: 'AI Deals 2026 — Verified AI Tool Discounts & Promo Codes | ToolverAI',
+        title: HUB_TITLES.deals,
         description: 'The best AI deals in one place: verified AI tool discounts, promo codes and extended free trials for ChatGPT, Claude, Cursor, ElevenLabs and more.',
         canonicalUrl: `${BASE_URL}/deals`,
         ogType: 'website',
@@ -398,7 +406,7 @@ export function generateSEOData(
 
     case 'prompts':
       return {
-        title: 'AI Prompt Engineering Library — Templates for ChatGPT, Claude & More | ToolverAI',
+        title: HUB_TITLES.prompts,
         description: 'Master ChatGPT GPT-4o, Claude, Midjourney, and Cursor AI with battle-tested prompts for coding, SEO, marketing, and workflow automation. Free prompt library.',
         canonicalUrl: `${BASE_URL}/prompts`,
         ogType: 'website',
@@ -443,10 +451,10 @@ export function generateSEOData(
       if (catSlug && catSlug !== 'all') {
         const catName = catSlug
           .split('-')
-          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+          .map((w) => (w === 'ai' ? 'AI' : w.charAt(0).toUpperCase() + w.slice(1)))
           .join(' ');
         const catCanonical = `${BASE_URL}/categories/${catSlug}`;
-        const catTitle = `Best ${catName} Tools in 2026 | ToolverAI`;
+        const catTitle = categoryTitle(catName);
         const catDesc = `Discover the best ${catName} tools in 2026. Compare top ${catName} AI tools ranked by estimated monthly traffic, pricing, and authentic user reviews on ToolverAI.`;
 
         return {
@@ -485,7 +493,7 @@ export function generateSEOData(
       }
 
       return {
-        title: 'AI Tools by Category — Coding, Writing, Image, Video & More | ToolverAI',
+        title: HUB_TITLES.categories,
         description: 'Browse 120+ AI tools organized across 8 core categories. Find the best Coding AI, Writing AI, Image Generation, Video AI, Marketing AI, and more on ToolverAI.',
         canonicalUrl: `${BASE_URL}/categories`,
         ogType: 'website',
@@ -522,7 +530,7 @@ export function generateSEOData(
 
     case 'blog':
       return {
-        title: 'AI Tools Blog — News, Reviews & Tutorials | ToolverAI',
+        title: HUB_TITLES.blog,
         description: 'Read expert analysis, AI tool reviews, LLM benchmark comparisons, step-by-step tutorials, and the latest news from the AI software industry at ToolverAI.',
         canonicalUrl: `${BASE_URL}/blog`,
         ogType: 'article',
@@ -581,7 +589,7 @@ export function generateSEOData(
     case 'directory':
     default:
       return {
-        title: 'Best AI Tools & AI Tools Directory | ToolverAI',
+        title: HUB_TITLES.home,
         description: 'Explore the best AI tools in 2026. Discover, compare, and track top AI tools across coding, productivity, image, and video generation in our curated AI tools directory.',
         canonicalUrl: `${BASE_URL}/`,
         ogType: 'website',
