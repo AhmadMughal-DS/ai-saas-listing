@@ -22,7 +22,9 @@ import {
   ChevronRight,
   ArrowLeft
 } from 'lucide-react';
-import { ELIGIBLE_COMPARISONS, normalizeComparisonSlugs, getRelatedComparisonsForPair } from '../utils/programmaticSeo';
+import { getLiveComparisons, normalizeComparisonSlugs, getRelatedComparisonsForPair, alternativesHref } from '../utils/programmaticSeo';
+import { COMPARE_HUB_CONTENT } from '../data/hubSeoContent';
+import { SeoContentBlock } from './SeoContentBlock';
 
 interface CompareViewProps {
   tools: AITool[];
@@ -153,8 +155,8 @@ export const CompareView: React.FC<CompareViewProps> = ({
 
   const isPairMode = Boolean(comparisonPair && tool1 && tool2);
   const relatedComparisons = isPairMode
-    ? getRelatedComparisonsForPair(tool1.slug || tool1.id, tool2.slug || tool2.id, 6)
-    : ELIGIBLE_COMPARISONS;
+    ? getRelatedComparisonsForPair(tool1.slug || tool1.id, tool2.slug || tool2.id, 6, tools)
+    : getLiveComparisons(tools);
 
   return (
     <div className="w-full pt-28 pb-24 px-4 sm:px-8 max-w-[1440px] mx-auto">
@@ -210,12 +212,12 @@ export const CompareView: React.FC<CompareViewProps> = ({
           <span>{isPairMode ? 'Head-to-Head Comparison & Benchmark' : 'Side-by-Side Comparison & AI Verdict Engine'}</span>
         </div>
         <h1 className="font-heading text-4xl sm:text-5xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-4">
-          {isPairMode ? `${tool1.name} vs ${tool2.name} (2026): Features, Pricing & Comparison` : 'Compare AI Tools Side-by-Side'}
+          {isPairMode ? `${tool1.name} vs ${tool2.name} (2026): Features, Pricing & Comparison` : 'AI Comparison Tool: Compare AI Tools Side-by-Side'}
         </h1>
         <p className="text-base sm:text-lg text-slate-500 dark:text-slate-400 max-w-3xl mx-auto leading-relaxed">
           {isPairMode
             ? `Compare ${tool1.name} (${tool1.pricingType}) vs ${tool2.name} (${tool2.pricingType}) in ${tool1.category}. Evaluate monthly web traffic (${tool1.monthlyVisitsFormatted || 'N/A'} vs ${tool2.monthlyVisitsFormatted || 'N/A'}), pricing plans, platforms, and user pros/cons to choose the right solution.`
-            : 'Evaluate monthly web traffic, pricing models, key features, platform availability, and verified pros/cons to choose the ultimate AI solution.'}
+            : COMPARE_HUB_CONTENT.answer}
         </p>
 
         {/* Popular Presets */}
@@ -662,7 +664,10 @@ export const CompareView: React.FC<CompareViewProps> = ({
           </div>
         </div>
 
-        {/* Section: In-Depth Reviews & Alternatives Navigation */}
+        {/* Section: In-Depth Reviews & Alternatives Navigation.
+            Guarded: `tools` is empty on the first render, and an unguarded tool1.name here crashed the
+            whole /compare page (blank for users AND for Googlebot's rendered DOM). */}
+        {tool1 && tool2 && (
         <div className="p-6 sm:p-8 bg-slate-50/50 dark:bg-slate-800/30 border-t border-slate-200 dark:border-slate-800">
           <h3 className="font-heading text-lg font-bold text-slate-900 dark:text-white mb-4">
             In-Depth Reviews & Alternative Recommendations
@@ -683,10 +688,10 @@ export const CompareView: React.FC<CompareViewProps> = ({
                   <ChevronRight className="w-3.5 h-3.5" />
                 </a>
                 <a
-                  href={`/alternatives/${tool1.slug || tool1.id}`}
+                  href={alternativesHref(tool1)}
                   onClick={(e) => {
                     e.preventDefault();
-                    window.history.pushState({}, '', `/alternatives/${tool1.slug || tool1.id}`);
+                    window.history.pushState({}, '', alternativesHref(tool1));
                     window.dispatchEvent(new PopStateEvent('popstate'));
                   }}
                   className="text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-indigo-50/50 dark:hover:bg-slate-700 transition-colors"
@@ -712,10 +717,10 @@ export const CompareView: React.FC<CompareViewProps> = ({
                   <ChevronRight className="w-3.5 h-3.5" />
                 </a>
                 <a
-                  href={`/alternatives/${tool2.slug || tool2.id}`}
+                  href={alternativesHref(tool2)}
                   onClick={(e) => {
                     e.preventDefault();
-                    window.history.pushState({}, '', `/alternatives/${tool2.slug || tool2.id}`);
+                    window.history.pushState({}, '', alternativesHref(tool2));
                     window.dispatchEvent(new PopStateEvent('popstate'));
                   }}
                   className="text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-indigo-50/50 dark:hover:bg-slate-700 transition-colors"
@@ -727,6 +732,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
             </div>
           </div>
         </div>
+        )}
       </div>
 
       {/* Section: Related or Featured Comparisons */}
@@ -778,6 +784,9 @@ export const CompareView: React.FC<CompareViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Crawlable guide + FAQ — mirrors the SSR body for /compare */}
+      {!isPairMode && <SeoContentBlock content={COMPARE_HUB_CONTENT} />}
     </div>
   );
 };

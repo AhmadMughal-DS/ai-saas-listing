@@ -205,16 +205,16 @@ async function runValidation() {
       isRedirect: false,
     },
     {
-      route: '/tool/bolt-new',
+      route: '/tool/deepseek',
       expectedStatus: 200,
-      expectedCanonical: 'https://toolverai.com/tool/bolt-new',
+      expectedCanonical: 'https://toolverai.com/tool/deepseek',
       expectedRobots: 'index, follow',
       isRedirect: false,
     },
     {
-      route: '/tool/github-copilot',
+      route: '/tool/aiepics',
       expectedStatus: 200,
-      expectedCanonical: 'https://toolverai.com/tool/github-copilot',
+      expectedCanonical: 'https://toolverai.com/tool/aiepics',
       expectedRobots: 'index, follow',
       isRedirect: false,
     },
@@ -269,9 +269,9 @@ async function runValidation() {
     },
     // Programmatic Comparison Route Tests
     {
-      route: '/compare/cursor-vs-github-copilot',
+      route: '/compare/chatgpt-vs-claude',
       expectedStatus: 200,
-      expectedCanonical: 'https://toolverai.com/compare/cursor-vs-github-copilot',
+      expectedCanonical: 'https://toolverai.com/compare/chatgpt-vs-claude',
       expectedRobots: 'index, follow',
       isRedirect: false,
     },
@@ -347,9 +347,9 @@ async function runValidation() {
     },
     // Programmatic Comparison Reversed Ordering 301 Redirect
     {
-      route: '/compare/github-copilot-vs-cursor',
+      route: '/compare/claude-vs-chatgpt',
       expectedStatus: 301,
-      expectedRedirect: '/compare/cursor-vs-github-copilot',
+      expectedRedirect: '/compare/chatgpt-vs-claude',
       isRedirect: true,
     },
     {

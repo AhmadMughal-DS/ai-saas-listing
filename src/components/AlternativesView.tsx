@@ -1,6 +1,6 @@
 import React from 'react';
 import { AITool } from '../types';
-import { getToolAlternatives, getRelatedComparisonsForTool, normalizeComparisonSlugs, ELIGIBLE_ALTERNATIVES } from '../utils/programmaticSeo';
+import { getToolAlternatives, getRelatedComparisonsForTool, normalizeComparisonSlugs, getLiveAlternatives } from '../utils/programmaticSeo';
 import { slugifyCategory } from '../utils/seo';
 import { 
   Star, 
@@ -68,7 +68,7 @@ export const AlternativesView: React.FC<AlternativesViewProps> = ({
           </p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {ELIGIBLE_ALTERNATIVES.map((alt) => {
+          {getLiveAlternatives(allTools).map((alt) => {
             const matchedTool = allTools.find((t) => (t.slug || t.id) === alt.toolSlug);
             const name = matchedTool?.name || alt.toolSlug;
             return (
@@ -106,7 +106,7 @@ export const AlternativesView: React.FC<AlternativesViewProps> = ({
   }
 
   const alternatives = getToolAlternatives(tool, allTools, 6);
-  const relatedComparisons = getRelatedComparisonsForTool(tool.slug || tool.id);
+  const relatedComparisons = getRelatedComparisonsForTool(tool.slug || tool.id, allTools);
   const categorySlug = slugifyCategory(tool.category || 'tools');
 
   return (

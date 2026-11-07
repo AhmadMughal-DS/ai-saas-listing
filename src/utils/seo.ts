@@ -268,13 +268,15 @@ export function generateSEOData(
       }
 
       return {
-        title: 'Compare AI Tools Side-by-Side — Features, Pricing & Traffic | ToolverAI',
-        description: 'Compare top AI models and software head-to-head on pricing plans, monthly traffic, API availability, supported platforms, and user ratings. Free comparison tool.',
+        title: 'AI Comparison Tool — Compare AI Tools Side-by-Side (Free) | ToolverAI',
+        description: 'Free AI comparison tool: compare AI tools side by side on pricing, features, monthly traffic, platforms and ratings. 180+ AI tools, no sign-up.',
         canonicalUrl: `${BASE_URL}/compare`,
         ogType: 'website',
         ogImage: DEFAULT_IMAGE,
         keywords: [
+          'AI comparison tool',
           'compare AI tools',
+          'AI tools comparison',
           'AI tool comparison 2026',
           'ChatGPT vs Claude',
           'Cursor AI vs GitHub Copilot',
@@ -286,7 +288,7 @@ export function generateSEOData(
             '@context': 'https://schema.org',
             '@type': 'WebPage',
             '@id': `${BASE_URL}/compare#page`,
-            name: 'Side-by-Side AI Tools Comparison Engine',
+            name: 'AI Comparison Tool — Compare AI Tools Side-by-Side',
             description: 'Compare AI software head-to-head on pricing, traffic, features, and user reviews.',
             url: `${BASE_URL}/compare`,
           },
@@ -359,12 +361,14 @@ export function generateSEOData(
 
     case 'deals':
       return {
-        title: 'Best AI Tool Deals & Promo Codes — Verified Discounts 2026 | ToolverAI',
-        description: 'Save on leading AI software with exclusive verified coupon codes, lifetime deals, and extended free trials. All deals manually verified and updated daily.',
+        title: 'AI Deals 2026 — Verified AI Tool Discounts & Promo Codes | ToolverAI',
+        description: 'The best AI deals in one place: verified AI tool discounts, promo codes and extended free trials for ChatGPT, Claude, Cursor, ElevenLabs and more.',
         canonicalUrl: `${BASE_URL}/deals`,
         ogType: 'website',
         ogImage: DEFAULT_IMAGE,
         keywords: [
+          'AI deals',
+          'AI tools deals',
           'AI tool deals 2026',
           'AI promo codes',
           'AI software discounts',

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { FaqList } from './SeoContentBlock';
 import { BlogPost } from '../types';
 import { getPublishedArticles, getArticleBySlug } from '../data/blogData';
 import { fetchToolGuide, fetchToolGuides, isToolGuideSlug } from '../lib/toolGuides';
@@ -404,6 +405,9 @@ export const BlogView: React.FC<BlogViewProps> = ({
             );
           })}
         </article>
+
+        {/* FAQ — mirrors the SSR FAQ section + FAQPage JSON-LD */}
+        {currentArticle.faqs?.length ? <FaqList faqs={currentArticle.faqs} /> : null}
 
         {/* Contextual Related Research Box */}
         <section className="max-w-4xl mx-auto mt-16 p-6 sm:p-8 rounded-3xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">

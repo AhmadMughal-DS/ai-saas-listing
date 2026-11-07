@@ -27,7 +27,9 @@ import {
   Briefcase,
   ChevronRight
 } from 'lucide-react';
-import { getRelatedComparisonsForTool } from '../utils/programmaticSeo';
+import { getRelatedComparisonsForTool, alternativesHref } from '../utils/programmaticSeo';
+import { buildToolFaqs } from '../utils/toolFaq';
+import { FaqList } from './SeoContentBlock';
 
 interface ToolDetailViewProps {
   tool: AITool;
@@ -82,7 +84,8 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
     (t) => t.id !== tool.id && t.category?.toLowerCase() !== tool.category?.toLowerCase()
   );
   const relatedTools = (sameCategoryTools.length >= 3 ? sameCategoryTools : [...sameCategoryTools, ...otherTools]).slice(0, 3);
-  const toolRelatedComparisons = getRelatedComparisonsForTool(tool.slug || '');
+  const toolRelatedComparisons = getRelatedComparisonsForTool(tool.slug || '', allTools);
+  const toolFaqs = React.useMemo(() => buildToolFaqs(tool, allTools), [tool, allTools]);
 
   const handleToggleHelpful = (revId: string, initialCount: number = 0) => {
     setHelpfulVotes(prev => {
@@ -573,6 +576,11 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
             </section>
           )}
 
+          {/* FAQ — same data-driven answers as the SSR body + FAQPage JSON-LD */}
+          {toolFaqs.length > 0 && (
+            <FaqList faqs={toolFaqs} heading={`${tool.name} FAQ`} className="" />
+          )}
+
           {/* User Reviews */}
           <section className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-xs">
             <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-100 dark:border-slate-800">
@@ -814,10 +822,10 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
                 <span>Direct Alternatives</span>
               </h3>
               <a
-                href={`/alternatives/${tool.slug || tool.id}`}
+                href={alternativesHref(tool)}
                 onClick={(e) => {
                   e.preventDefault();
-                  const targetPath = `/alternatives/${tool.slug || tool.id}`;
+                  const targetPath = alternativesHref(tool);
                   window.history.pushState({}, '', targetPath);
                   window.dispatchEvent(new PopStateEvent('popstate'));
                 }}
@@ -875,10 +883,10 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
               Related Research & Comparisons
             </h3>
             <a
-              href={`/alternatives/${tool.slug || tool.id}`}
+              href={alternativesHref(tool)}
               onClick={(e) => {
                 e.preventDefault();
-                const targetPath = `/alternatives/${tool.slug || tool.id}`;
+                const targetPath = alternativesHref(tool);
                 window.history.pushState({}, '', targetPath);
                 window.dispatchEvent(new PopStateEvent('popstate'));
               }}

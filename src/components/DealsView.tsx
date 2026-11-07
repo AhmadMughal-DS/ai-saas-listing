@@ -2,6 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { AIDeal, AITool, ActiveTab } from '../types';
 import { INITIAL_DEALS } from '../data/initialData';
 import { trackDealClick } from '../lib/analytics';
+import { DEALS_HUB_CONTENT } from '../data/hubSeoContent';
+import { SeoContentBlock } from './SeoContentBlock';
 import { 
   Tag, 
   Copy, 
@@ -125,10 +127,10 @@ export const DealsView: React.FC<DealsViewProps> = ({
           <span>Exclusive Community Savings</span>
         </div>
         <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-4">
-          Verified AI Deals & Promo Codes
+          AI Deals: Verified AI Tool Discounts &amp; Promo Codes
         </h1>
         <p className="text-base sm:text-lg text-slate-500 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
-          Save hundreds on your AI tech stack. Verified coupons, lifetime subscriptions, and founder discount codes updated daily.
+          {DEALS_HUB_CONTENT.answer}
         </p>
 
         {/* Highlight Stats */}
@@ -315,6 +317,11 @@ export const DealsView: React.FC<DealsViewProps> = ({
             </div>
           );
         })}
+      </div>
+
+      {/* Crawlable guide + FAQ — mirrors the SSR body for /deals */}
+      <div className="mb-16">
+        <SeoContentBlock content={DEALS_HUB_CONTENT} />
       </div>
 
       {/* Partner with us / Submit a deal banner */}

@@ -90,6 +90,49 @@ export const ELIGIBLE_COMPARISONS: EligibleComparison[] = [
     category: 'Video AI',
     focusArea: 'Text-to-video generation, cinematic camera control, and physics simulation',
   },
+  // Pairs between tools that are live in the directory (added 2026-11-07 for "X vs Y" queries).
+  {
+    slug1: 'chatgpt',
+    slug2: 'claude',
+    canonicalSlug: 'chatgpt-vs-claude',
+    category: 'Productivity',
+    focusArea: 'General-purpose AI assistants: writing, reasoning, coding help and pricing tiers',
+  },
+  {
+    slug1: 'chatgpt',
+    slug2: 'deepseek',
+    canonicalSlug: 'chatgpt-vs-deepseek',
+    category: 'Productivity',
+    focusArea: 'Closed frontier assistant vs open-weight reasoning model: cost, privacy and quality',
+  },
+  {
+    slug1: 'claude',
+    slug2: 'perplexity',
+    canonicalSlug: 'claude-vs-perplexity',
+    category: 'Productivity',
+    focusArea: 'Long-form reasoning assistant vs citation-first AI answer engine for research',
+  },
+  {
+    slug1: 'claude',
+    slug2: 'cursor',
+    canonicalSlug: 'claude-vs-cursor',
+    category: 'Coding',
+    focusArea: 'Chat-based coding model vs AI-first code editor for day-to-day development',
+  },
+  {
+    slug1: 'cursor',
+    slug2: 'devin',
+    canonicalSlug: 'cursor-vs-devin',
+    category: 'Coding',
+    focusArea: 'AI coding assistant in your IDE vs autonomous AI software-engineering agent',
+  },
+  {
+    slug1: 'chatgpt',
+    slug2: 'jasper',
+    canonicalSlug: 'chatgpt-vs-jasper',
+    category: 'Copywriting',
+    focusArea: 'General AI chat for copy vs dedicated marketing-copy platform with brand voice',
+  },
 ];
 
 /**
@@ -97,6 +140,16 @@ export const ELIGIBLE_COMPARISONS: EligibleComparison[] = [
  * Each tool has verified alternative options in the same category in the production database.
  */
 export const ELIGIBLE_ALTERNATIVES: EligibleAlternative[] = [
+  {
+    toolSlug: 'suno',
+    category: 'Audio AI',
+    reason: 'Musicians and creators comparing AI song generators on vocals, licensing and price.',
+  },
+  {
+    toolSlug: 'jasper',
+    category: 'Copywriting',
+    reason: 'Marketers looking for cheaper AI copywriting tools or general-purpose assistants.',
+  },
   {
     toolSlug: 'chatgpt',
     category: 'Productivity',
@@ -238,19 +291,59 @@ export function getToolAlternatives(tool: AITool, allTools: AITool[], limit = 5)
 /**
  * Returns any eligible comparisons that involve the given tool slug.
  */
-export function getRelatedComparisonsForTool(toolSlug: string): EligibleComparison[] {
+export function getRelatedComparisonsForTool(toolSlug: string, tools: { slug?: string; id?: string }[] = []): EligibleComparison[] {
   const clean = toolSlug.trim().toLowerCase();
-  return ELIGIBLE_COMPARISONS.filter((c) => c.slug1 === clean || c.slug2 === clean);
+  return getLiveComparisons(tools).filter((c) => c.slug1 === clean || c.slug2 === clean);
 }
 
 /**
  * Returns related comparisons for a comparison page (excluding the current pair).
  */
-export function getRelatedComparisonsForPair(slug1: string, slug2: string, limit = 4): EligibleComparison[] {
+export function getRelatedComparisonsForPair(
+  slug1: string,
+  slug2: string,
+  limit = 4,
+  tools: { slug?: string; id?: string }[] = []
+): EligibleComparison[] {
   const currentCanonical = normalizeComparisonSlugs(slug1, slug2).canonicalSlug;
   // Prioritize comparisons sharing one of the tools or same category
-  const matches = ELIGIBLE_COMPARISONS.filter((c) => c.canonicalSlug !== currentCanonical);
+  const matches = getLiveComparisons(tools).filter((c) => c.canonicalSlug !== currentCanonical);
   const shared = matches.filter((c) => c.slug1 === slug1 || c.slug2 === slug1 || c.slug1 === slug2 || c.slug2 === slug2);
   const others = matches.filter((c) => !shared.includes(c));
   return [...shared, ...others].slice(0, limit);
+}
+
+/**
+ * Where an "alternatives" link for a tool should point. Only curated tools have an indexable
+ * /alternatives/{slug} page — every other slug 404s (noindex), so link those to their category hub
+ * instead of leaking hundreds of dead internal links.
+ */
+export function alternativesHref(tool: { slug?: string; id?: string; category?: string }): string {
+  const slug = (tool.slug || tool.id || '').toLowerCase();
+  if (slug && isEligibleAlternative(slug)) return `/alternatives/${slug}`;
+  const cat = (tool.category || 'tools').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  return `/categories/${cat}`;
+}
+
+type SlugLike = { slug?: string; id?: string };
+function liveSlugSet(tools: SlugLike[]): Set<string> {
+  return new Set(tools.map((t) => String(t?.slug || t?.id || '').toLowerCase()).filter(Boolean));
+}
+
+/**
+ * Curated comparisons whose BOTH tools exist in the live directory. The /compare/{pair} route
+ * 404s when a tool is missing, so only these may appear in the sitemap or internal links.
+ * An empty tool list (DB not loaded yet) returns the full curated list.
+ */
+export function getLiveComparisons(tools: SlugLike[]): EligibleComparison[] {
+  if (!tools?.length) return ELIGIBLE_COMPARISONS;
+  const live = liveSlugSet(tools);
+  return ELIGIBLE_COMPARISONS.filter((c) => live.has(c.slug1) && live.has(c.slug2));
+}
+
+/** Curated alternatives pages whose source tool exists in the live directory. */
+export function getLiveAlternatives(tools: SlugLike[]): EligibleAlternative[] {
+  if (!tools?.length) return ELIGIBLE_ALTERNATIVES;
+  const live = liveSlugSet(tools);
+  return ELIGIBLE_ALTERNATIVES.filter((a) => live.has(a.toolSlug));
 }

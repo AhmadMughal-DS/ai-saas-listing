@@ -26,8 +26,20 @@ import {
   isEligibleAlternative,
   getToolAlternatives,
   getRelatedComparisonsForPair,
+  getLiveComparisons,
+  getLiveAlternatives,
 } from './src/utils/programmaticSeo';
 import { getPublishedArticles, getArticleBySlug } from './src/data/blogData';
+import {
+  COMPARE_HUB_CONTENT,
+  DEALS_HUB_CONTENT,
+  HubSeoContent,
+  hubContentToHtml,
+  faqsToHtml,
+  faqPageJsonLd,
+  seoInlineToHtml,
+} from './src/data/hubSeoContent';
+import { buildToolFaqs } from './src/utils/toolFaq';
 
 dotenv.config();
 
@@ -2322,6 +2334,14 @@ Only return valid JSON.`;
           console.warn('Tool blog render skipped:', (blogErr as any)?.message);
         }
 
+        const toolKey = String(tool.slug || tool.id);
+        const hasAltPage = isEligibleAlternative(toolKey);
+        // FAQ is built from the RAW (unescaped) records: faqsToHtml escapes for HTML itself and the
+        // JSON-LD must carry plain text, so the pre-escaped SSR copies would double-encode.
+        const rawTools = await getToolsFromDbOrFallback();
+        const rawTool = rawTools.find((t: any) => t.id === tool.id) || tool;
+        const toolFaqs = buildToolFaqs(rawTool, rawTools);
+
         const toolBodyHtml = `
 <header>
   <nav aria-label="Breadcrumb">
@@ -2358,19 +2378,24 @@ Only return valid JSON.`;
     <section>
       <h2>Top Alternatives to ${cleanName}</h2>
       <p>Explore the best alternative AI software in ${tool.category}:</p>
-      <p><a href="/alternatives/${tool.slug || tool.id}"><strong>Explore Dedicated ${cleanName} Alternatives Guide &rarr;</strong></a></p>
+      ${hasAltPage ? `<p><a href="/alternatives/${toolKey}"><strong>Explore Dedicated ${cleanName} Alternatives Guide &rarr;</strong></a></p>` : ''}
       <ul>
         ${sameCategoryTools.map((alt: any) => {
-          const { canonicalSlug } = normalizeComparisonSlugs(tool.slug || tool.id, alt.slug || alt.id);
-          return `<li><a href="/tool/${alt.slug || alt.id}"><strong>${alt.name}</strong></a> — ${alt.tagline || alt.description?.slice(0, 70)} (${alt.pricingType}) [<a href="/compare/${canonicalSlug}">Compare ${cleanName} vs ${alt.name}</a>]</li>`;
+          // Only link comparison pages that exist — every other pair 404s with noindex.
+          const altKey = alt.slug || alt.id;
+          const cmp = isEligibleComparison(toolKey, altKey)
+            ? ` [<a href="/compare/${normalizeComparisonSlugs(toolKey, altKey).canonicalSlug}">Compare ${cleanName} vs ${alt.name}</a>]`
+            : '';
+          return `<li><a href="/tool/${altKey}"><strong>${alt.name}</strong></a> — ${alt.tagline || alt.description?.slice(0, 70)} (${alt.pricingType})${cmp}</li>`;
         }).join('\n        ')}
       </ul>
     </section>
+    ${faqsToHtml(toolFaqs, `${cleanName} FAQ`)}
     <section>
       <h2>Related AI Software Comparisons</h2>
       <p>Compare ${cleanName} with industry alternatives or check current promotional pricing:</p>
       <p>
-        <a href="/alternatives/${tool.slug || tool.id}">Top ${cleanName} Alternatives</a> |
+        ${hasAltPage ? `<a href="/alternatives/${toolKey}">Top ${cleanName} Alternatives</a> |` : ''}
         <a href="/compare">Compare ${cleanName} Side-by-Side</a> |
         <a href="/deals">Browse Curated AI Discounts &amp; Deals</a> |
         <a href="/categories/${categorySlug}">All ${tool.category} Tools</a>
@@ -2386,7 +2411,7 @@ Only return valid JSON.`;
           robots: 'index, follow, max-image-preview:large, max-snippet:-1',
           ogType: 'product',
           ogImage,
-          jsonLd: [schemaJsonLd, breadcrumbJsonLd],
+          jsonLd: [schemaJsonLd, breadcrumbJsonLd, ...(toolFaqs.length ? [faqPageJsonLd(toolFaqs, canonical)] : [])],
           bodyHtml: toolBodyHtml,
         });
 
@@ -2569,14 +2594,14 @@ Only return valid JSON.`;
         h1: 'Top AI Tools by Monthly Traffic — Verified Rankings 2026',
       },
       '/compare': {
-        title: 'Compare AI Tools Side-by-Side — Features, Pricing & Traffic | ToolverAI',
-        desc: 'Compare top AI tools head-to-head on pricing, monthly traffic, API availability, supported platforms, and user ratings. Free comparison tool at ToolverAI.',
-        h1: 'Compare AI Tools Side-by-Side',
+        title: 'AI Comparison Tool — Compare AI Tools Side-by-Side (Free) | ToolverAI',
+        desc: 'Free AI comparison tool: compare AI tools side by side on pricing, features, monthly traffic, platforms and ratings. 180+ AI tools, no sign-up.',
+        h1: 'AI Comparison Tool: Compare AI Tools Side-by-Side',
       },
       '/deals': {
-        title: 'Best AI Tool Deals & Promo Codes — Verified Discounts 2026 | ToolverAI',
-        desc: 'Save on leading AI software with exclusive verified coupon codes, lifetime deals, and extended free trials. All deals manually verified and updated daily.',
-        h1: 'Best AI Tool Deals & Promo Codes — Verified Discounts 2026',
+        title: 'AI Deals 2026 — Verified AI Tool Discounts & Promo Codes | ToolverAI',
+        desc: 'The best AI deals in one place: verified AI tool discounts, promo codes and extended free trials for ChatGPT, Claude, Cursor, ElevenLabs and more.',
+        h1: 'AI Deals: Verified AI Tool Discounts & Promo Codes',
       },
       '/prompts': {
         title: 'AI Prompt Engineering Library — Templates for ChatGPT, Claude & More | ToolverAI',
@@ -2614,6 +2639,10 @@ Only return valid JSON.`;
           };
 
           let extraContent = '';
+          const hubContent: HubSeoContent | null =
+            routePath === '/compare' ? COMPARE_HUB_CONTENT : routePath === '/deals' ? DEALS_HUB_CONTENT : null;
+          const hubJsonLd: Record<string, any>[] = [breadcrumbJsonLd];
+          if (hubContent) hubJsonLd.push(faqPageJsonLd(hubContent.faqs, canonical));
           if (routePath === '/categories') {
             extraContent = `
     <section>
@@ -2640,12 +2669,22 @@ Only return valid JSON.`;
       </ul>
     </section>`;
           } else if (routePath === '/compare') {
+            hubJsonLd.push({
+              '@context': 'https://schema.org',
+              '@type': 'ItemList',
+              name: 'Popular AI tool comparisons',
+              itemListElement: getLiveComparisons(tools).map((c, i) => ({
+                '@type': 'ListItem',
+                position: i + 1,
+                url: `${baseUrl}/compare/${c.canonicalSlug}`,
+              })),
+            });
             extraContent = `
     <section>
       <h2>Featured AI Comparisons</h2>
       <p>Compare top artificial intelligence software side-by-side with estimated traffic rankings, platform compatibility, and features:</p>
       <ul>
-        ${ELIGIBLE_COMPARISONS.map((c) => {
+        ${getLiveComparisons(tools).map((c) => {
           const t1 = tools.find((t: any) => t.slug === c.slug1);
           const t2 = tools.find((t: any) => t.slug === c.slug2);
           const n1 = t1?.name || c.slug1;
@@ -2658,7 +2697,7 @@ Only return valid JSON.`;
       <h2>Curated Tool Alternatives</h2>
       <p>Explore dedicated alternatives guides for high-volume tools:</p>
       <ul>
-        ${ELIGIBLE_ALTERNATIVES.map((a) => {
+        ${getLiveAlternatives(tools).map((a) => {
           const t = tools.find((tl: any) => tl.slug === a.toolSlug);
           const name = t?.name || a.toolSlug;
           return `<li><a href="/alternatives/${a.toolSlug}"><strong>Best ${name} Alternatives</strong></a> (${a.category}) — ${a.reason}</li>`;
@@ -2700,8 +2739,9 @@ Only return valid JSON.`;
 </header>
 <main>
   <h1>${seo.h1}</h1>
-  <p>${seo.desc}</p>
+  <p>${hubContent ? seoInlineToHtml(hubContent.answer) : seo.desc}</p>
   ${extraContent}
+  ${hubContent ? hubContentToHtml(hubContent) : ''}
   <nav aria-label="Quick Navigation">
     <p><a href="/">Home</a> | <a href="/categories">All Categories</a> | <a href="/rankings">Rankings</a> | <a href="/deals">Deals</a></p>
   </nav>
@@ -2713,7 +2753,7 @@ Only return valid JSON.`;
             canonical,
             ogType: seo.type || 'website',
             ogImage: `${baseUrl}/og-banner.png`,
-            jsonLd: [breadcrumbJsonLd],
+            jsonLd: hubJsonLd,
             bodyHtml: hubBodyHtml,
           });
 
@@ -2762,7 +2802,7 @@ Only return valid JSON.`;
   <section>
     <h2>Curated Alternatives Guides</h2>
     <ul>
-      ${ELIGIBLE_ALTERNATIVES.map((a) => {
+      ${getLiveAlternatives(tools).map((a) => {
         const t = tools.find((tl: any) => tl.slug === a.toolSlug);
         const name = t?.name || a.toolSlug;
         return `<li><a href="/alternatives/${a.toolSlug}"><strong>Best ${name} Alternatives</strong></a> (${a.category}) — ${a.reason}</li>`;
@@ -2859,7 +2899,7 @@ Only return valid JSON.`;
           ],
         };
 
-        const relatedComps = getRelatedComparisonsForPair(slug1, slug2, 4);
+        const relatedComps = getRelatedComparisonsForPair(slug1, slug2, 4, tools);
 
         const compareBodyHtml = `
 <header>
@@ -3270,6 +3310,10 @@ Only return valid JSON.`;
           },
         };
 
+        // Only link comparison pages that resolve (both tools live).
+        const liveCompSlugs = new Set(getLiveComparisons(tools).map((c) => c.canonicalSlug));
+        const liveBlogComparisons = (article.relatedComparisonSlugs || []).filter((c) => liveCompSlugs.has(c));
+
         // Render referenced tools
         const relatedTools = (article.relatedToolSlugs || [])
           .map((tSlug) => tools.find((t: any) => t.slug === tSlug || t.id === tSlug))
@@ -3295,8 +3339,9 @@ Only return valid JSON.`;
 
     <div class="article-content">
       <p><strong>${article.excerpt}</strong></p>
-      <div>${article.content.replace(/#+\s+(.*?)\n/g, '<h2>$1</h2>\n').replace(/\n\n/g, '</p><p>')}</div>
+      ${marked.parse(article.content)}
     </div>
+    ${article.faqs?.length ? faqsToHtml(article.faqs) : ''}
 
     ${relatedTools.length > 0 ? `
     <section>
@@ -3306,11 +3351,11 @@ Only return valid JSON.`;
       </ul>
     </section>` : ''}
 
-    ${(article.relatedComparisonSlugs || []).length > 0 ? `
+    ${liveBlogComparisons.length > 0 ? `
     <section>
       <h2>Related Head-to-Head Comparisons</h2>
       <ul>
-        ${article.relatedComparisonSlugs!.map((cSlug) => `<li><a href="/compare/${cSlug}">Compare ${cSlug.replace('-vs-', ' vs ')}</a></li>`).join('\n        ')}
+        ${liveBlogComparisons.map((cSlug) => `<li><a href="/compare/${cSlug}">Compare ${cSlug.replace('-vs-', ' vs ')}</a></li>`).join('\n        ')}
       </ul>
     </section>` : ''}
 
@@ -3348,7 +3393,11 @@ Only return valid JSON.`;
           robots: 'index, follow, max-image-preview:large, max-snippet:-1',
           ogType: 'article',
           ogImage: heroImage,
-          jsonLd: [breadcrumbJsonLd, blogPostingJsonLd],
+          jsonLd: [
+            breadcrumbJsonLd,
+            blogPostingJsonLd,
+            ...(article.faqs?.length ? [faqPageJsonLd(article.faqs, canonical)] : []),
+          ],
           bodyHtml: articleBodyHtml,
         });
 

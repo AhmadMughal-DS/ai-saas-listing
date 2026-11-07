@@ -1,5 +1,5 @@
 import { getPublishedArticles } from '../data/blogData';
-import { ELIGIBLE_COMPARISONS, ELIGIBLE_ALTERNATIVES } from '../utils/programmaticSeo';
+import { getLiveComparisons, getLiveAlternatives } from '../utils/programmaticSeo';
 
 export interface SitemapUrlEntry {
   loc: string;
@@ -233,7 +233,8 @@ export function generateSitemapEntries(baseUrl: string, tools: any[] = []): Site
 
   // 5. Eligible Curated Side-by-Side Comparison Pages (/compare/{tool-a}-vs-{tool-b})
   // Strictly includes only canonical alphabetical pairs (never reversed duplicates)
-  ELIGIBLE_COMPARISONS.forEach((comp) => {
+  // Only pairs whose tools both exist — a missing tool makes the page 404.
+  getLiveComparisons(tools).forEach((comp) => {
     entries.push({
       loc: `${cleanBaseUrl}/compare/${encodeURIComponent(comp.canonicalSlug)}`,
       lastmod: today,
@@ -243,7 +244,7 @@ export function generateSitemapEntries(baseUrl: string, tools: any[] = []): Site
   });
 
   // 6. Eligible Curated Tool Alternatives Pages (/alternatives/{slug})
-  ELIGIBLE_ALTERNATIVES.forEach((alt) => {
+  getLiveAlternatives(tools).forEach((alt) => {
     entries.push({
       loc: `${cleanBaseUrl}/alternatives/${encodeURIComponent(alt.toolSlug)}`,
       lastmod: today,

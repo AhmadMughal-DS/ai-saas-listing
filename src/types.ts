@@ -141,6 +141,8 @@ export interface BlogPost {
   relatedComparisonSlugs?: string[];
   relatedAlternativeSlugs?: string[];
   relatedArticleSlugs?: string[];
+  /** Visible FAQ + FAQPage JSON-LD (answer-engine friendly). Plain text; **bold** and [text](/path) allowed. */
+  faqs?: { q: string; a: string }[];
   // Tool reviews built from a tool's stored blog (served by /api/guides)
   isToolGuide?: boolean;
   toolSlug?: string;
