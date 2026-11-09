@@ -2031,6 +2031,10 @@ Only return valid JSON.`;
       'julius-ai': 'julius',
       'devin-ai': 'devin',
       apple: 'vidcap', // lead file mislabelled VidCap (vidcap.app) as "Apple"; renamed 2026-11-06
+      // GSC "Not found (404)" 2026-11-09 — renamed tools whose old slug Google still crawls.
+      // Both targets confirmed live in the DB; the alias field never captured these renames.
+      'suno-ai': 'suno',
+      'vidgenix-studio': 'vidgenix',
     };
 
     // Slugify a stored alias the same way the Python pipeline slugs a tool name,
