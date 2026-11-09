@@ -35,6 +35,22 @@ export const ELIGIBLE_COMPARISONS: EligibleComparison[] = [
     focusArea: 'Hybrid reasoning models, open-weights economics, and coding benchmarks',
   },
   {
+    // Re-curated 2026-11-09: Google already crawls this high-intent pair (was a GSC 404).
+    slug1: 'claude',
+    slug2: 'cursor',
+    canonicalSlug: 'claude-vs-cursor',
+    category: 'Coding',
+    focusArea: 'Agentic coding assistants, in-editor context, and reasoning quality for software work',
+  },
+  {
+    // Re-curated 2026-11-09: high-intent coding comparison Google already crawls.
+    slug1: 'cursor',
+    slug2: 'deepseek',
+    canonicalSlug: 'cursor-vs-deepseek',
+    category: 'Coding',
+    focusArea: 'AI-first code editor vs open-weight reasoning model, cost, and coding benchmarks',
+  },
+  {
     slug1: 'cursor',
     slug2: 'windsurf',
     canonicalSlug: 'cursor-vs-windsurf',
