@@ -2626,6 +2626,25 @@ Only return valid JSON.`;
           publisher: { '@type': 'Organization', name: 'ToolverAI', url: baseUrl },
         };
 
+        // ── AEO: answer-first Q&A for "best <category> AI tools" ───────────
+        const catRanked = [...categoryTools].sort(
+          (a: any, b: any) => (Number(b.monthlyVisits) || 0) - (Number(a.monthlyVisits) || 0),
+        );
+        const catTop = catRanked.slice(0, 5).map((t: any) => t.name);
+        const catFree = catRanked
+          .filter((t: any) => /free|freemium/i.test(String(t.pricingType || '')))
+          .slice(0, 4)
+          .map((t: any) => t.name);
+        const catTopVisits = catRanked[0]?.monthlyVisitsFormatted;
+        const categoryTldrHtml = catRanked.length ? `
+    <section class="tldr" id="summary">
+      <h2>${categoryName} AI Tools — Quick Answers</h2>
+      <p><strong>What are the best ${categoryName} AI tools in 2026?</strong> ${catTop.join(', ')}${catTop.length ? '.' : ''} ToolverAI ranks them by estimated monthly traffic, pricing, and user ratings.</p>
+      <p><strong>How many ${categoryName} AI tools are listed?</strong> ${categoryTools.length} ${categoryName} tools are tracked and compared on ToolverAI.</p>
+      ${catRanked[0] ? `<p><strong>Which ${categoryName} AI tool is most popular?</strong> ${catRanked[0].name}${catTopVisits && catTopVisits !== 'N/A' ? `, with an estimated ${catTopVisits} monthly visits` : ''}.</p>` : ''}
+      ${catFree.length ? `<p><strong>Are there free ${categoryName} AI tools?</strong> Yes — ${catFree.join(', ')} offer free or freemium plans.</p>` : ''}
+    </section>` : '';
+
         const categoryBodyHtml = `
 <header>
   <nav aria-label="Breadcrumb">
@@ -2641,6 +2660,7 @@ Only return valid JSON.`;
     <h1>Best ${categoryName} Tools in 2026</h1>
     <p>Discover top ${categoryTools.length} ${categoryName} tools in 2026. Compare software features, pricing tiers, and estimated monthly traffic analytics to find the ideal AI solution for your workflow.</p>
   </section>
+  ${categoryTldrHtml}
   <section>
     <h2>Top Ranked ${categoryName} Tools</h2>
     <ul>
@@ -3064,6 +3084,35 @@ Only return valid JSON.`;
 
         const relatedComps = getRelatedComparisonsForPair(slug1, slug2, 4, tools);
 
+        // ── AEO: answer-first "X vs Y" verdict block ───────────────────────
+        // Neutral, fact-based answers to the exact questions AI engines field
+        // for a comparison query. All fields are HTML-sanitized (getSsrTools).
+        const cv1 = Number(tool1.monthlyVisits) || 0;
+        const cv2 = Number(tool2.monthlyVisits) || 0;
+        const popAns = (cv1 && cv2 && cv1 !== cv2)
+          ? `${cv1 > cv2 ? name1 : name2} gets more traffic — about ${(cv1 > cv2 ? tool1 : tool2).monthlyVisitsFormatted} vs ${(cv1 > cv2 ? tool2 : tool1).monthlyVisitsFormatted} monthly visits.`
+          : `Both ${name1} and ${name2} are widely used; see the traffic row below.`;
+        const cr1 = Number(tool1.rating) || 4.5;
+        const cr2 = Number(tool2.rating) || 4.5;
+        const ratingAns = cr1 === cr2
+          ? `Both hold a ${cr1}/5 user rating.`
+          : `${cr1 > cr2 ? name1 : name2} has the higher user rating (${Math.max(cr1, cr2)}/5 vs ${Math.min(cr1, cr2)}/5).`;
+        const cp1 = String(tool1.pricingType || 'Freemium');
+        const cp2 = String(tool2.pricingType || 'Freemium');
+        const priceAns = cp1.toLowerCase() === cp2.toLowerCase()
+          ? `Both use a ${cp1.toLowerCase()} pricing model.`
+          : `${name1} is ${cp1.toLowerCase()}, while ${name2} is ${cp2.toLowerCase()}.`;
+        const d1 = String(tool1.tagline || tool1.description || '').split(/(?<=[.!?])\s/)[0].slice(0, 130);
+        const d2 = String(tool2.tagline || tool2.description || '').split(/(?<=[.!?])\s/)[0].slice(0, 130);
+        const compareTldrHtml = `
+    <section class="tldr" id="summary">
+      <h2>${name1} vs ${name2} — Quick Answers</h2>
+      <p><strong>What's the difference between ${name1} and ${name2}?</strong> Both are ${category} AI tools.${d1 ? ` ${name1}: ${d1}` : ''}${d2 ? ` ${name2}: ${d2}` : ''}</p>
+      <p><strong>Which is more popular, ${name1} or ${name2}?</strong> ${popAns}</p>
+      <p><strong>How do they compare on price?</strong> ${priceAns}</p>
+      <p><strong>Which has the better rating?</strong> ${ratingAns} The best choice depends on your specific use case — compare the full specs below.</p>
+    </section>`;
+
         const compareBodyHtml = `
 <header>
   <nav aria-label="Breadcrumb">
@@ -3078,6 +3127,7 @@ Only return valid JSON.`;
   <article>
     <h1>${name1} vs ${name2} (2026): Features, Pricing &amp; Comparison</h1>
     <p>Comprehensive side-by-side evaluation of ${name1} and ${name2} across pricing, estimated web traffic volume, supported platforms, core features, and architectural strengths.</p>
+    ${compareTldrHtml}
 
     <section>
       <h2>Quick Specification Comparison</h2>
