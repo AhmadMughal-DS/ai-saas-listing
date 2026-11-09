@@ -1996,6 +1996,30 @@ Only return valid JSON.`;
       apple: 'vidcap', // lead file mislabelled VidCap (vidcap.app) as "Apple"; renamed 2026-11-06
     };
 
+    // Slugify a stored alias the same way the Python pipeline slugs a tool name,
+    // so an old lead-file name ("Apple") maps to the old URL slug ("apple").
+    const slugifyAlias = (s: string) =>
+      String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+    // Build {oldSlug -> currentSlug} from each tool's DB `aliases`. When the daily
+    // pipeline renames a tool it records the old name in `aliases`; without this,
+    // the old /tool/<oldSlug> URL 404s (a recurring Search Console "Not found"
+    // source) until someone hand-edits LEGACY_SLUG_REDIRECTS. This self-heals every
+    // rename, present and future. Only consulted when no live tool matches the slug,
+    // so a real tool slug always wins over an alias.
+    function buildAliasRedirectMap(tools: any[]): Record<string, string> {
+      const map: Record<string, string> = {};
+      for (const t of tools) {
+        const canonical = String(t?.slug || t?.id || '').toLowerCase();
+        if (!canonical) continue;
+        for (const a of Array.isArray(t?.aliases) ? t.aliases : []) {
+          const key = slugifyAlias(a);
+          if (key && key !== canonical && !map[key]) map[key] = canonical;
+        }
+      }
+      return map;
+    }
+
     interface SsrMetaOptions {
       title: string;
       description: string;
@@ -2261,6 +2285,12 @@ Only return valid JSON.`;
       }
     });
 
+    // Legacy plural scheme safety net: 301 /tools/:slug -> /tool/:slug (and the
+    // bare /tools listing -> homepage) so any old inbound/indexed plural URLs
+    // consolidate onto the canonical singular page instead of 404ing.
+    app.get('/tools/:slug', (req, res) => res.redirect(301, `/tool/${String(req.params.slug).toLowerCase()}`));
+    app.get('/tools', (_req, res) => res.redirect(301, '/'));
+
     // ── SSR: Tool Detail Pages (/tool/:slug) ────────────────────────────
     app.get('/tool/:slug', async (req, res) => {
       try {
@@ -2289,6 +2319,11 @@ Only return valid JSON.`;
         const baseUrl = resolveBaseUrl(req);
 
         if (!tool) {
+          // Before 404ing, honor a renamed tool's old slug (DB `aliases`) with a 301.
+          const aliasTarget = buildAliasRedirectMap(tools)[normalizedSlug];
+          if (aliasTarget && aliasTarget !== normalizedSlug) {
+            return res.redirect(301, `/tool/${aliasTarget}`);
+          }
           // Tool not found — serve 404 with noindex and self-referencing canonical
           const notFoundHtml = renderSsrPage(htmlTemplate, {
             title: 'Tool Not Found — ToolverAI',
@@ -3102,6 +3137,11 @@ Only return valid JSON.`;
         const sourceTool = tools.find((t: any) => t.slug?.toLowerCase() === normalizedSlug || t.id?.toLowerCase() === normalizedSlug);
 
         if (!isEligible || !sourceTool) {
+          // Honor a renamed tool's old slug (DB `aliases`) when the new one has a curated page.
+          const aliasTarget = buildAliasRedirectMap(tools)[normalizedSlug];
+          if (aliasTarget && aliasTarget !== normalizedSlug && isEligibleAlternative(aliasTarget)) {
+            return res.redirect(301, `/alternatives/${aliasTarget}`);
+          }
           // Ineligible or missing tool -> 404 with noindex and self-canonical
           const notFoundHtml = renderSsrPage(htmlTemplate, {
             title: 'Alternatives Not Found — ToolverAI',
