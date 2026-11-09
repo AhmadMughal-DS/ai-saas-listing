@@ -11,6 +11,7 @@ import dotenv from 'dotenv';
 import { marked } from 'marked';
 import { INITIAL_TOOLS } from './src/data/initialData';
 import { buildSitemapXml, generateSitemapEntries } from './src/server/sitemap';
+import { buildLlmsTxt } from './src/server/llms';
 import {
   submitToIndexNow,
   triggerToolContentChange,
@@ -623,15 +624,48 @@ async function startServer() {
     }
   });
 
+  // ── GEO: Dynamic llms.txt ──────────────────────────────────────────────
+  // Curated Markdown map of the site for answer engines / LLM crawlers
+  // (ChatGPT, Perplexity, Claude, Google AI Overviews). See llmstxt.org.
+  // Built from the same live DB as the sitemap, so it never goes stale.
+  app.get('/llms.txt', async (req, res) => {
+    try {
+      const baseUrl = resolveBaseUrl(req);
+      const tools = await getToolsFromDbOrFallback();
+      const txt = buildLlmsTxt(baseUrl, tools);
+      res.header('Content-Type', 'text/plain; charset=utf-8');
+      res.header('Cache-Control', 'public, max-age=3600, s-maxage=14400');
+      return res.status(200).send(txt);
+    } catch (error: any) {
+      console.error('Error generating llms.txt:', error);
+      res.status(500).header('Content-Type', 'text/plain; charset=utf-8').send('Error generating llms.txt');
+    }
+  });
+
   // ── SEO: Dynamic robots.txt ────────────────────────────────────────────
   app.get('/robots.txt', (req, res) => {
     const baseUrl = resolveBaseUrl(req);
     res.type('text/plain');
     res.header('Cache-Control', 'public, max-age=86400');
+    // AI answer-engine & LLM crawlers — explicitly welcomed (GEO). Being named
+    // and allowed (rather than relying on `*`) removes any ambiguity that could
+    // keep ToolverAI out of AI Overviews, ChatGPT, Perplexity, Gemini answers.
+    const aiCrawlers = [
+      'GPTBot', 'OAI-SearchBot', 'ChatGPT-User',           // OpenAI
+      'ClaudeBot', 'Claude-SearchBot', 'Claude-User', 'anthropic-ai', // Anthropic
+      'PerplexityBot', 'Perplexity-User',                  // Perplexity
+      'Google-Extended',                                    // Google Gemini / AI Overviews training
+      'Applebot-Extended',                                  // Apple Intelligence
+      'Amazonbot', 'Bytespider', 'CCBot', 'cohere-ai', 'Meta-ExternalAgent', 'Meta-ExternalFetcher',
+      'DuckAssistBot', 'MistralAI-User', 'YouBot',
+    ];
+    const aiBlock = aiCrawlers.map((ua) => `User-agent: ${ua}\nAllow: /\n`).join('\n');
     res.send([
       '# ToolverAI — robots.txt',
       '# https://toolverai.com',
-      '# Updated: 2026-10-01',
+      '# Updated: 2026-11-09',
+      '',
+      aiBlock.trimEnd(),
       '',
       'User-agent: *',
       'Allow: /',
@@ -672,6 +706,9 @@ async function startServer() {
       '',
       `# Dynamic XML Sitemap — auto-generated from live MongoDB database`,
       `Sitemap: ${baseUrl}/sitemap.xml`,
+      '',
+      `# LLM / answer-engine content map (llmstxt.org)`,
+      `# ${baseUrl}/llms.txt`,
     ].join('\n'));
   });
 
@@ -2352,6 +2389,15 @@ Only return valid JSON.`;
           operatingSystem: (tool.platforms || ['Web']).join(', '),
           url: tool.url || canonical,
           image: ogImage,
+          inLanguage: 'en',
+          // AEO: directly answers "is <tool> free?" for AI Overviews / assistants.
+          isAccessibleForFree: /free|freemium/i.test(String(tool.pricingType || 'Freemium')),
+          ...(Array.isArray(tool.keyFeatures) && tool.keyFeatures.length
+            ? { featureList: tool.keyFeatures.slice(0, 12) }
+            : {}),
+          ...(tool.updatedAt || tool.createdAt
+            ? { dateModified: new Date(tool.updatedAt || tool.createdAt).toISOString().split('T')[0] }
+            : {}),
           ...(tool.pricingPlans?.[0]?.price ? {
             offers: {
               '@type': 'Offer',
@@ -2421,6 +2467,32 @@ Only return valid JSON.`;
         const rawTool = rawTools.find((t: any) => t.id === tool.id) || tool;
         const toolFaqs = buildToolFaqs(rawTool, rawTools);
 
+        // ── AEO: answer-first "at a glance" block ──────────────────────────
+        // A concise, extractable Q&A summary directly under the H1. This is the
+        // block AI Overviews / ChatGPT / Perplexity quote when answering
+        // "what is <tool>", "is <tool> free", "is <tool> good". All fields are
+        // already HTML-sanitized (getSsrTools → sanitizeForHtml).
+        const tldrPrice = String(tool.pricingPlans?.[0]?.price || '').replace(/[^0-9.]/g, '');
+        const tldrType = String(tool.pricingType || 'Freemium');
+        const costAnswer = (/free/i.test(tldrType) && !/freemium/i.test(tldrType))
+          ? `${cleanName} is free to use.`
+          : (tldrPrice && Number(tldrPrice) > 0
+              ? `${cleanName} uses a ${tldrType.toLowerCase()} model, with paid plans starting at $${tldrPrice}/month.`
+              : `${cleanName} uses a ${tldrType.toLowerCase()} pricing model.`);
+        const tldrDef = String(tool.tagline || tool.description || '').split(/(?<=[.!?])\s/)[0].slice(0, 180);
+        const tldrFeature = (Array.isArray(tool.keyFeatures) && tool.keyFeatures[0]) ? String(tool.keyFeatures[0]) : '';
+        const tldrVisits = (tool.monthlyVisitsFormatted && tool.monthlyVisitsFormatted !== 'N/A')
+          ? ` and draws an estimated ${tool.monthlyVisitsFormatted} monthly visits` : '';
+        const popAnswer = `It holds a ${tool.rating || 4.5}/5 community rating${tool.reviewCount ? ` from ${tool.reviewCount} reviews` : ''}${tldrVisits}.`;
+        const tldrHtml = `
+    <section class="tldr" id="summary">
+      <h2>${cleanName} at a Glance</h2>
+      <p><strong>What is ${cleanName}?</strong> ${cleanName} is an AI tool in the ${tool.category || 'AI'} category.${tldrDef ? ` ${tldrDef}` : ''}</p>
+      <p><strong>How much does ${cleanName} cost?</strong> ${costAnswer}</p>
+      ${tldrFeature ? `<p><strong>What is ${cleanName} best for?</strong> ${tldrFeature}.</p>` : ''}
+      <p><strong>Is ${cleanName} any good?</strong> ${popAnswer}</p>
+    </section>`;
+
         const toolBodyHtml = `
 <header>
   <nav aria-label="Breadcrumb">
@@ -2436,6 +2508,7 @@ Only return valid JSON.`;
   <article>
     <h1>${cleanName} Review 2026: Features, Pricing &amp; Alternatives</h1>
     <p>${tool.tagline || tool.description || ''}</p>
+    ${tldrHtml}
     <section>
       <h2>Overview &amp; Key Specifications</h2>
       <ul>
