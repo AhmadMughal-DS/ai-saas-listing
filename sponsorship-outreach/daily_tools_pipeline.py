@@ -61,6 +61,14 @@ BLOG_MODEL = "deepseek-v4-pro"
 DEEPSEEK_KEY = dotenv_values(ROOT / ".env").get("DEEPSEEK_API_KEY") or dotenv_values(BASE / ".env").get("DEEPSEEK_API_KEY")
 MONGO = dotenv_values(ROOT / ".env")
 
+# ── blog generation toggle ─────────────────────────────────────────────────────
+# PAUSED 2026-11-09 by request. While off, the daily run still imports/updates
+# tools (research, logo, Sheet row, DB insert) but writes NO Medium SEO blog, so
+# new tool pages go live without a long-form guide. The tool's blog field is left
+# empty and nothing is published to Medium.
+# TO RESUME: set BLOGS_ENABLED=1 in .env, or change the default "0" below to "1".
+BLOGS_ENABLED = str(MONGO.get("BLOGS_ENABLED") or "0").strip().lower() in ("1", "true", "yes", "on")
+
 # IndexNow (Bing, Yandex, Seznam, Naver). The key is public by design: search
 # engines verify it at https://toolverai.com/<key>.txt (served from public/).
 SITE_URL = "https://toolverai.com"
@@ -214,7 +222,12 @@ def _finalize_blog(text: str, name: str, toolver_page: str, cat_link: str) -> st
 
 def write_blog(name: str, url: str, category: str, research_blob: dict, toolver_page: str = "") -> tuple[str, float]:
     """Generate the blog, retrying when the result is too short (the model sometimes
-    returns only a stub). Returns the longest attempt and the total cost."""
+    returns only a stub). Returns the longest attempt and the total cost.
+
+    Paused via BLOGS_ENABLED: returns an empty blog (0 cost) so the pipeline keeps
+    importing tools but saves no guide until blogs are resumed."""
+    if not BLOGS_ENABLED:
+        return "", 0.0
     best, total = "", 0.0
     for attempt in range(1, BLOG_ATTEMPTS + 1):
         text, cost = _write_blog_once(name, url, category, research_blob, toolver_page)
