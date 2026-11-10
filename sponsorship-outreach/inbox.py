@@ -37,9 +37,21 @@ OPT_OUT = re.compile(
     r"\b(unsubscribe|remove (me|us)|opt[- ]?out|stop (emailing|contacting|sending)|do not (contact|email)|"
     r"don'?t (contact|email)|not interested|no,? thanks|no thank you|take (me|us) off|please stop)\b", re.I)
 POSITIVE = re.compile(
-    r"\b(interested|pricing|prices?|rates?|costs?|how much|packages?|media ?kit|rate ?card|stats|traffic|"
+    r"\b(interested|pricing|how much|media ?kit|rate ?card|"
     r"tell me more|more (info|details|information)|sounds (good|great|interesting)|let'?s (talk|chat|connect)|"
-    r"(book|schedule|hop on) a call|send (it|them|over|me)|happy to|would love|keen|yes)\b", re.I)
+    r"(book|schedule|hop on) a call|send (it|them) over|would love to)\b", re.I)
+# Helpdesk / AI-agent acknowledgements. These are NOT a person saying yes: answering them with pricing
+# makes the desk acknowledge again, and the two systems mail each other forever (Captions, 2026-11-09:
+# 17 pricing emails in one day). Checked on the body, because such desks send no auto-reply headers.
+ACK_BODY = re.compile(
+    r"(reply above this line|how would you rate|"
+    r"(shared|forwarded|passed|sent) (your|this) (message|email|note|request|inquiry|enquiry|partnership|proposal|"
+    r"information|details)[^.\n]{0,80}(to|with|over to|along to) (our|the) |"
+    r"(they|we|someone|our team|the team)('ll| will)? (be in touch|get back to you|reply to you|respond)|"
+    r"(we|we've|we have) received your (message|email|request|inquiry|enquiry)|"
+    r"confirm that we have received|thank(s| you) for (reaching out|contacting|getting in touch) (to|with) [\w .]{0,40}"
+    r"support|won'?t continue this request by email|contact support|support (widget|team|request|ticket)|"
+    r"if (they|we)('re| are) interested)", re.I)
 QUOTE_CUT = re.compile(
     r"(^On .{0,200}wrote:\s*$|^-{2,}\s*Original Message\s*-{2,}|^_{5,}|^From:\s.+$|^Sent from my |"
     r"^Le .{0,200}a écrit\s*:|^Am .{0,200}schrieb)", re.I | re.M)
@@ -212,9 +224,26 @@ class InboxMonitor:
             return "auto"
 
         reply_text = strip_quoted(raw_text)
+
+        # 2b. Helpdesk / AI-agent acknowledgement → log only, never answer (prevents mail loops).
+        if ACK_BODY.search(reply_text):
+            self.store.log_event(key, "auto_reply", f"helpdesk ack from {from_addr}: {subject[:80]}")
+            if verbose:
+                print(f"  🤖 Helpdesk ack → {key} ({from_addr}) — logged, not answered")
+            return "auto"
+
         reply_entry = {"at": st.now_iso(), "from": from_addr, "subject": subject,
                        "message_id": msg.get("Message-ID", ""), "snippet": reply_text[:500]}
         rec.setdefault("replies", []).append(reply_entry)
+
+        # 2c. Loop guard: once we have answered this tool (or it is already a lead), every further
+        # message is for a human to read. The automation sends at most ONE reply per tool, ever.
+        if rec.get("replies_sent") or rec.get("status") in (st.HOT_LEAD, st.REPLIED):
+            self.store.log_event(key, "needs_human", f"further reply from {from_addr} — not auto-answered")
+            self.notify(key, f"another reply from {from_addr} — read it and answer by hand")
+            if verbose:
+                print(f"  💬 Further reply → {key} ({from_addr}) — already answered once, left for manual reply")
+            return "replied"
 
         # 3. Opt-out (checked before positive: "not interested" contains "interested")
         if OPT_OUT.search(reply_text):

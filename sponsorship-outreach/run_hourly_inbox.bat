@@ -4,4 +4,4 @@ set PYTHONIOENCODING=utf-8
 call "d:\company page\ai-saas-listing\sponsorship-outreach\ensure_env.bat"
 cd /d "d:\company page\ai-saas-listing"
 
-"C:\Users\HP\AppData\Local\Python\bin\python.exe" "sponsorship-outreach\hourly_inbox_runner.py"
+"C:\Users\HP\AppData\Local\Python\bin\python.exe" "sponsorship-outreach\hourly_inbox_runner.py" >> "sponsorship-outreach\hourly_inbox.log" 2>&1

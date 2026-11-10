@@ -83,10 +83,10 @@ SPONSOR_TIERS: list[SponsorTier] = [
 # tool through the vendor's own affiliate/referral link — ToolverAI earns the
 # standard affiliate commission only on conversions we actually drive.
 AFFILIATE_OFFER = SponsorTier(
-    "Zero-Cost Affiliate Feature", "Free — commission only",
-    "No upfront fee: share your affiliate/referral link and we'll feature your tool to our "
-    "buying-intent audience. You pay only your standard affiliate commission, and only when a "
-    "visitor we send actually converts.",
+    "Affiliate Feature", "Free — commission only",
+    "No fee: send us your affiliate or partner link and we use it on your listing and comparison "
+    "pages. You pay only your normal affiliate commission, and only when a visitor we send becomes "
+    "a customer.",
 )
 
 

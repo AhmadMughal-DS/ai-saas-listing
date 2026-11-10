@@ -1,9 +1,15 @@
 """Email copy. Plain-text only, 1–2 links, no images/attachments in cold emails —
-this is what keeps Email #1 in the primary inbox."""
+this is what keeps Email #1 in the primary inbox.
+
+Rewritten 2026-11-10. The earlier copy sold paid packages on "buying-intent traffic"
+to companies who then found a 404 listing and a site with no traffic: ~230 emails,
+one human reply. The first email now asks for two small things the site actually
+needs — a listing correction and an affiliate/partner link — and makes no claim we
+cannot back up. Paid placements are only mentioned when someone asks."""
 from __future__ import annotations
 
 from config import AFFILIATE_OFFER, SPONSOR_TIERS, Settings
-from sheet import ToolRow, first_sentence
+from sheet import ToolRow
 
 
 def _footer(s: Settings) -> str:
@@ -34,35 +40,21 @@ def _features(tool: ToolRow) -> str:
 
 
 def initial_email(tool: ToolRow, s: Settings, video_url: str = "") -> tuple[str, str]:
-    subject = f"We featured {tool.name} on ToolverAI (+ a short Problem/Solution video)"
+    subject = f"{tool.name} is listed on ToolverAI — is the info right?"
     category = f" in our {tool.category} category" if tool.category else ""
-
-    problem = first_sentence(tool.problem)
-    solution = first_sentence(tool.solution)
-    if problem and solution:
-        preview = f"  The Problem: {problem}\n  The Solution: {solution}\n\n"
-    else:
-        preview = ""
-
-    if video_url:
-        video_line = f"The first cut is already live: {video_url}\n\n"
-    else:
-        video_line = ""
+    video_line = f"We also made a short video about {tool.name}: {video_url}\n\n" if video_url else ""
 
     body = (
         f"Hi {tool.name} team,\n\n"
-        f"Quick heads-up: {tool.name} is now featured on ToolverAI{category}. Here's your live listing:\n"
+        f"I run ToolverAI, a directory where people compare AI tools. We've added {tool.name}{category}:\n"
         f"{tool.live_page}\n\n"
         f"{_features(tool)}"
-        f"We've also scripted a 30-second Problem → Solution video about {tool.name}, which we're rolling out "
-        f"across our @toolverai channels (YouTube, TikTok, Instagram, LinkedIn and Facebook):\n\n"
-        f"{preview}"
+        f"Two quick questions:\n\n"
+        f"1. Is anything on the listing wrong or out of date? Reply with the correction and I'll fix it.\n"
+        f"2. Do you have an affiliate or partner program? If so, send me the link and I'll use it on your "
+        f"listing, so every visitor we send is tracked to us on your side.\n\n"
         f"{video_line}"
-        f"ToolverAI is where people come to compare and pick AI tools, so our visitors arrive with real buying intent. "
-        f"Would you like to pin {tool.name} to our Homepage Featured Spot and get full ad-usage rights to the video? "
-        f"We have paid partner packages, plus a zero-cost option where we simply feature you through your own "
-        f"affiliate link — so there's a fit whatever your budget. "
-        f"Reply \"INTERESTED\" and I'll send over both options.\n\n"
+        f"The listing is free and stays free.\n\n"
         # Keep total links ≤ 2: drop the site URL from the signature when a video link is present
         f"{_signature(s, include_site=not video_url)}\n\n"
         f"{_footer(s)}\n"
@@ -74,14 +66,11 @@ def followup_email(tool: ToolRow, s: Settings, original_subject: str) -> tuple[s
     subject = original_subject if original_subject.lower().startswith("re:") else f"Re: {original_subject}"
     body = (
         f"Hi {tool.name} team,\n\n"
-        f"I'm the founder of ToolverAI — following up personally on my note from a couple of days ago.\n\n"
-        f"Here's why I think this is worth two minutes: our visitors come specifically to compare and choose AI "
-        f"tools, so the traffic we'd send {tool.name} arrives ready to sign up. Your listing is already live:\n"
+        f"A short follow-up on my note about your ToolverAI listing:\n"
         f"{tool.live_page}\n\n"
-        f"A Homepage Featured Spot puts {tool.name} in front of that buying-intent audience first, and you get full "
-        f"ad-usage rights to the 30-second Problem→Solution video we scripted for you.\n\n"
-        f"If that's interesting, just reply \"INTERESTED\" and I'll send the options "
-        f"— including a zero-cost affiliate feature if a paid package isn't the right fit. No pressure either way.\n\n"
+        f"If the details there are wrong, a one-line reply is enough and I'll correct them. And if {tool.name} "
+        f"has an affiliate or partner program, point me to it and I'll link the listing through it.\n\n"
+        f"If this isn't for you, no reply needed — I won't write again.\n\n"
         f"{_signature(s, include_site=False)}\n\n"
         f"{_footer(s)}\n"
     )
@@ -90,28 +79,25 @@ def followup_email(tool: ToolRow, s: Settings, original_subject: str) -> tuple[s
 
 def hot_lead_reply(tool_name: str, live_page: str, s: Settings, original_subject: str,
                    greeting_name: str = "") -> tuple[str, str]:
-    """Pricing reply for a positive response. Plain text, no attachments."""
+    """Reply to a positive response. Free affiliate option first, paid placements second.
+    Plain text, no attachments."""
     subject = original_subject if original_subject.lower().startswith("re:") else f"Re: {original_subject}"
     hi = f"Hi {greeting_name}," if greeting_name else f"Hi {tool_name} team,"
     tiers = "\n".join(
         f"  {i}. {t.name} · {t.price}\n     {t.includes}" for i, t in enumerate(SPONSOR_TIERS, 1)
     )
-    affiliate_block = (
-        f"Not ready for a monthly or one-time package? There's also a zero-cost option:\n\n"
-        f"  • {AFFILIATE_OFFER.name} · {AFFILIATE_OFFER.price}\n"
-        f"    {AFFILIATE_OFFER.includes}\n\n"
-    )
     body = (
         f"{hi}\n\n"
         f"Thanks for getting back to me!\n\n"
-        f"Here are our partner packages for {tool_name}:\n\n"
+        f"The simplest way to work together costs nothing:\n\n"
+        f"  • {AFFILIATE_OFFER.name} · {AFFILIATE_OFFER.price}\n"
+        f"    {AFFILIATE_OFFER.includes}\n\n"
+        f"If you'd rather have a fixed placement for {tool_name}, these are the paid options:\n\n"
         f"{tiers}\n\n"
-        f"{affiliate_block}"
-        f"Every option builds on your existing listing ({live_page}). Tell me which one fits and I'll get "
-        f"{tool_name} pinned right away.\n\n"
-        f"One quick win either way: many of our partners add their ToolverAI listing link to their own site, "
-        f"blog or newsletter — it sends your audience straight to the listing and helps {tool_name} rank higher "
-        f"across our comparison pages.\n\n"
+        f"ToolverAI is a young directory, so I'd rather be straight with you: I'm happy to share our current "
+        f"visitor numbers before you decide anything, and the affiliate option carries no cost either way.\n\n"
+        f"Everything builds on your existing listing ({live_page}). If any detail there needs correcting, "
+        f"tell me and I'll update it.\n\n"
         f"{_signature(s)}\n"
     )
     return subject, body

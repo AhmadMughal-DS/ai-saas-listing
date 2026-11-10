@@ -78,6 +78,12 @@ def run_daily_cycle(live: bool = False, max_send: int = 15) -> None:
         app.sync()
     except Exception as exc:
         print(f"      ⚠️ Sheet sync warning: {exc} — continuing with {len(app.store.tools)} cached tool(s).")
+        # The sheet failed, but the website check must still run: no email without a live listing.
+        import listing_sync
+        res = listing_sync.apply(app.store.tools)
+        print(f"      Listing sync: {res['live']} live · {res['missing']} not live" if res["ok"]
+              else "      ⚠️ Listing sync failed too — keeping previous live/not-live flags.")
+        app.store.save()
     print(f"      Database now: {len(app.store.tools)} tools tracked (live from sheet).")
 
     # 2. Monitor Inbox (IMAP)
@@ -94,7 +100,8 @@ def run_daily_cycle(live: bool = False, max_send: int = 15) -> None:
     if recovered:
         print(f"      🔄 Bounce recovery: auto-switched {len(recovered)} bounced tool(s) to alternate contact/marketing emails.")
 
-    ready_count = len([k for k, r in app.store.tools.items() if r["status"] == st.READY])
+    ready_count = len([k for k, r in app.store.tools.items()
+                       if r["status"] == st.READY and r.get("listing_live") is True])
     print(f"\n[3/5] 🎯 Checking Ready Queue: {ready_count} verified tool(s) ready.")
     if ready_count < max_send:
         needed = max_send - ready_count + 5

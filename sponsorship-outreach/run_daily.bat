@@ -9,6 +9,6 @@ echo ToolverAI Daily 10 PM Outreach Runner
 echo Started at: %date% %time%
 echo ===================================================
 
-"C:\Users\HP\AppData\Local\Python\bin\python.exe" "sponsorship-outreach\daily_runner.py" --live
+"C:\Users\HP\AppData\Local\Python\bin\python.exe" "sponsorship-outreach\daily_runner.py" --live >> "sponsorship-outreach\daily_outreach.log" 2>&1
 
 echo Finished at: %date% %time%

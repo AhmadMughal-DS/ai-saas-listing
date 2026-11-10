@@ -295,20 +295,40 @@ def _write_blog_once(name: str, url: str, category: str, research_blob: dict, to
 
 # ── existing-tool dedup ───────────────────────────────────────────────────────
 def existing_keys(db, ws_vals) -> set:
+    """Tools that are really on the website = documents in toolver_db.tools.
+
+    The Google Sheet is NOT consulted: a Sheet row whose DB insert failed (or whose
+    tool was later lost from the DB) used to count as "existing", so it was never
+    imported again and its listing URL stayed a 404 forever. Deciding from the DB
+    alone makes that drift self-healing. (ws_vals is kept for the call signature;
+    see sheet_names() for duplicate-row protection.)
+
+    A DB read failure must abort the run — an empty set here would re-import everything."""
     keys = set()
-    try:
-        for d in db["tools"].find({}, {"name": 1, "slug": 1, "aliases": 1}):
-            keys.add((d.get("name") or "").strip().lower())
-            keys.add((d.get("slug") or "").strip().lower())
-            # lead-file names of renamed tools (e.g. "Apple" -> VidCap), so they aren't re-imported
-            for a in d.get("aliases") or []:
-                keys.add(str(a).strip().lower())
-    except Exception:
-        pass
-    for row in ws_vals[1:]:
-        if row and row[0]:
-            keys.add(row[0].strip().lower())
+    for d in db["tools"].find({}, {"name": 1, "slug": 1, "aliases": 1}):
+        keys.add((d.get("name") or "").strip().lower())
+        keys.add((d.get("slug") or "").strip().lower())
+        # lead-file names of renamed tools (e.g. "Apple" -> VidCap), so they aren't re-imported
+        for a in d.get("aliases") or []:
+            keys.add(str(a).strip().lower())
+    for s in do_not_restore():
+        keys.add(s)
     return {k for k in keys if k}
+
+
+def sheet_names(ws_vals) -> set:
+    """Lower-cased tool names already present in the Sheet, so a re-import never adds a second row."""
+    return {row[0].strip().lower() for row in ws_vals[1:] if row and row[0] and row[0].strip()}
+
+
+def do_not_restore() -> set:
+    """Slugs/names removed from the site on purpose (one per line in do_not_restore.txt).
+    Neither the daily import nor restore_missing_tools will bring these back."""
+    f = BASE / "do_not_restore.txt"
+    if not f.exists():
+        return set()
+    return {ln.strip().lower() for ln in f.read_text(encoding="utf-8").splitlines()
+            if ln.strip() and not ln.lstrip().startswith("#")}
 
 
 def pick_new(limit: int, existing: set) -> list[dict]:
@@ -418,6 +438,7 @@ def main():
             print(f"[sheet] header now {len(header)} cols (added blog/live columns)")
 
     existing = existing_keys(db, ws_vals)
+    in_sheet = sheet_names(ws_vals)
     print(f"Existing tools on site: ~{len(existing)//2}. Picking {args.limit} new...\n")
     tools = pick_new(args.limit, existing)
 
@@ -451,7 +472,9 @@ def main():
                 except Exception as exc:
                     print(f"   DB insert failed: {exc}")
             row = sheet_row(t["name"], cat, t["url"], slug, rb, blog, live)
-            if args.sheet:
+            # Sheet row only for a tool that is really live and not already listed there:
+            # the Sheet must never claim a listing the website does not have.
+            if args.sheet and (live or not args.db) and t["name"].strip().lower() not in in_sheet:
                 try:
                     ws.append_row(row, value_input_option="RAW")
                 except Exception as exc:

@@ -23,6 +23,7 @@ import time
 from collections import Counter
 from datetime import date, datetime, timedelta
 
+import listing_sync
 import store as st
 from config import PREVIEW_DIR, Settings, load_settings
 from contacts import ContactFinder, base_domain
@@ -116,6 +117,12 @@ class App:
                 elif base_domain(t.domain) in self.s.exclude_domains:
                     self.store.set_status(t.key, st.SKIPPED, f"excluded domain {t.domain}")
             keys.append(t.key)
+        # Listing sync: stamp every record with whether its page is really live on the website.
+        res = listing_sync.apply(self.store.tools)
+        if res["ok"]:
+            print(f"[✓] Listing sync: {res['live']} live on website · {res['missing']} not live (held back from outreach)")
+        else:
+            print("[!] Listing sync: could not read the website sitemap — keeping the previous live/not-live flags")
         self.store.save()
         c = Counter(self.store.tools[k]["status"] for k in keys)
         print(f"[✓] Synced {len(keys)} tools · " + ", ".join(f"{st.STATUS_LABEL[s]}: {n}" for s, n in c.items()))
@@ -125,7 +132,8 @@ class App:
     def discover(self, limit: int, only: str = "", retry: bool = True) -> None:
         finder = ContactFinder(self.s, store=self.store)
         statuses = {st.PENDING} | ({st.NEEDS_REVIEW} if retry else set())
-        todo = [k for k, r in self.store.tools.items() if r["status"] in statuses and (not only or k == only)]
+        todo = [k for k, r in self.store.tools.items()
+                if r["status"] in statuses and (not only or k == only) and listing_sync.is_live(r)]
         print(f"[*] Discovering contacts for {min(limit, len(todo))} of {len(todo)} tools...")
         for i, key in enumerate(todo[:limit], 1):
             rec = self.store.tools[key]
@@ -163,12 +171,42 @@ class App:
     def _can_send(self) -> bool:
         return self.store.sent_today() < self.s.daily_limit
 
+    @staticmethod
+    def _listing_status(url: str) -> int | None:
+        """HTTP status of the tool's listing page; 0 = no URL, None = site unreachable."""
+        import urllib.error
+        import urllib.request
+        if not url.startswith("http"):
+            return 0
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "ToolverAI-outreach-precheck"})
+            with urllib.request.urlopen(req, timeout=20) as resp:
+                return resp.status
+        except urllib.error.HTTPError as exc:
+            return exc.code
+        except Exception:
+            return None
+
     def _deliver(self, key: str, kind: str, subject: str, body: str, in_reply_to: str = "",
                  refs: list[str] | None = None) -> bool:
         rec = self.store.tools[key]
         to = rec["contact"]["email"]
         if self.store.is_suppressed(to):
             self.store.set_status(key, st.OPTED_OUT, f"{to} suppressed")
+            return False
+        # Every email says "here's your live listing: <url>". On 2026-11-10, 102 of the 113 tools already
+        # emailed pointed at a 404 because the tool was no longer in the site DB. Never send a dead link.
+        live = self._listing_status(rec.get("live_page", ""))
+        if live != 200:
+            if live is None:
+                print(f"  ⚠ {kind} → {to} held: could not reach {rec.get('live_page')} (will retry next run)")
+                return False
+            # Keep the status: once the listing is back, the next listing sync re-opens this tool by itself.
+            rec["listing_live"] = False
+            rec["listing_checked_at"] = st.now_iso()
+            self.store.log_event(key, "listing_missing", f"HTTP {live}: {rec.get('live_page')}")
+            self.store.save()
+            print(f"  ⛔ {kind} → {to} NOT sent: listing {rec.get('live_page')} returns HTTP {live}")
             return False
         msg = build_message(self.s, to, subject, body, in_reply_to=in_reply_to, references=refs)
         if not self.live:
@@ -201,7 +239,7 @@ class App:
             return []  # follow-ups disabled: each tool gets exactly one email
         due = []
         for key, rec in self.store.tools.items():
-            if rec["status"] != st.SENT or rec.get("replies"):
+            if rec["status"] != st.SENT or rec.get("replies") or not listing_sync.is_live(rec):
                 continue
             initial = next((m for m in rec["messages"] if m["type"] == "initial"), None)
             if initial and business_days_since(initial["sent_at"]) >= self.s.followup_business_days:
@@ -232,7 +270,8 @@ class App:
             return
         queue = [("followup", k) for k in self.due_followups()]
         if not followups_only:
-            queue += [("initial", k) for k, r in self.store.tools.items() if r["status"] == st.READY]
+            queue += [("initial", k) for k, r in self.store.tools.items()
+                      if r["status"] == st.READY and listing_sync.is_live(r)]
         queue = queue[:limit]
         if not queue:
             print("[i] Nothing to send. Run `discover` first, or no follow-ups are due yet.")
