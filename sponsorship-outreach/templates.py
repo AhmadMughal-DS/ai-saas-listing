@@ -39,13 +39,18 @@ def _features(tool: ToolRow) -> str:
     return f"On the listing we highlight {joined}.\n\n"
 
 
-def initial_email(tool: ToolRow, s: Settings, video_url: str = "") -> tuple[str, str]:
+def initial_email(tool: ToolRow, s: Settings, video_url: str = "", correction: bool = False) -> tuple[str, str]:
+    """correction=True is the one-time re-pitch to companies whose first email carried a
+    listing link that did not work: it says so plainly before the normal pitch."""
     subject = f"{tool.name} is listed on ToolverAI — is the info right?"
     category = f" in our {tool.category} category" if tool.category else ""
+    sorry = ("I wrote to you a while ago about your listing, but the link in that email did not work. "
+             "Sorry about that — the working one is below.\n\n") if correction else ""
     video_line = f"We also made a short video about {tool.name}: {video_url}\n\n" if video_url else ""
 
     body = (
         f"Hi {tool.name} team,\n\n"
+        f"{sorry}"
         f"I run ToolverAI, a directory where people compare AI tools. We've added {tool.name}{category}:\n"
         f"{tool.live_page}\n\n"
         f"{_features(tool)}"

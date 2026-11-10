@@ -34,6 +34,11 @@ from templates import followup_email, initial_email
 from videos import VideoMatcher
 
 
+# First emails sent before this moment used the old pitch and, for most tools, a listing link
+# that returned 404. Those tools get one corrected re-pitch (see App.due_repitches).
+REPITCH_BEFORE = "2026-11-10T12:00:00+00:00"
+
+
 # ─── helpers ─────────────────────────────────────────────────────────────────
 def business_days_since(iso_ts: str) -> int:
     start = datetime.fromisoformat(iso_ts).astimezone().date()
@@ -252,6 +257,31 @@ class App:
         subject, body = followup_email(tool_from_record(rec), self.s, initial["subject"])
         return self._deliver(key, "followup", subject, body, initial["message_id"], [initial["message_id"]])
 
+    def due_repitches(self) -> list[str]:
+        """Tools emailed before 2026-11-10, when the listing link in the email was a 404.
+        Each gets the new pitch once, with the working link. Never: anyone who replied,
+        bounced or opted out (their status is no longer sent/followed_up)."""
+        due = []
+        for key, rec in self.store.tools.items():
+            if rec["status"] not in (st.SENT, st.FOLLOWED_UP) or rec.get("replies"):
+                continue
+            if not listing_sync.is_live(rec) or not (rec.get("contact") or {}).get("email"):
+                continue
+            msgs = rec.get("messages", [])
+            if any(m["type"] == "repitch" for m in msgs):
+                continue
+            # only records whose first email used the old pitch
+            if any(m["type"] == "initial" and m["sent_at"] < REPITCH_BEFORE for m in msgs):
+                due.append(key)
+        return due
+
+    def send_repitch(self, key: str) -> bool:
+        rec = self.store.tools[key]
+        # Apologise for the broken link only where the link really was broken.
+        subject, body = initial_email(tool_from_record(rec), self.s, rec.get("video_url", ""),
+                                      correction=rec.get("first_link_was_dead") is True)
+        return self._deliver(key, "repitch", subject, body)
+
     def send_initial(self, key: str) -> bool:
         rec = self.store.tools[key]
         subject, body = initial_email(tool_from_record(rec), self.s, rec.get("video_url", ""))
@@ -272,6 +302,8 @@ class App:
         if not followups_only:
             queue += [("initial", k) for k, r in self.store.tools.items()
                       if r["status"] == st.READY and listing_sync.is_live(r)]
+            # after every never-contacted tool: the one-time corrected re-pitch
+            queue += [("repitch", k) for k in self.due_repitches()]
         queue = queue[:limit]
         if not queue:
             print("[i] Nothing to send. Run `discover` first, or no follow-ups are due yet.")
@@ -286,7 +318,8 @@ class App:
             if self.live and sent_any:
                 self._pause()
             try:
-                ok = self.send_followup(key) if kind == "followup" else self.send_initial(key)
+                ok = (self.send_followup(key) if kind == "followup"
+                      else self.send_repitch(key) if kind == "repitch" else self.send_initial(key))
             except Exception as exc:
                 # One email failing (timeout, SMTP/IMAP error, bad data) must never stop the run.
                 print(f"  ⚠ {kind} for {key} failed — skipping, run continues: {exc}")

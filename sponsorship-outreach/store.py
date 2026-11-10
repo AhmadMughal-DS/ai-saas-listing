@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from config import LOCK_PATH, LOG_PATH
@@ -37,7 +37,10 @@ def now_iso() -> str:
 
 
 def today_key() -> str:
-    return datetime.now().strftime("%Y-%m-%d")
+    """The "send day". It rolls over at noon, not midnight: the nightly run starts at 22:00 and
+    can send until morning, and all of it must count against the same day's quota (otherwise the
+    emails sent after midnight would eat the next night's allowance)."""
+    return (datetime.now() - timedelta(hours=12)).strftime("%Y-%m-%d")
 
 
 class Store:
