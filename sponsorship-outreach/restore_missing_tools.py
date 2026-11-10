@@ -29,6 +29,7 @@ import requests
 import daily_tools_pipeline as p
 import listing_sync
 import logo_utils
+import research_fallback as fb
 
 BASE = Path(__file__).resolve().parent
 LOG = BASE / "outreach-log.json"
@@ -77,6 +78,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit", type=int, default=0, help="max tools to restore (0 = all)")
     ap.add_argument("--only", default="", help="comma-separated slugs")
+    ap.add_argument("--fallback-only", action="store_true", help="skip ScrapeGraph; use only the plain-fetch research")
     ap.add_argument("--db", action="store_true", help="insert into toolver_db.tools (LIVE on website)")
     args = ap.parse_args()
 
@@ -104,10 +106,29 @@ def main() -> None:
                 if db["tools"].find_one({"$or": [{"slug": t["slug"]}, {"id": f"tool-{t['slug']}"}]}, {"_id": 1}):
                     line = f"[{i}/{len(todo)}] {t['slug']:30} already in DB — left untouched"
                     print(line); rep.write(line + "\n"); continue
-                rb, c1 = p.research(t["name"], t["url"], "", cfg)
-                # A failed scrape leaves nothing real to publish: skip rather than put up an empty page.
-                if rb["_scrape_error"] or len(rb["description"]) < 60 or len(rb["key_features"]) < 3:
-                    why = rb["_scrape_error"] or "scrape returned too little content"
+                url = fb.PRODUCT_URLS.get(t["slug"], t["url"])
+                if fb.is_store_root(url):
+                    why = "only a store homepage is on file, the app's own URL is missing"
+                    skipped.append((t["slug"], why))
+                    line = f"[{i}/{len(todo)}] {t['slug']:30} SKIPPED ({why})"
+                    print(line); rep.write(line + "\n"); rep.flush(); continue
+                t["url"] = url
+                how, why, c1 = "scrape", "", 0.0
+                rb = {"_scrape_error": "not tried"}
+                if not args.fallback_only:
+                    try:
+                        rb, c1 = p.research(t["name"], url, "", cfg)
+                    except Exception as exc:        # ScrapeGraph sometimes returns a bare string
+                        rb = {"_scrape_error": type(exc).__name__}
+                if not fb.usable(rb):
+                    rb2, c1b, why = fb.research(t["name"], url, p.PRICING, p.deepseek)
+                    c1 += c1b
+                    if rb2:
+                        rb, how = rb2, "fallback"
+                # Nothing real to publish: skip rather than put up an empty or invented page.
+                if not fb.usable(rb):
+                    why = why or rb.get("_scrape_error") or "scrape returned too little content"
+                    cost_total += c1
                     skipped.append((t["slug"], why))
                     line = f"[{i}/{len(todo)}] {t['slug']:30} SKIPPED ({why})"
                     print(line); rep.write(line + "\n"); rep.flush(); continue
@@ -124,7 +145,7 @@ def main() -> None:
                 cost_total += c1 + c2
                 done.append(t["slug"])
                 line = (f"[{i}/{len(todo)}] {t['slug']:30} {cat:16} {rb['pricing_type']:10} "
-                        f"feat:{len(rb['key_features'])} logo:{lnote[:20]:20} ({round(time.time() - ts, 1)}s) LIVE")
+                        f"feat:{len(rb['key_features'])} via:{how:8} logo:{lnote[:14]:14} ({round(time.time() - ts, 1)}s) LIVE")
                 print(line); rep.write(line + "\n"); rep.flush()
             except Exception as exc:
                 skipped.append((t["slug"], f"{type(exc).__name__}: {str(exc)[:100]}"))
