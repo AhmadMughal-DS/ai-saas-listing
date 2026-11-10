@@ -1,4 +1,5 @@
 import React from 'react';
+import { outboundUrl, outboundRel } from '../utils/outbound';
 import { AITool } from '../types';
 import { getToolAlternatives, getRelatedComparisonsForTool, normalizeComparisonSlugs, getLiveAlternatives, isEligibleComparison } from '../utils/programmaticSeo';
 import { slugifyCategory } from '../utils/seo';
@@ -216,9 +217,9 @@ export const AlternativesView: React.FC<AlternativesViewProps> = ({
               <ArrowRight className="w-3.5 h-3.5" />
             </a>
             <a
-              href={tool.url}
+              href={outboundUrl(tool)}
               target="_blank"
-              rel="nofollow noopener noreferrer"
+              rel={outboundRel(tool)}
               className="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all border border-white/10 flex items-center justify-center gap-1.5 w-full sm:w-auto cursor-pointer"
             >
               <span>Official Site</span>

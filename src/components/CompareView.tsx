@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { outboundUrl, outboundRel } from '../utils/outbound';
 import { AITool, ActiveTab } from '../types';
 import { NewBadge } from './NewBadge';
 import { trackComparisonView } from '../lib/analytics';
@@ -493,9 +494,9 @@ export const CompareView: React.FC<CompareViewProps> = ({
                   View Full Specs
                 </a>
                 <a
-                  href={tool.url}
+                  href={outboundUrl(tool)}
                   target="_blank"
-                  rel="noopener noreferrer"
+                  rel={outboundRel(tool)}
                   className="p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 transition-all cursor-pointer"
                   title="Visit Website"
                 >

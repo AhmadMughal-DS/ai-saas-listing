@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { outboundUrl, outboundRel } from '../utils/outbound';
 import { marked } from 'marked';
 import { AITool, ToolReview, UserAccount } from '../types';
 import { NewBadge } from './NewBadge';
@@ -307,9 +308,9 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
           {/* Action CTA */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 shrink-0">
             <a
-              href={tool.url}
+              href={outboundUrl(tool)} onClick={() => handleOutboundClick(outboundUrl(tool), 'visit_official_site')}
               target="_blank"
-              rel="noopener noreferrer"
+              rel={outboundRel(tool)}
               className="py-3.5 px-8 rounded-xl btn-purple text-sm font-semibold flex items-center justify-center gap-2 shadow-xs cursor-pointer"
             >
               <span>Visit Official Site</span>
@@ -549,9 +550,9 @@ export const ToolDetailView: React.FC<ToolDetailViewProps> = ({
                   </div>
 
                   <a
-                    href={tool.url}
+                    href={outboundUrl(tool)} onClick={() => handleOutboundClick(outboundUrl(tool), 'pricing_plan_cta')}
                     target="_blank"
-                    rel="noopener noreferrer"
+                    rel={outboundRel(tool)}
                     className={`w-full py-2.5 rounded-xl text-xs font-semibold text-center transition-all cursor-pointer block ${
                       plan.isPopular ? 'btn-purple shadow-xs' : 'btn-outline-purple'
                     }`}

@@ -376,6 +376,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
     tagline: '',
     description: '',
     url: '',
+    affiliateUrl: '',
     category: 'Coding',
     logoUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80',
     thumbnailVideoUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80',
@@ -529,6 +530,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
       tagline: formData.tagline,
       description: formData.description,
       url: formData.url,
+      affiliateUrl: formData.affiliateUrl.trim(),
       category: formData.category,
       logoUrl: formData.logoUrl,
       thumbnailVideoUrl: formData.thumbnailVideoUrl,
@@ -610,6 +612,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
       tagline: tool.tagline,
       description: tool.description,
       url: tool.url,
+      affiliateUrl: tool.affiliateUrl || '',
       category: tool.category,
       logoUrl: tool.logoUrl,
       thumbnailVideoUrl: tool.thumbnailVideoUrl || '',
@@ -1069,6 +1072,22 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     placeholder="https://cursor.com"
                     className="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600 text-slate-900"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Affiliate / Partner Link
+                  </label>
+                  <input
+                    type="url"
+                    value={formData.affiliateUrl}
+                    onChange={(e) => setFormData({ ...formData, affiliateUrl: e.target.value })}
+                    placeholder="Leave empty until the vendor's program has approved you"
+                    className="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600 text-slate-900"
+                  />
+                  <p className="mt-1 text-[11px] text-slate-500">
+                    When set, every "Visit site" click for this tool goes through this link.
+                  </p>
                 </div>
 
                 <div>

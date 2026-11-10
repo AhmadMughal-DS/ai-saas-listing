@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useDeferredValue, Suspense } from 'react';
+import { outboundUrl, outboundRel } from '../utils/outbound';
 import { AITool, ActiveTab } from '../types';
 import { trackSearch, trackCategoryView } from '../lib/analytics';
 import { NewBadge } from './NewBadge';
@@ -789,9 +790,9 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({
                   <GitCompare className="w-4 h-4" />
                 </button>
                 <a
-                  href={tool.url}
+                  href={outboundUrl(tool)}
                   target="_blank"
-                  rel="noopener noreferrer"
+                  rel={outboundRel(tool)}
                   className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 transition-all cursor-pointer"
                   title="Visit Website"
                 >

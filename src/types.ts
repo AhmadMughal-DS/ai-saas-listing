@@ -72,6 +72,8 @@ export interface AITool {
   tagline: string;
   description: string;
   url: string;
+  /** Vendor affiliate/partner link. When set, every outbound click uses it (rel="sponsored"). */
+  affiliateUrl?: string;
   category: 'Copywriting' | 'Video AI' | 'Coding' | 'Productivity' | 'Image AI' | 'Audio AI' | 'Data & Analytics' | 'Agents' | '3D & Design' | 'Marketing';
   logoUrl: string;
   thumbnailVideoUrl?: string;

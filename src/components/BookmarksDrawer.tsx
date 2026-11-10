@@ -1,4 +1,5 @@
 import React from 'react';
+import { outboundUrl, outboundRel } from '../utils/outbound';
 import { AITool, ActiveTab } from '../types';
 import { Bookmark, X, Trash2, ExternalLink, ArrowRight, Sparkles, Share2 } from 'lucide-react';
 
@@ -130,9 +131,9 @@ export const BookmarksDrawer: React.FC<BookmarksDrawerProps> = ({
 
                 <div className="flex items-center gap-1 shrink-0">
                   <a
-                    href={tool.url}
+                    href={outboundUrl(tool)}
                     target="_blank"
-                    rel="noopener noreferrer"
+                    rel={outboundRel(tool)}
                     className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />

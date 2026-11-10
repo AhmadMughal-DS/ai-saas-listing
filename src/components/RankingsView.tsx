@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useDeferredValue } from 'react';
+import { outboundUrl, outboundRel } from '../utils/outbound';
 import { AITool, ActiveTab } from '../types';
 import { 
   TrendingUp, 
@@ -408,9 +409,9 @@ export const RankingsView: React.FC<RankingsViewProps> = ({
                           <GitCompare className="w-4 h-4" />
                         </button>
                         <a
-                          href={tool.url}
+                          href={outboundUrl(tool)}
                           target="_blank"
-                          rel="noopener noreferrer"
+                          rel={outboundRel(tool)}
                           className="p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 transition-all cursor-pointer"
                           title="Visit Official Site"
                         >

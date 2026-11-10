@@ -41,6 +41,14 @@ import {
   seoInlineToHtml,
 } from './src/data/hubSeoContent';
 import { buildToolFaqs } from './src/utils/toolFaq';
+import { outboundUrl, outboundRel } from './src/utils/outbound';
+
+// A rating is shown only when real reviews exist. Tools without reviews used to be rendered as
+// "4.5 / 5 (1 reviews)" in the server HTML — an invented score that search engines read as fact.
+const hasRealRating = (t: any): boolean => Number(t?.reviewCount) >= 1 && Number(t?.rating) > 0;
+const ratingLabel = (t: any): string =>
+  hasRealRating(t) ? `${t.rating} / 5 (${t.reviewCount} review${Number(t.reviewCount) === 1 ? '' : 's'})` : 'Not yet rated';
+const ratingShort = (t: any): string => (hasRealRating(t) ? `${t.rating}★` : 'Not yet rated');
 import {
   HUB_TITLES,
   toolTitle,
@@ -1150,6 +1158,7 @@ async function startServer() {
         tagline: toolData.tagline || 'Next-generation AI platform',
         description: toolData.description || 'Comprehensive AI tool designed for high productivity and automated workflows.',
         url: toolData.url || 'https://example.com',
+        affiliateUrl: /^https?:\/\//i.test(String(toolData.affiliateUrl || '').trim()) ? String(toolData.affiliateUrl).trim() : '',
         category: toolData.category,
         logoUrl: toolData.logoUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80',
         thumbnailVideoUrl: toolData.thumbnailVideoUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80',
@@ -2487,7 +2496,7 @@ Only return valid JSON.`;
         const tldrFeature = (Array.isArray(tool.keyFeatures) && tool.keyFeatures[0]) ? String(tool.keyFeatures[0]) : '';
         const tldrVisits = (tool.monthlyVisitsFormatted && tool.monthlyVisitsFormatted !== 'N/A')
           ? ` and draws an estimated ${tool.monthlyVisitsFormatted} monthly visits` : '';
-        const popAnswer = `It holds a ${tool.rating || 4.5}/5 community rating${tool.reviewCount ? ` from ${tool.reviewCount} reviews` : ''}${tldrVisits}.`;
+        const popAnswer = `${hasRealRating(tool) ? `It holds a ${tool.rating}/5 community rating from ${tool.reviewCount} review${Number(tool.reviewCount) === 1 ? '' : 's'}` : 'It has no community reviews on ToolverAI yet'}${tldrVisits}.`;
         const tldrHtml = `
     <section class="tldr" id="summary">
       <h2>${cleanName} at a Glance</h2>
@@ -2519,8 +2528,8 @@ Only return valid JSON.`;
         <li><strong>Category:</strong> <a href="/categories/${categorySlug}">${tool.category}</a></li>
         <li><strong>Pricing Model:</strong> ${tool.pricingType || 'Freemium'}</li>
         <li><strong>Estimated Monthly Web Visits:</strong> ${tool.monthlyVisitsFormatted || 'N/A'}</li>
-        <li><strong>Community Rating:</strong> ${tool.rating || 4.5} / 5 (${tool.reviewCount || 1} reviews)</li>
-        <li><strong>Official Website:</strong> <a href="${tool.url}" rel="nofollow noopener noreferrer" target="_blank">${cleanName}</a></li>
+        <li><strong>Community Rating:</strong> ${ratingLabel(tool)}</li>
+        <li><strong>Official Website:</strong> <a href="${outboundUrl(tool).replace(/&(?!amp;)/g, '&amp;')}" rel="${outboundRel(tool)}" target="_blank">${cleanName}</a></li>
       </ul>
     </section>
     ${tool.keyFeatures?.length ? `
@@ -2668,7 +2677,7 @@ Only return valid JSON.`;
   <section>
     <h2>Top Ranked ${categoryName} Tools</h2>
     <ul>
-      ${categoryTools.map((t: any) => `<li><a href="/tool/${t.slug || t.id}"><strong>${t.name}</strong></a> — ${t.tagline || t.description?.slice(0, 90)} [Traffic: ${t.monthlyVisitsFormatted || 'N/A'}/mo | Pricing: ${t.pricingType || 'Freemium'} | Rating: ${t.rating || 4.5}★]</li>`).join('\n      ')}
+      ${categoryTools.map((t: any) => `<li><a href="/tool/${t.slug || t.id}"><strong>${t.name}</strong></a> — ${t.tagline || t.description?.slice(0, 90)} [Traffic: ${t.monthlyVisitsFormatted || 'N/A'}/mo | Pricing: ${t.pricingType || 'Freemium'} | Rating: ${ratingShort(t)}]</li>`).join('\n      ')}
     </ul>
   </section>
   <section>
@@ -3161,8 +3170,8 @@ Only return valid JSON.`;
           </tr>
           <tr>
             <td>User Rating</td>
-            <td>${tool1.rating || 4.5} / 5 (${tool1.reviewCount || 1} reviews)</td>
-            <td>${tool2.rating || 4.5} / 5 (${tool2.reviewCount || 1} reviews)</td>
+            <td>${ratingLabel(tool1)}</td>
+            <td>${ratingLabel(tool2)}</td>
           </tr>
           <tr>
             <td>Supported Platforms</td>
@@ -3333,7 +3342,7 @@ Only return valid JSON.`;
     <section>
       <h2>Why Consider Alternatives to ${cleanName}?</h2>
       <p>${altReason}</p>
-      <p>Source Benchmark: <a href="/tool/${sourceTool.slug || sourceTool.id}"><strong>${cleanName}</strong></a> — ${sourceTool.pricingType || 'Freemium'} | ${sourceTool.monthlyVisitsFormatted || 'N/A'} visits/mo | ${sourceTool.rating || 4.5}★ (${sourceTool.reviewCount || 1} reviews).</p>
+      <p>Source Benchmark: <a href="/tool/${sourceTool.slug || sourceTool.id}"><strong>${cleanName}</strong></a> — ${sourceTool.pricingType || 'Freemium'} | ${sourceTool.monthlyVisitsFormatted || 'N/A'} visits/mo | ${ratingLabel(sourceTool)}.</p>
     </section>
 
     <section>
@@ -3347,7 +3356,7 @@ Only return valid JSON.`;
             ? `\n            [<a href="/compare/${normalizeComparisonSlugs(srcKey, altKey).canonicalSlug}">Compare ${cleanName} vs ${alt.name}</a>]`
             : '';
           return `<li>
-            <a href="/tool/${altKey}"><strong>${alt.name}</strong></a> (${alt.pricingType || 'Freemium'} | ${alt.monthlyVisitsFormatted || 'N/A'} visits/mo | ${alt.rating || 4.5}★) — ${alt.tagline || alt.description?.slice(0, 80)}${cmp}
+            <a href="/tool/${altKey}"><strong>${alt.name}</strong></a> (${alt.pricingType || 'Freemium'} | ${alt.monthlyVisitsFormatted || 'N/A'} visits/mo | ${ratingShort(alt)}) — ${alt.tagline || alt.description?.slice(0, 80)}${cmp}
           </li>`;
         }).join('\n        ')}
       </ul>
